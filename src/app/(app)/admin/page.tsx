@@ -30,7 +30,7 @@ export default async function AdminPage() {
         ))}
       </div>
 
-      <div className="card">
+      <div className={`card border ${s.color}`}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-syne font-bold">Registered Users</h3>
           <span className="font-mono-code text-xs text-muted">{users.length} total</span>

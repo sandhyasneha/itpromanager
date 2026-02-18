@@ -8,8 +8,13 @@ export default async function AdminPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  const users = profiles ?? []
-  const countries = Array.from(new Set(users.map((u) => u.country).filter(Boolean)))
+  const countries = Array.from(
+  new Set(
+    users
+      .map((u) => u.country?.trim().toLowerCase()) // Normalize
+      .filter(Boolean)
+  )
+);
 
   return (
     <div className="space-y-6">

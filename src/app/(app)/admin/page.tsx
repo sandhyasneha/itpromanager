@@ -8,13 +8,9 @@ export default async function AdminPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
- const countries = Array.from(
-  new Set(
-    users
-      .map((u) => u.country?.trim().toLowerCase()) // Normalize
-      .filter(Boolean)
-  )
-);
+  const users = profiles ?? []
+  const countries = Array.from(new Set(users.map((u) => u.country).filter(Boolean)))
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -76,4 +72,3 @@ export default async function AdminPage() {
     </div>
   )
 }
-

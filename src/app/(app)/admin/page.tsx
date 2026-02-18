@@ -9,7 +9,7 @@ export default async function AdminPage() {
     .limit(50)
 
   const users = profiles ?? []
-  const countries = Array.from(new Set(users.map((u) => u.country).filter(Boolean))
+  const countries = Array.from(new Set(users.map((u) => u.country).filter(Boolean)))
 
   return (
     <div className="space-y-6">
@@ -21,7 +21,7 @@ export default async function AdminPage() {
           { label: 'PMs',            value: users.filter(u => u.role === 'IT Project Manager').length, icon: '🧑‍💼', color: 'border-accent3/30' },
           { label: 'Engineers',      value: users.filter(u => u.role === 'Network Engineer').length, icon: '🌐', color: 'border-warn/30' },
         ].map(s => (
-          <div key={s.label} className={`card border ${s.color}`}>
+          <div className=`card border ${s.color}`>
             <div className="flex justify-between items-start mb-2">
               <p className="text-xs font-syne font-semibold text-muted uppercase">{s.label}</p>
               <span className="text-2xl">{s.icon}</span>

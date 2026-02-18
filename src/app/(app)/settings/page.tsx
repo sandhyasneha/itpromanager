@@ -1,3 +1,5 @@
+
+
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -6,7 +8,7 @@ import type { Profile } from '@/types'
 const ROLES = ['IT Project Manager','Network Engineer','Sponsor','Stakeholder','Other']
 
 // ✅ NEW (fixed)
-const countries = Array.from(new Set(users.map(u => u.country).filter(Boolean)))
+const countries = [...new Set(users.map(u => u.country).filter(Boolean))]
 export default function SettingsPage() {
   const supabase = createClient()
   const [profile, setProfile] = useState<Partial<Profile>>({})

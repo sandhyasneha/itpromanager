@@ -13,15 +13,14 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Users',    value: users.length, icon: '👥', color: 'border-accent/30' },
-          { label: 'Countries',      value: countries.length, icon: '🌍', color: 'border-accent2/30' },
-          { label: 'PMs',            value: users.filter(u => u.role === 'IT Project Manager').length, icon: '🧑‍💼', color: 'border-accent3/30' },
-          { label: 'Engineers',      value: users.filter(u => u.role === 'Network Engineer').length, icon: '🌐', color: 'border-warn/30' },
+          { label: 'Total Users', value: users.length, icon: '👥', color: 'border-accent/30' },
+          { label: 'Countries', value: countries.length, icon: '🌍', color: 'border-accent2/30' },
+          { label: 'PMs', value: users.filter(u => u.role === 'IT Project Manager').length, icon: '🧑‍💼', color: 'border-accent3/30' },
+          { label: 'Engineers', value: users.filter(u => u.role === 'Network Engineer').length, icon: '🌐', color: 'border-warn/30' },
         ].map(s => (
-          <div className=`card border ${s.color}`>
+          <div key={s.label} className={`card border ${s.color}`}>
             <div className="flex justify-between items-start mb-2">
               <p className="text-xs font-syne font-semibold text-muted uppercase">{s.label}</p>
               <span className="text-2xl">{s.icon}</span>
@@ -31,7 +30,6 @@ export default async function AdminPage() {
         ))}
       </div>
 
-      {/* Users table */}
       <div className="card">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-syne font-bold">Registered Users</h3>

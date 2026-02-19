@@ -9,7 +9,9 @@ export default async function AdminPage() {
     .limit(50)
 
   const users = profiles ?? []
-  const countries = Array.from(new Set(users.map((u) => u.country).filter(Boolean)))
+  const countrySet = new Set(users.map((u: any) => u.country).filter(Boolean))
+  const countries: string[] = []
+  countrySet.forEach((c: any) => countries.push(c))
 
   return (
     <div className="space-y-6">
@@ -17,8 +19,8 @@ export default async function AdminPage() {
         {[
           { label: 'Total Users', value: users.length, icon: '👥', color: 'border-accent/30' },
           { label: 'Countries', value: countries.length, icon: '🌍', color: 'border-accent2/30' },
-          { label: 'PMs', value: users.filter(u => u.role === 'IT Project Manager').length, icon: '🧑‍💼', color: 'border-accent3/30' },
-          { label: 'Engineers', value: users.filter(u => u.role === 'Network Engineer').length, icon: '🌐', color: 'border-warn/30' },
+          { label: 'PMs', value: users.filter((u: any) => u.role === 'IT Project Manager').length, icon: '🧑‍💼', color: 'border-accent3/30' },
+          { label: 'Engineers', value: users.filter((u: any) => u.role === 'Network Engineer').length, icon: '🌐', color: 'border-warn/30' },
         ].map(s => (
           <div key={s.label} className={`card border ${s.color}`}>
             <div className="flex justify-between items-start mb-2">
@@ -29,7 +31,6 @@ export default async function AdminPage() {
           </div>
         ))}
       </div>
-
       <div className="card">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-syne font-bold">Registered Users</h3>
@@ -47,7 +48,7 @@ export default async function AdminPage() {
             <tbody>
               {users.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-12 text-muted">No users yet</td></tr>
-              ) : users.map(u => (
+              ) : users.map((u: any) => (
                 <tr key={u.id} className="hover:bg-surface2 transition-colors">
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2.5">
@@ -72,4 +73,3 @@ export default async function AdminPage() {
     </div>
   )
 }
-

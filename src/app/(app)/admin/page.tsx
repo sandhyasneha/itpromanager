@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 
 export default async function AdminPage() {
   const supabase = createClient()
@@ -17,12 +17,12 @@ export default async function AdminPage() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Users', value: users.length, icon: '👥', color: 'border-accent/30' },
-          { label: 'Countries', value: countries.length, icon: '🌍', color: 'border-accent2/30' },
-          { label: 'PMs', value: users.filter((u: any) => u.role === 'IT Project Manager').length, icon: '🧑‍💼', color: 'border-accent3/30' },
-          { label: 'Engineers', value: users.filter((u: any) => u.role === 'Network Engineer').length, icon: '🌐', color: 'border-warn/30' },
+          { label: 'Total Users', value: users.length, icon: 'ðŸ‘¥', color: 'border-accent/30' },
+          { label: 'Countries', value: countries.length, icon: 'ðŸŒ', color: 'border-accent2/30' },
+          { label: 'PMs', value: users.filter((u: any) => u.role === 'IT Project Manager').length, icon: 'ðŸ§‘â€ðŸ’¼', color: 'border-accent3/30' },
+          { label: 'Engineers', value: users.filter((u: any) => u.role === 'Network Engineer').length, icon: 'ðŸŒ', color: 'border-warn/30' },
         ].map(s => (
-          <div key={s.label} className={`card border ${s.color}`}>
+          <div key={s.label} className={\card border ${s.color}`}>`
             <div className="flex justify-between items-start mb-2">
               <p className="text-xs font-syne font-semibold text-muted uppercase">{s.label}</p>
               <span className="text-2xl">{s.icon}</span>
@@ -55,12 +55,12 @@ export default async function AdminPage() {
                       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent2 flex items-center justify-center text-[10px] font-black text-black shrink-0">
                         {(u.full_name ?? u.email ?? 'U').slice(0,2).toUpperCase()}
                       </div>
-                      <span className="text-sm font-semibold">{u.full_name ?? '—'}</span>
+                      <span className="text-sm font-semibold">{u.full_name ?? 'â€”'}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3.5 font-mono-code text-xs text-muted">{u.email}</td>
-                  <td className="px-4 py-3.5"><span className="tag-chip bg-accent/10 text-accent text-xs">{u.role ?? '—'}</span></td>
-                  <td className="px-4 py-3.5 text-sm text-muted">{u.country ?? '—'}</td>
+                  <td className="px-4 py-3.5"><span className="tag-chip bg-accent/10 text-accent text-xs">{u.role ?? 'â€”'}</span></td>
+                  <td className="px-4 py-3.5 text-sm text-muted">{u.country ?? 'â€”'}</td>
                   <td className="px-4 py-3.5 font-mono-code text-xs text-muted">
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>
@@ -73,3 +73,5 @@ export default async function AdminPage() {
     </div>
   )
 }
+
+

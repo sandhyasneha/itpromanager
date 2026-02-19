@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
 const ROLES = ['IT Project Manager','Network Engineer','Sponsor','Stakeholder','Other']
-
+const COUNTRIES = ['United States','United Kingdom','India','Australia','Canada','Singapore','Germany','South Africa','UAE','New Zealand','Other']
 // ✅ NEW (fixed)
   export default function SettingsPage() {
   const supabase = createClient()

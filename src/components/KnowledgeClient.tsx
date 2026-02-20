@@ -1,428 +1,58 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-const CATEGORIES = ['All', 'Networking', 'Security', 'Cloud', 'Project Management', 'Office Move', 'Server & VM', 'Migration']
+const CATEGORIES = [
+  { name: 'All', icon: '🔍' },
+  { name: 'Networking', icon: '🌐' },
+  { name: 'Security', icon: '🔐' },
+  { name: 'Cloud', icon: '☁️' },
+  { name: 'Server & VM', icon: '🖥️' },
+  { name: 'Project Management', icon: '📋' },
+  { name: 'Office Move', icon: '🏢' },
+  { name: 'Migration', icon: '🚀' },
+  { name: 'Runbooks', icon: '📖' },
+  { name: 'Wireless', icon: '📡' },
+  { name: 'Storage', icon: '💾' },
+  { name: 'General', icon: '💡' },
+]
 
-const SAMPLE_ARTICLES = [
-  {
-    id: 'sample-1', title: 'How to Configure a Router', category: 'Networking',
-    tags: ['router', 'cisco', 'networking'],
-    content: `ROUTER CONFIGURATION GUIDE
-    
-Overview:
-A router connects multiple networks and directs traffic between them. This guide covers basic router configuration for enterprise IT environments.
+const SUGGESTED_TOPICS = [
+  'How to configure BGP routing',
+  'SDWAN deployment guide',
+  'Zero Trust Network Architecture',
+  'Office 365 migration steps',
+  'Cisco switch VLAN setup',
+  'Azure Virtual Network setup',
+  'Windows Server 2022 hardening',
+  'Disaster Recovery planning',
+  'Network segmentation best practices',
+  'AWS EC2 instance setup',
+  'Firewall policy best practices',
+  'Active Directory setup guide',
+  'VMware vSphere cluster setup',
+  'Office move IT checklist',
+  'SQL Server migration to Azure',
+  'WiFi 6 deployment guide',
+  'SAN storage configuration',
+  'DevOps pipeline setup',
+  'IT Change Management process',
+  'Network monitoring with SNMP',
+]
 
-Step-by-Step Configuration:
-1. Connect to the router via console cable or SSH
-2. Enter privileged EXEC mode: enable
-3. Enter global configuration mode: configure terminal
-4. Set hostname: hostname ROUTER-01
-5. Configure interfaces:
-   - interface GigabitEthernet0/0
-   - ip address 192.168.1.1 255.255.255.0
-   - no shutdown
-6. Configure default gateway: ip route 0.0.0.0 0.0.0.0 [ISP-IP]
-7. Enable SSH: crypto key generate rsa modulus 2048
-8. Save configuration: write memory
-
-Best Practices:
-- Always use strong passwords for console and VTY lines
-- Enable logging to a syslog server
-- Disable unused interfaces
-- Use access control lists (ACLs) to restrict management access
-- Document all configuration changes
-
-Common Issues:
-- No connectivity: Check interface status with 'show ip interface brief'
-- Routing issues: Verify routing table with 'show ip route'
-- SSH not working: Ensure crypto keys are generated and VTY lines allow SSH`
-  },
-  {
-    id: 'sample-2', title: 'How to Configure Network Switches', category: 'Networking',
-    tags: ['switch', 'vlan', 'cisco', 'layer2'],
-    content: `NETWORK SWITCH CONFIGURATION GUIDE
-
-Overview:
-Managed switches control network traffic at Layer 2. This guide covers VLAN configuration, port security, and trunk setup.
-
-Step-by-Step Configuration:
-1. Access switch via console or SSH
-2. Enter configuration mode: configure terminal
-3. Create VLANs:
-   - vlan 10
-   - name USERS
-   - vlan 20
-   - name SERVERS
-   - vlan 30
-   - name MANAGEMENT
-4. Configure access ports:
-   - interface FastEthernet0/1
-   - switchport mode access
-   - switchport access vlan 10
-5. Configure trunk ports:
-   - interface GigabitEthernet0/1
-   - switchport mode trunk
-   - switchport trunk allowed vlan 10,20,30
-6. Enable Spanning Tree: spanning-tree mode rapid-pvst
-7. Configure port security:
-   - switchport port-security maximum 2
-   - switchport port-security violation restrict
-
-Best Practices:
-- Disable unused ports and put them in a dead VLAN
-- Enable BPDU Guard on access ports
-- Use VLAN segmentation for security
-- Document VLAN assignments
-
-Common Issues:
-- VLAN not passing: Check trunk configuration
-- Port in err-disabled: Check port security violations`
-  },
-  {
-    id: 'sample-3', title: 'What is SD-WAN and How to Deploy It', category: 'Networking',
-    tags: ['sdwan', 'wan', 'cloud', 'network'],
-    content: `SD-WAN COMPLETE GUIDE
-
-Overview:
-Software-Defined Wide Area Network (SD-WAN) is a virtual WAN architecture that allows enterprises to leverage any combination of transport services to securely connect users to applications.
-
-Key Concepts:
-- Centralized control plane manages all WAN connections
-- Traffic is intelligently routed based on application requirements
-- Multiple transport links (MPLS, broadband, 4G/5G) can be used simultaneously
-- Application-aware routing improves performance
-
-Deployment Steps:
-1. Plan your SD-WAN topology (hub-and-spoke or mesh)
-2. Choose SD-WAN vendor (Cisco Viptela, VMware VeloCloud, Fortinet)
-3. Deploy central controller/orchestrator
-4. Install SD-WAN edge devices at each site
-5. Configure WAN links and transport policies
-6. Define application-aware routing policies
-7. Test failover between WAN links
-8. Monitor performance via central dashboard
-
-Benefits:
-- Reduced WAN costs (replace expensive MPLS with broadband)
-- Improved application performance
-- Centralized management and visibility
-- Automatic failover between links
-
-Common Issues:
-- High latency: Check link quality metrics
-- Application issues: Verify QoS policies
-- Site not connecting: Check underlay connectivity`
-  },
-  {
-    id: 'sample-4', title: 'What is an Edge Router', category: 'Networking',
-    tags: ['edge', 'router', 'wan', 'security'],
-    content: `EDGE ROUTER GUIDE
-
-Overview:
-An edge router sits at the boundary of your network, connecting your internal infrastructure to external networks (internet, MPLS, partner networks). It is the first and last line of defence.
-
-Key Functions:
-- Routes traffic between internal LAN and external WAN
-- Implements security policies and ACLs
-- Performs NAT (Network Address Translation)
-- Handles BGP routing with ISPs
-- Provides QoS for traffic prioritization
-
-Configuration Steps:
-1. Configure WAN interface with ISP-provided IP
-2. Set up NAT overload (PAT) for internal users
-3. Configure BGP or static routing with ISP
-4. Implement inbound and outbound ACLs
-5. Set up QoS policies for voice and critical apps
-6. Enable NetFlow for traffic monitoring
-7. Configure redundancy (dual ISP failover)
-
-Security Best Practices:
-- Block RFC 1918 addresses inbound
-- Rate-limit ICMP traffic
-- Disable IP directed broadcasts
-- Enable uRPF (Unicast Reverse Path Forwarding)
-- Log all denied traffic
-
-Troubleshooting:
-- No internet: Check WAN interface and ISP routing
-- Slow speeds: Check for duplex mismatch or QoS issues
-- Security issues: Review ACL logs`
-  },
-  {
-    id: 'sample-5', title: 'How to Fill a Cabling Sheet', category: 'Networking',
-    tags: ['cabling', 'documentation', 'structured-cabling'],
-    content: `CABLING SHEET GUIDE
-
-Overview:
-A cabling sheet documents all physical cable connections in your network infrastructure. Accurate cabling documentation is critical for troubleshooting and future changes.
-
-Cabling Sheet Fields:
-1. Cable ID - Unique identifier (e.g., CAB-001)
-2. Cable Type - Cat6, Cat6A, Fiber OM4, Fiber OS2
-3. Source Location - Patch panel number and port
-4. Destination Location - Switch/device and port
-5. Length (metres)
-6. Color - For identification
-7. VLAN/Purpose - What it's used for
-8. Date Installed
-9. Installed By
-10. Test Result - Pass/Fail with test date
-
-Step-by-Step Process:
-1. Label both ends of the cable before installation
-2. Record source patch panel, bay, and port number
-3. Record destination device name, rack, and port
-4. Measure and record cable length
-5. Run cable test (Fluke or similar tester)
-6. Record test result (pass/fail, signal strength)
-7. Update the cabling sheet immediately
-8. Save to shared network documentation folder
-
-Best Practices:
-- Use consistent naming conventions
-- Update the sheet every time a change is made
-- Take photos of patch panels for reference
-- Keep digital and physical copies
-- Review and audit cabling sheets quarterly`
-  },
-  {
-    id: 'sample-6', title: 'How to Build a Server VM', category: 'Server & VM',
-    tags: ['vm', 'vmware', 'server', 'virtualisation'],
-    content: `SERVER VM BUILD GUIDE
-
-Overview:
-Virtual machines (VMs) allow you to run multiple server instances on a single physical host. This guide covers creating a VM on VMware vSphere/ESXi.
-
-Pre-requisites:
-- VMware vSphere/ESXi host configured
-- vCenter Server (recommended)
-- ISO image of OS (Windows Server 2022, Ubuntu, RHEL)
-- Storage datastore with sufficient space
-- Network portgroup configured
-
-Step-by-Step VM Build:
-1. Log in to vCenter or ESXi host
-2. Right-click cluster/host → New Virtual Machine
-3. Select creation type: Create new virtual machine
-4. Name the VM (follow naming convention: SRV-APP-01)
-5. Select compute resource (host/cluster)
-6. Select storage datastore
-7. Choose compatibility (ESXi 7.0 or later recommended)
-8. Select Guest OS: Windows Server 2022 or Linux
-9. Configure hardware:
-   - CPU: 2-4 vCPUs (match workload requirements)
-   - RAM: 8-16 GB minimum
-   - Hard disk: 80 GB OS + additional data disks
-   - Network: Select correct portgroup/VLAN
-10. Mount ISO and power on VM
-11. Complete OS installation
-12. Install VMware Tools
-13. Configure IP address, DNS, hostname
-14. Join to Active Directory domain
-15. Install required applications
-16. Take baseline snapshot
-
-Post-Build Checklist:
-- Antivirus installed and updated
-- Windows Updates applied
-- Monitoring agent installed
-- Backup configured
-- Documentation updated`
-  },
-  {
-    id: 'sample-7', title: 'Office Move Checklist', category: 'Office Move',
-    tags: ['office-move', 'checklist', 'project'],
-    content: `OFFICE MOVE CHECKLIST
-
-Overview:
-An office move is a complex IT project requiring careful planning. This checklist ensures nothing is missed during the relocation.
-
-12 Weeks Before Move:
-- Audit all IT equipment (PCs, phones, printers, servers)
-- Plan new office network topology
-- Order new network equipment if required
-- Engage ISP for new office internet/WAN circuit
-- Plan server room/data centre layout
-- Identify which systems need to move vs cloud migration
-
-8 Weeks Before Move:
-- Install network infrastructure at new site
-- Configure switches, routers, wireless APs
-- Test internet connectivity at new site
-- Set up phone system (VoIP/PBX)
-- Order cabling works if required
-- Test VPN connectivity
-
-4 Weeks Before Move:
-- Label all equipment with new desk/location
-- Back up all critical data
-- Create detailed cable management plan
-- Test all meeting room AV equipment
-- Communicate IT move plan to all staff
-- Arrange IT support team for move weekend
-
-Move Weekend:
-- Shut down servers in correct sequence
-- Disconnect and label all cables
-- Physically move equipment in protected packaging
-- Set up server room first
-- Reconnect and power on servers
-- Test all systems before staff arrival
-
-Post-Move (Week 1):
-- Resolve outstanding IT issues
-- Update asset register with new locations
-- Update network documentation
-- Collect feedback from staff
-- Update DNS and IP records if changed
-- Decommission old site connectivity`
-  },
-  {
-    id: 'sample-8', title: 'How to Do an Office Move - Step by Step', category: 'Office Move',
-    tags: ['office-move', 'migration', 'planning'],
-    content: `OFFICE MOVE PROJECT GUIDE
-
-Overview:
-A successful office IT move requires a structured project approach. This guide covers the end-to-end process for IT project managers.
-
-Phase 1 - Discovery and Planning:
-1. Conduct IT infrastructure audit at current site
-2. Create inventory of all equipment
-3. Survey new office space
-4. Design network topology for new site
-5. Create project plan with milestones
-6. Identify risks and mitigation strategies
-7. Get budget approval
-8. Assign team roles and responsibilities
-
-Phase 2 - New Site Preparation:
-1. Engage structured cabling contractor
-2. Install server room cooling and power (UPS)
-3. Install core network switches and routers
-4. Configure VLANs and routing
-5. Set up wireless infrastructure
-6. Test all connectivity
-7. Set up VoIP phone system
-8. Install and test printers and AV equipment
-
-Phase 3 - Migration Weekend:
-1. Brief all IT staff on roles
-2. Follow shutdown sequence for servers
-3. Transport equipment safely
-4. Set up server room at new site
-5. Power on and test core infrastructure
-6. Set up user workstations
-7. Test all business-critical applications
-8. Keep helpdesk open for issues
-
-Phase 4 - Post-Move Support:
-1. Provide on-site IT support for first week
-2. Monitor systems for stability
-3. Resolve outstanding issues
-4. Close out project and document lessons learned
-5. Update all documentation`
-  },
-  {
-    id: 'sample-9', title: 'How to Move On-Premise to Cloud', category: 'Cloud',
-    tags: ['cloud', 'migration', 'azure', 'aws'],
-    content: `ON-PREMISE TO CLOUD MIGRATION GUIDE
-
-Overview:
-Cloud migration moves your IT infrastructure from physical servers to cloud platforms like Microsoft Azure, AWS, or Google Cloud. This guide covers the end-to-end process.
-
-Migration Strategies (6 R's):
-1. Rehost (Lift and Shift) - Move VMs as-is to cloud
-2. Replatform - Migrate with minor optimisations
-3. Repurchase - Switch to SaaS alternatives
-4. Refactor - Re-architect for cloud-native
-5. Retire - Decommission unused systems
-6. Retain - Keep on-premise (compliance reasons)
-
-Phase 1 - Assessment:
-1. Discover and catalogue all on-premise workloads
-2. Assess dependencies between applications
-3. Identify compliance and data sovereignty requirements
-4. Choose cloud provider (Azure, AWS, GCP)
-5. Estimate cloud costs vs current costs
-6. Define migration waves (what moves first)
-
-Phase 2 - Foundation Setup:
-1. Set up cloud landing zone (subscriptions, accounts)
-2. Configure identity (Azure AD, AWS IAM)
-3. Set up connectivity (ExpressRoute, Direct Connect, VPN)
-4. Configure security policies and governance
-5. Set up monitoring and logging
-
-Phase 3 - Migration Execution:
-1. Migrate non-critical workloads first (test)
-2. Use migration tools (Azure Migrate, AWS MGN)
-3. Validate each migrated workload
-4. Migrate critical workloads during maintenance windows
-5. Test failback procedures
-
-Phase 4 - Optimisation:
-1. Right-size VMs based on actual usage
-2. Implement auto-scaling
-3. Enable cloud-native services (managed databases, etc.)
-4. Optimise costs with reserved instances
-5. Decommission on-premise hardware`
-  },
-  {
-    id: 'sample-10', title: 'How to Migrate MS SQL from On-Premise to Cloud', category: 'Migration',
-    tags: ['sql', 'database', 'azure', 'migration', 'cloud'],
-    content: `MS SQL SERVER CLOUD MIGRATION GUIDE
-
-Overview:
-Migrating SQL Server from on-premise to cloud (Azure SQL or SQL Server on Azure VM) requires careful planning to minimise downtime and ensure data integrity.
-
-Target Options:
-1. Azure SQL Database (fully managed PaaS)
-2. Azure SQL Managed Instance (near-full compatibility)
-3. SQL Server on Azure VM (IaaS - full control)
-
-Pre-Migration Assessment:
-1. Inventory all SQL Server instances and databases
-2. Check SQL Server version compatibility
-3. Identify deprecated features in use
-4. Assess database sizes and growth rates
-5. Map application dependencies
-6. Define RTO/RPO requirements
-7. Run Data Migration Assistant (DMA) assessment
-
-Phase 1 - Preparation:
-1. Choose target (Azure SQL DB, MI, or VM)
-2. Size compute and storage requirements
-3. Set up Azure SQL environment
-4. Configure networking (private endpoints)
-5. Set up Azure Database Migration Service
-6. Test network connectivity from source to target
-
-Phase 2 - Migration:
-1. Take full backup of source databases
-2. Restore backup to Azure (for initial sync)
-3. Set up continuous replication using DMS
-4. Validate data integrity on target
-5. Test all application connections
-6. Run performance benchmarks
-
-Phase 3 - Cutover:
-1. Schedule maintenance window
-2. Stop application write traffic
-3. Allow final sync to complete
-4. Update connection strings in applications
-5. Test all application functionality
-6. Monitor for errors post-cutover
-
-Post-Migration:
-1. Monitor query performance
-2. Update statistics and rebuild indexes
-3. Configure automated backups
-4. Set up geo-replication for DR
-5. Decommission on-premise SQL Server
-6. Update documentation`
-  },
+const STATIC_ARTICLES = [
+  { id: 's1', title: 'How to Configure a Router', category: 'Networking', tags: ['router','cisco','networking'], is_ai_generated: false, created_at: new Date().toISOString(),
+    content: `OVERVIEW\nA router connects multiple networks and directs traffic. This guide covers enterprise router configuration.\n\nSTEP-BY-STEP GUIDE\n1. Connect via console cable or SSH\n2. Enter privileged EXEC: enable\n3. Global config: configure terminal\n4. Set hostname: hostname ROUTER-01\n5. Configure interface:\n   interface GigabitEthernet0/0\n   ip address 192.168.1.1 255.255.255.0\n   no shutdown\n6. Default route: ip route 0.0.0.0 0.0.0.0 [ISP-IP]\n7. Enable SSH: crypto key generate rsa modulus 2048\n8. Save: write memory\n\nBEST PRACTICES\n- Use strong passwords on console and VTY lines\n- Enable logging to syslog server\n- Disable unused interfaces\n- Use ACLs to restrict management access\n- Document all changes\n\nTROUBLESHOOTING\n- No connectivity: show ip interface brief\n- Routing issues: show ip route\n- SSH not working: verify crypto keys generated` },
+  { id: 's2', title: 'How to Configure Network Switches', category: 'Networking', tags: ['switch','vlan','cisco'], is_ai_generated: false, created_at: new Date().toISOString(),
+    content: `OVERVIEW\nManaged switches control Layer 2 traffic. This guide covers VLAN, trunking, and port security.\n\nSTEP-BY-STEP GUIDE\n1. Access switch console/SSH\n2. Create VLANs:\n   vlan 10 / name USERS\n   vlan 20 / name SERVERS\n3. Configure access port:\n   interface Fa0/1\n   switchport mode access\n   switchport access vlan 10\n4. Configure trunk:\n   interface Gi0/1\n   switchport mode trunk\n   switchport trunk allowed vlan 10,20\n5. Enable Rapid STP: spanning-tree mode rapid-pvst\n\nBEST PRACTICES\n- Disable unused ports in dead VLAN\n- Enable BPDU Guard on access ports\n- Segment VLANs for security\n- Document VLAN assignments\n\nTROUBLESHOOTING\n- VLAN not passing: check trunk config\n- Port err-disabled: check port security logs` },
+  { id: 's3', title: 'What is SD-WAN', category: 'Networking', tags: ['sdwan','wan','cloud'], is_ai_generated: false, created_at: new Date().toISOString(),
+    content: `OVERVIEW\nSD-WAN is a virtual WAN architecture leveraging any transport (MPLS, broadband, 4G/5G) with centralised management.\n\nKEY CONCEPTS\n- Centralised control plane\n- Application-aware routing\n- Multiple transport links\n- Zero-touch provisioning\n\nSTEP-BY-STEP DEPLOYMENT\n1. Plan topology (hub-and-spoke or mesh)\n2. Choose vendor (Cisco Viptela, VMware VeloCloud, Fortinet)\n3. Deploy controller/orchestrator\n4. Install edge devices at each site\n5. Configure WAN links and policies\n6. Define application routing policies\n7. Test failover between links\n\nBEST PRACTICES\n- Start with non-critical sites\n- Test failover thoroughly\n- Monitor link quality metrics\n- Define clear QoS policies\n\nTROUBLESHOOTING\n- High latency: check link quality\n- Site not connecting: verify underlay` },
+  { id: 's4', title: 'Office Move IT Checklist', category: 'Office Move', tags: ['office-move','checklist'], is_ai_generated: false, created_at: new Date().toISOString(),
+    content: `OVERVIEW\nIT office moves require careful planning. This checklist ensures nothing is missed.\n\n12 WEEKS BEFORE\n- Audit all IT equipment\n- Plan new network topology\n- Order network equipment\n- Engage ISP for new circuits\n\n8 WEEKS BEFORE\n- Install network infrastructure at new site\n- Configure switches, routers, APs\n- Test internet connectivity\n- Set up VoIP system\n\n4 WEEKS BEFORE\n- Label all equipment\n- Back up all critical data\n- Test AV equipment\n- Communicate plan to staff\n\nMOVE WEEKEND\n- Shut down servers in sequence\n- Disconnect and label cables\n- Move equipment safely\n- Test all systems before staff arrive\n\nPOST-MOVE\n- Resolve outstanding issues\n- Update asset register\n- Update network documentation` },
+  { id: 's5', title: 'How to Migrate SQL Server to Azure', category: 'Migration', tags: ['sql','azure','migration'], is_ai_generated: false, created_at: new Date().toISOString(),
+    content: `OVERVIEW\nMigrating SQL Server to Azure requires careful planning to minimise downtime and ensure data integrity.\n\nTARGET OPTIONS\n1. Azure SQL Database (PaaS - fully managed)\n2. Azure SQL Managed Instance (near-full compatibility)\n3. SQL Server on Azure VM (IaaS - full control)\n\nPRE-MIGRATION\n1. Run Data Migration Assistant (DMA)\n2. Identify deprecated features\n3. Assess database sizes\n4. Map application dependencies\n5. Define RTO/RPO\n\nMIGRATION STEPS\n1. Take full backup\n2. Restore to Azure\n3. Set up continuous replication via DMS\n4. Validate data integrity\n5. Test application connections\n6. Schedule cutover window\n\nPOST-MIGRATION\n- Monitor query performance\n- Rebuild indexes\n- Configure automated backups\n- Set up geo-replication\n- Decommission on-premise server` },
+  { id: 's6', title: 'How to Build a Server VM', category: 'Server & VM', tags: ['vm','vmware','virtualisation'], is_ai_generated: false, created_at: new Date().toISOString(),
+    content: `OVERVIEW\nVirtual machines allow multiple server instances on a single physical host using VMware vSphere/ESXi.\n\nPRE-REQUISITES\n- VMware ESXi host configured\n- vCenter Server\n- OS ISO image\n- Storage datastore\n- Network portgroup\n\nSTEP-BY-STEP BUILD\n1. Log in to vCenter\n2. New Virtual Machine wizard\n3. Name VM: SRV-APP-01\n4. Select compute resource\n5. Select datastore\n6. Configure hardware:\n   - CPU: 2-4 vCPUs\n   - RAM: 8-16 GB\n   - Disk: 80 GB OS + data disks\n   - Network: correct VLAN portgroup\n7. Mount ISO and install OS\n8. Install VMware Tools\n9. Configure IP, DNS, hostname\n10. Join Active Directory\n11. Take baseline snapshot\n\nPOST-BUILD CHECKLIST\n- Antivirus installed\n- Windows Updates applied\n- Monitoring agent installed\n- Backup configured` },
 ]
 
 export default function KnowledgeClient({ articles, userId }: { articles: any[], userId: string }) {
@@ -435,24 +65,44 @@ export default function KnowledgeClient({ articles, userId }: { articles: any[],
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [aiResult, setAiResult] = useState('')
+  const [aiTitle, setAiTitle] = useState('')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [aiMode, setAiMode] = useState<'search' | 'scope'>('search')
+  const [aiQuery, setAiQuery] = useState('')
+  const [aiCategory, setAiCategory] = useState('Networking')
+  const [savedToKB, setSavedToKB] = useState(false)
   const [localArticles, setLocalArticles] = useState(articles)
   const [newArticle, setNewArticle] = useState({ title: '', content: '', category: 'Networking', tags: '' })
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
 
-  // Combine sample + user articles
-  const allArticles = [...SAMPLE_ARTICLES, ...localArticles]
+  const allArticles = [...STATIC_ARTICLES, ...localArticles]
 
   const filtered = allArticles.filter(a => {
     const matchSearch = search === '' ||
       a.title.toLowerCase().includes(search.toLowerCase()) ||
       (a.content ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      a.tags.some((t: string) => t.toLowerCase().includes(search.toLowerCase()))
+      (a.tags ?? []).some((t: string) => t.toLowerCase().includes(search.toLowerCase()))
     const matchCat = category === 'All' || a.category === category
     return matchSearch && matchCat
   })
 
+  // Live search suggestions
+  useEffect(() => {
+    if (search.length > 1) {
+      const suggestions = SUGGESTED_TOPICS.filter(t =>
+        t.toLowerCase().includes(search.toLowerCase())
+      ).slice(0, 5)
+      setSearchSuggestions(suggestions)
+      setShowSuggestions(suggestions.length > 0 && filtered.length === 0)
+    } else {
+      setShowSuggestions(false)
+    }
+  }, [search, filtered.length])
+
   function downloadArticle(article: any) {
-    const blob = new Blob([`${article.title}\n${'='.repeat(article.title.length)}\n\n${article.content}`], { type: 'text/plain' })
+    const text = `${article.title}\n${'='.repeat(60)}\nCategory: ${article.category}\n\n${article.content}`
+    const blob = new Blob([text], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -461,36 +111,67 @@ export default function KnowledgeClient({ articles, userId }: { articles: any[],
     URL.revokeObjectURL(url)
   }
 
-  async function generateWithAI() {
-    if (!uploadedFile) return
+  async function generateAI() {
+    if (aiMode === 'scope' && !uploadedFile) return
+    if (aiMode === 'search' && !aiQuery.trim()) return
+
     setGenerating(true)
     setAiResult('')
+    setSavedToKB(false)
+
     try {
-      const text = await uploadedFile.text()
+      let scopeText = ''
+      if (aiMode === 'scope' && uploadedFile) {
+        scopeText = await uploadedFile.text()
+      }
+
       const response = await fetch('/api/ai-kb', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scopeDocument: text.slice(0, 4000), title: uploadedFile.name }),
+        body: JSON.stringify({
+          query: aiMode === 'search' ? aiQuery : '',
+          category: aiCategory,
+          scopeDocument: scopeText,
+          title: aiMode === 'scope' ? uploadedFile?.name : aiQuery,
+          saveToKB: aiMode === 'search',
+          userId,
+        }),
       })
+
       const data = await response.json()
-      setAiResult(data.content ?? 'Failed to generate. Please try again.')
+      setAiResult(data.content ?? 'Failed to generate.')
+      setAiTitle(aiMode === 'search' ? aiQuery : (uploadedFile?.name ?? 'Project Plan'))
+
+      if (data.saved) {
+        setSavedToKB(true)
+        // Add to local articles list
+        setLocalArticles((prev: any[]) => [{
+          id: data.articleId,
+          title: aiQuery,
+          content: data.content,
+          category: aiCategory,
+          tags: [aiCategory.toLowerCase(), 'ai-generated'],
+          is_ai_generated: true,
+          created_at: new Date().toISOString(),
+        }, ...prev])
+      }
     } catch (e) {
-      setAiResult('Error connecting to AI. Please check your API key.')
+      setAiResult('Error connecting to AI. Please add ANTHROPIC_API_KEY to Vercel environment variables.')
     }
     setGenerating(false)
   }
 
   function downloadAIResult() {
-    const blob = new Blob([aiResult], { type: 'text/plain' })
+    const blob = new Blob([`${aiTitle}\n${'='.repeat(60)}\n\n${aiResult}`], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'ai-project-plan.txt'
+    a.download = `${aiTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.txt`
     a.click()
     URL.revokeObjectURL(url)
   }
 
-  async function saveArticle() {
+  async function saveManualArticle() {
     if (!newArticle.title.trim()) return
     setSaving(true)
     const tags = newArticle.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
@@ -506,101 +187,178 @@ export default function KnowledgeClient({ articles, userId }: { articles: any[],
 
   return (
     <div className="space-y-6">
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 flex items-center gap-3 bg-surface border border-border rounded-xl px-4 py-3 min-w-[200px]">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted shrink-0">
+      {/* Search bar */}
+      <div className="relative">
+        <div className="flex items-center gap-3 bg-surface border border-border rounded-xl px-4 py-3.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent shrink-0">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted"
-            placeholder="Search: router, SDWAN, office move, cloud migration..."
-            value={search} onChange={e => setSearch(e.target.value)}/>
-          {search && <button onClick={() => setSearch('')} className="text-muted hover:text-text text-lg">x</button>}
+          <input
+            className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted"
+            placeholder="Search anything: BGP, SDWAN, office move, Azure migration, firewall..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setShowSuggestions(true) }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && search.trim() && filtered.length === 0) {
+                setAiQuery(search)
+                setShowAI(true)
+                setShowSuggestions(false)
+              }
+            }}/>
+          {search && (
+            <button onClick={() => { setSearch(''); setShowSuggestions(false) }} className="text-muted hover:text-text">✕</button>
+          )}
+          {search && filtered.length === 0 && (
+            <button onClick={() => { setAiQuery(search); setShowAI(true); setShowSuggestions(false) }}
+              className="btn-primary text-xs px-3 py-1.5 shrink-0 whitespace-nowrap">
+              Generate with AI
+            </button>
+          )}
         </div>
-        <button onClick={() => setShowAI(true)} className="btn-ghost text-sm px-4 py-2">AI Generator</button>
-        <button onClick={() => setShowAdd(true)} className="btn-primary text-sm px-4 py-2">+ New Article</button>
-      </div>
 
-      <div className="flex gap-5">
-        {/* Sidebar */}
-        <div className="w-48 shrink-0">
-          <div className="card p-4">
-            <p className="font-mono-code text-xs text-muted uppercase tracking-widest mb-3">Categories</p>
-            {CATEGORIES.map(cat => (
-              <button key={cat} onClick={() => setCategory(cat)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${category === cat ? 'bg-accent/10 text-accent font-semibold' : 'text-muted hover:text-text hover:bg-surface2'}`}>
-                {cat}
-                <span className="float-right text-xs opacity-60">
-                  {cat === 'All' ? allArticles.length : allArticles.filter((a: any) => a.category === cat).length}
-                </span>
+        {/* Search suggestions */}
+        {showSuggestions && searchSuggestions.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-xl z-20 overflow-hidden">
+            <p className="px-4 py-2 text-xs text-muted font-mono-code border-b border-border">Suggested topics</p>
+            {searchSuggestions.map(s => (
+              <button key={s} onClick={() => { setSearch(s); setShowSuggestions(false) }}
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-surface2 transition-colors flex items-center gap-2">
+                <span className="text-accent text-xs">→</span> {s}
               </button>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* No results — prompt AI */}
+      {search && filtered.length === 0 && (
+        <div className="card border-accent/30 bg-accent/5 text-center py-10">
+          <p className="text-lg mb-1">No articles found for <span className="text-accent font-semibold">"{search}"</span></p>
+          <p className="text-muted text-sm mb-4">Let AI generate a professional IT article on this topic and save it to your knowledge base</p>
+          <button onClick={() => { setAiQuery(search); setAiMode('search'); setShowAI(true) }}
+            className="btn-primary px-6 py-2.5">
+            Generate AI Article for "{search}"
+          </button>
+        </div>
+      )}
+
+      <div className="flex gap-5">
+        {/* Sidebar */}
+        <div className="w-52 shrink-0 space-y-3">
+          <div className="card p-3">
+            <p className="font-mono-code text-xs text-muted uppercase tracking-widest mb-2 px-1">Categories</p>
+            {CATEGORIES.map(cat => {
+              const count = cat.name === 'All' ? allArticles.length : allArticles.filter((a: any) => a.category === cat.name).length
+              return (
+                <button key={cat.name} onClick={() => setCategory(cat.name)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm mb-0.5 transition-colors flex items-center gap-2 ${
+                    category === cat.name ? 'bg-accent/10 text-accent font-semibold' : 'text-muted hover:text-text hover:bg-surface2'
+                  }`}>
+                  <span>{cat.icon}</span>
+                  <span className="flex-1">{cat.name}</span>
+                  <span className="text-xs opacity-50">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* AI Actions */}
+          <div className="card p-3 space-y-2">
+            <p className="font-mono-code text-xs text-muted uppercase tracking-widest mb-2 px-1">AI Tools</p>
+            <button onClick={() => { setAiMode('search'); setShowAI(true) }}
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm bg-accent/10 text-accent hover:bg-accent/20 transition-colors font-semibold">
+              Ask AI Anything
+            </button>
+            <button onClick={() => { setAiMode('scope'); setShowAI(true) }}
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm bg-accent2/10 text-purple-300 hover:bg-accent2/20 transition-colors font-semibold">
+              Upload Scope Doc
+            </button>
+            <button onClick={() => setShowAdd(true)}
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-surface2 transition-colors text-muted">
+              + Write Article
+            </button>
+          </div>
         </div>
 
-        {/* Articles */}
+        {/* Articles grid */}
         <div className="flex-1 space-y-3">
-          {search && (
-            <p className="text-sm text-muted font-mono-code">{filtered.length} result{filtered.length !== 1 ? 's' : ''} for "{search}"</p>
-          )}
-          {filtered.length === 0 ? (
-            <div className="card text-center py-16">
-              <h3 className="font-syne font-bold text-lg mb-2">No articles found</h3>
-              <p className="text-muted text-sm mb-4">Try searching for: router, switch, SDWAN, office move, cloud, SQL</p>
-              <button onClick={() => setSearch('')} className="btn-ghost text-sm px-4 py-2 mr-2">Clear Search</button>
-              <button onClick={() => setShowAI(true)} className="btn-primary text-sm px-4 py-2">Try AI Generator</button>
-            </div>
-          ) : filtered.map((article: any) => (
+          {/* Stats bar */}
+          <div className="flex items-center justify-between text-xs text-muted font-mono-code">
+            <span>{filtered.length} article{filtered.length !== 1 ? 's' : ''} {category !== 'All' ? `in ${category}` : ''}</span>
+            <span>{allArticles.filter((a: any) => a.is_ai_generated).length} AI-generated</span>
+          </div>
+
+          {filtered.length > 0 && filtered.map((article: any) => (
             <div key={article.id}
               className="card hover:border-accent/40 cursor-pointer transition-all hover:-translate-y-0.5 group">
               <div className="flex items-start justify-between mb-2">
-                <h3 className="font-syne font-bold group-hover:text-accent transition-colors" onClick={() => setShowView(article)}>
-                  {article.title}
-                </h3>
-                <span className="text-xs bg-accent2/10 text-purple-300 px-2 py-1 rounded-lg font-mono-code ml-3 shrink-0">{article.category}</span>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <h3 className="font-syne font-bold group-hover:text-accent transition-colors truncate"
+                    onClick={() => setShowView(article)}>
+                    {article.title}
+                  </h3>
+                  {article.is_ai_generated && (
+                    <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded font-mono-code shrink-0">AI</span>
+                  )}
+                </div>
+                <span className="text-xs bg-accent2/10 text-purple-300 px-2 py-1 rounded-lg font-mono-code ml-3 shrink-0">
+                  {article.category}
+                </span>
               </div>
               <p className="text-sm text-muted mb-3 line-clamp-2" onClick={() => setShowView(article)}>
-                {(article.content ?? '').slice(0, 160)}...
+                {(article.content ?? '').replace(/\n/g, ' ').slice(0, 180)}...
               </p>
               <div className="flex items-center justify-between">
                 <div className="flex gap-1 flex-wrap">
-                  {article.tags.slice(0, 4).map((tag: string) => (
+                  {(article.tags ?? []).slice(0, 4).map((tag: string) => (
                     <span key={tag} className="px-2 py-0.5 bg-surface2 rounded text-xs text-muted font-mono-code">{tag}</span>
                   ))}
                 </div>
-                <div className="flex gap-2 ml-3 shrink-0">
-                  <button onClick={() => setShowView(article)}
-                    className="text-xs text-accent hover:underline font-mono-code">Read</button>
-                  <button onClick={() => downloadArticle(article)}
-                    className="text-xs text-accent3 hover:underline font-mono-code">Download</button>
+                <div className="flex gap-3 ml-3 shrink-0">
+                  <button onClick={() => setShowView(article)} className="text-xs text-accent hover:underline font-mono-code">Read</button>
+                  <button onClick={() => downloadArticle(article)} className="text-xs text-accent3 hover:underline font-mono-code">Download</button>
                 </div>
               </div>
             </div>
           ))}
+
+          {/* Suggested topics when empty */}
+          {!search && filtered.length <= 6 && (
+            <div className="card border-dashed">
+              <p className="font-syne font-bold mb-3 text-sm">Popular IT Topics — Click to Generate</p>
+              <div className="flex flex-wrap gap-2">
+                {SUGGESTED_TOPICS.slice(0, 12).map(topic => (
+                  <button key={topic}
+                    onClick={() => { setAiQuery(topic); setAiMode('search'); setShowAI(true) }}
+                    className="text-xs px-3 py-1.5 bg-surface2 hover:bg-accent/10 hover:text-accent border border-border hover:border-accent/30 rounded-lg transition-all font-mono-code">
+                    {topic}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Read Article Modal */}
       {showView && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowView(null)}>
-          <div className="card w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={(e: any) => e.stopPropagation()}>
-            <div className="flex items-start justify-between p-8 pb-4 border-b border-border">
-              <div>
-                <span className="text-xs bg-accent2/10 text-purple-300 px-2 py-1 rounded-lg font-mono-code">{showView.category}</span>
-                <h2 className="font-syne font-black text-2xl mt-2">{showView.title}</h2>
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  {showView.tags.map((tag: string) => (
-                    <span key={tag} className="px-2 py-0.5 bg-surface2 rounded text-xs text-muted">{tag}</span>
-                  ))}
+          <div className="card w-full max-w-3xl max-h-[88vh] flex flex-col" onClick={(e: any) => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-8 pb-4 border-b border-border shrink-0">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs bg-accent2/10 text-purple-300 px-2 py-1 rounded-lg font-mono-code">{showView.category}</span>
+                  {showView.is_ai_generated && <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-lg font-mono-code">AI Generated</span>}
                 </div>
+                <h2 className="font-syne font-black text-2xl mt-1">{showView.title}</h2>
               </div>
               <div className="flex gap-2 ml-4 shrink-0">
                 <button onClick={() => downloadArticle(showView)} className="btn-ghost text-xs px-3 py-1.5">Download</button>
-                <button onClick={() => setShowView(null)} className="text-muted hover:text-text text-xl font-bold px-2">X</button>
+                <button onClick={() => setShowView(null)} className="text-muted hover:text-text text-xl px-2">✕</button>
               </div>
             </div>
-            <div className="overflow-y-auto p-8 pt-6">
-              <pre className="text-sm text-text leading-relaxed whitespace-pre-wrap font-dm">{showView.content}</pre>
+            <div className="overflow-y-auto p-8 pt-5">
+              <pre className="text-sm text-text leading-relaxed whitespace-pre-wrap font-sans">{showView.content}</pre>
             </div>
           </div>
         </div>
@@ -609,54 +367,109 @@ export default function KnowledgeClient({ articles, userId }: { articles: any[],
       {/* AI Generator Modal */}
       {showAI && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-3xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-8 pb-4 border-b border-border">
+          <div className="card w-full max-w-3xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between p-8 pb-5 border-b border-border shrink-0">
               <div>
-                <h3 className="font-syne font-black text-xl">AI Project Plan Generator</h3>
-                <p className="text-muted text-sm mt-1">Upload your project scope document and AI will generate a complete project plan</p>
+                <h3 className="font-syne font-black text-xl">AI Knowledge Generator</h3>
+                <p className="text-muted text-sm mt-1">Generate professional IT documentation instantly</p>
               </div>
-              <button onClick={() => { setShowAI(false); setAiResult(''); setUploadedFile(null) }}
-                className="text-muted hover:text-text text-xl font-bold">X</button>
+              <button onClick={() => { setShowAI(false); setAiResult(''); setUploadedFile(null); setSavedToKB(false) }}
+                className="text-muted hover:text-text text-xl">✕</button>
             </div>
 
-            <div className="overflow-y-auto p-8 pt-6 space-y-5">
-              {/* Upload */}
-              <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-2">Upload Scope Document (TXT, PDF, DOCX)</label>
-                <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${uploadedFile ? 'border-accent3 bg-accent3/5' : 'border-border hover:border-accent/50'}`}>
-                  {uploadedFile ? (
-                    <div>
-                      <p className="text-accent3 font-semibold mb-1">{uploadedFile.name}</p>
-                      <p className="text-muted text-xs">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
-                      <button onClick={() => setUploadedFile(null)} className="text-xs text-danger hover:underline mt-2">Remove</button>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-muted text-sm mb-3">Drag and drop your scope document or click to browse</p>
-                      <p className="text-xs text-muted mb-4">Supports: .txt, .pdf, .docx — Examples: Network Migration Scope, Office Move Plan, SDWAN Rollout Brief</p>
-                    </div>
-                  )}
-                  <input type="file" accept=".txt,.pdf,.docx" className="hidden" id="scope-upload"
-                    onChange={e => setUploadedFile(e.target.files?.[0] ?? null)}/>
-                  {!uploadedFile && (
-                    <label htmlFor="scope-upload" className="btn-primary text-sm px-4 py-2 cursor-pointer">Browse Files</label>
-                  )}
-                </div>
+            <div className="overflow-y-auto p-8 pt-5 space-y-5 flex-1">
+              {/* Mode tabs */}
+              <div className="flex gap-2 p-1 bg-surface2 rounded-xl">
+                <button onClick={() => setAiMode('search')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all ${aiMode === 'search' ? 'bg-accent text-black' : 'text-muted hover:text-text'}`}>
+                  Ask About Any IT Topic
+                </button>
+                <button onClick={() => setAiMode('scope')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all ${aiMode === 'scope' ? 'bg-accent2 text-white' : 'text-muted hover:text-text'}`}>
+                  Upload Scope Document
+                </button>
               </div>
 
-              <button onClick={generateWithAI} disabled={!uploadedFile || generating}
-                className="btn-primary w-full justify-center py-3 disabled:opacity-40">
-                {generating ? 'AI is generating your project plan...' : 'Generate Project Plan with AI'}
+              {aiMode === 'search' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-2">What do you want to know?</label>
+                    <input className="input text-base" placeholder="e.g. How to configure BGP between two Cisco routers"
+                      value={aiQuery} onChange={e => setAiQuery(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && generateAI()}
+                      autoFocus/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-2">Category</label>
+                    <select className="select" value={aiCategory} onChange={e => setAiCategory(e.target.value)}>
+                      {CATEGORIES.filter(c => c.name !== 'All').map(c => <option key={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <p className="text-xs text-muted">Article will be automatically saved to your Knowledge Base for future searches.</p>
+
+                  {/* Quick suggestions */}
+                  <div>
+                    <p className="text-xs text-muted mb-2">Quick topics:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {SUGGESTED_TOPICS.slice(0, 8).map(t => (
+                        <button key={t} onClick={() => setAiQuery(t)}
+                          className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-mono-code ${aiQuery === t ? 'border-accent text-accent bg-accent/10' : 'border-border text-muted hover:border-accent/50'}`}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-2">Upload Project Scope Document</label>
+                    <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${uploadedFile ? 'border-accent3 bg-accent3/5' : 'border-border hover:border-accent/50'}`}>
+                      {uploadedFile ? (
+                        <div>
+                          <p className="text-accent3 font-semibold">{uploadedFile.name}</p>
+                          <p className="text-muted text-xs mt-1">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
+                          <button onClick={() => setUploadedFile(null)} className="text-xs text-danger hover:underline mt-2 block mx-auto">Remove</button>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-muted text-sm mb-2">Drop your scope document here</p>
+                          <p className="text-xs text-muted mb-4">Supports .txt, .pdf, .docx — Network scope, office move plan, SDWAN brief etc.</p>
+                          <label htmlFor="scope-upload" className="btn-primary text-sm px-4 py-2 cursor-pointer">Browse Files</label>
+                          <input type="file" accept=".txt,.pdf,.docx" className="hidden" id="scope-upload"
+                            onChange={e => setUploadedFile(e.target.files?.[0] ?? null)}/>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted">AI will generate a complete project plan with phases, steps, risks, and success criteria.</p>
+                </div>
+              )}
+
+              <button onClick={generateAI}
+                disabled={generating || (aiMode === 'search' ? !aiQuery.trim() : !uploadedFile)}
+                className="btn-primary w-full py-3 text-base justify-center disabled:opacity-40">
+                {generating ? (
+                  <span className="flex items-center gap-2 justify-center">
+                    <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"/>
+                    Generating... this may take 10-20 seconds
+                  </span>
+                ) : aiMode === 'search' ? 'Generate IT Article' : 'Generate Project Plan'}
               </button>
 
               {/* AI Result */}
               {aiResult && (
-                <div className="border border-accent3/30 rounded-xl bg-accent3/5 p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-syne font-bold text-accent3">AI Generated Project Plan</p>
+                <div className="border border-accent3/30 rounded-xl bg-surface overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-accent3/5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-accent3 font-syne font-bold text-sm">{aiTitle}</span>
+                      {savedToKB && <span className="text-xs bg-accent3/10 text-accent3 px-2 py-0.5 rounded font-mono-code">Saved to KB</span>}
+                    </div>
                     <button onClick={downloadAIResult} className="btn-ghost text-xs px-3 py-1.5">Download</button>
                   </div>
-                  <pre className="text-sm text-text leading-relaxed whitespace-pre-wrap font-dm max-h-96 overflow-y-auto">{aiResult}</pre>
+                  <div className="p-5 max-h-96 overflow-y-auto">
+                    <pre className="text-sm text-text leading-relaxed whitespace-pre-wrap font-sans">{aiResult}</pre>
+                  </div>
                 </div>
               )}
             </div>
@@ -664,26 +477,26 @@ export default function KnowledgeClient({ articles, userId }: { articles: any[],
         </div>
       )}
 
-      {/* Add Article Modal */}
+      {/* Manual Add Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-2xl p-8">
-            <h3 className="font-syne font-black text-xl mb-6">New Article</h3>
+            <h3 className="font-syne font-black text-xl mb-6">Write New Article</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Title</label>
-                <input className="input" placeholder="e.g. VPN Setup Guide" value={newArticle.title} onChange={e => setNewArticle(a => ({...a, title: e.target.value}))} autoFocus/>
+                <input className="input" placeholder="Article title" value={newArticle.title} onChange={e => setNewArticle(a => ({...a, title: e.target.value}))} autoFocus/>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Category</label>
                   <select className="select" value={newArticle.category} onChange={e => setNewArticle(a => ({...a, category: e.target.value}))}>
-                    {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c}>{c}</option>)}
+                    {CATEGORIES.filter(c => c.name !== 'All').map(c => <option key={c.name}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Tags (comma separated)</label>
-                  <input className="input" placeholder="vpn, cisco, network" value={newArticle.tags} onChange={e => setNewArticle(a => ({...a, tags: e.target.value}))}/>
+                  <input className="input" placeholder="cisco, routing, layer3" value={newArticle.tags} onChange={e => setNewArticle(a => ({...a, tags: e.target.value}))}/>
                 </div>
               </div>
               <div>
@@ -693,7 +506,7 @@ export default function KnowledgeClient({ articles, userId }: { articles: any[],
             </div>
             <div className="flex gap-3 justify-end mt-6">
               <button onClick={() => setShowAdd(false)} className="btn-ghost">Cancel</button>
-              <button onClick={saveArticle} className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save Article'}</button>
+              <button onClick={saveManualArticle} className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save Article'}</button>
             </div>
           </div>
         </div>

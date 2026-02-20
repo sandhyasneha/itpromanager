@@ -1,89 +1,91 @@
-import Link from 'next/link'
+'use client'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
-export default function LandingPage() {
+const ROLES = ['IT Project Manager','Network Engineer','Sponsor','Stakeholder','Other']
+const COUNTRIES = ['United States','United Kingdom','India','Australia','Canada','Singapore','Germany','South Africa','UAE','New Zealand','Other']
+
+export default function SettingsPage() {
+  const supabase = createClient()
+  const router = useRouter()
+  const [profile, setProfile] = useState<any>({})
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('*').eq('id', user.id).single()
+          .then(({ data }) => {
+            if (data) setProfile(data)
+            else setProfile({
+              email: user.email,
+              full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? '',
+              role: user.user_metadata?.role ?? 'IT Project Manager',
+              country: user.user_metadata?.country ?? 'United States',
+            })
+          })
+      }
+    })
+  }, [])
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('profiles').upsert({
+      id: user!.id,
+      email: user!.email,
+      full_name: profile.full_name,
+      role: profile.role,
+      country: profile.country,
+    })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => {
+      setSaved(false)
+      // Force refresh so topbar picks up new name
+      router.refresh()
+    }, 1500)
+  }
+
   return (
-    <div className="min-h-screen bg-bg relative overflow-hidden">
-      {/* Grid background */}
-      <div className="fixed inset-0 grid-bg opacity-40 pointer-events-none" />
-
-      {/* Glow orbs */}
-      <div className="fixed w-[600px] h-[600px] rounded-full blur-[120px] opacity-10 bg-accent -top-48 -left-48 pointer-events-none" />
-      <div className="fixed w-[600px] h-[600px] rounded-full blur-[120px] opacity-10 bg-accent2 -bottom-48 -right-48 pointer-events-none" />
-
-      {/* NAV */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 py-5 backdrop-blur-xl bg-bg/70 border-b border-border">
-        <div className="font-syne font-black text-xl">IT<span className="text-accent">Pro</span>Manager</div>
-        <div className="hidden md:flex gap-8">
-          {['Features','Pricing','Docs','About'].map(l => (
-            <span key={l} className="text-muted text-sm cursor-pointer hover:text-text transition-colors">{l}</span>
-          ))}
-        </div>
-        <div className="flex gap-3">
-          <Link href="/login" className="btn-ghost text-sm px-4 py-2">Sign In</Link>
-          <Link href="/login" className="btn-primary text-sm px-4 py-2">Get Started Free</Link>
-        </div>
-      </nav>
-
-      {/* HERO */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 pt-44 pb-24">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-accent3/10 border border-accent3/30 rounded-full text-accent3 text-xs font-mono mb-6">
-          ✦ 100% Free — No credit card required
-        </div>
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-accent/8 border border-accent/25 rounded-full text-accent text-xs font-mono mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          🚀 AI-Powered Project Intelligence
-        </div>
-        <h1 className="font-syne font-black text-5xl md:text-7xl leading-[1.04] tracking-tight max-w-4xl mb-6">
-          The <span className="text-accent glow-text">IT Project Manager</span><br/>Tool Built for Real Teams
-        </h1>
-        <p className="text-muted text-lg max-w-2xl leading-relaxed mb-12">
-          Kanban workflows, AI-generated project plans, network diagrams, and a knowledge base —
-          purpose-built for IT PMs, Engineers, Sponsors &amp; Stakeholders.
-        </p>
-        <div className="flex flex-wrap gap-4 justify-center">
-          <Link href="/login" className="btn-primary px-8 py-3 text-base">Start for Free →</Link>
-          <Link href="/dashboard" className="btn-ghost px-8 py-3 text-base">View Demo</Link>
-        </div>
+    <div className="max-w-lg">
+      <h2 className="font-syne font-black text-2xl mb-6">Account Settings</h2>
+      <div className="card p-8">
+        {saved && (
+          <div className="mb-4 px-4 py-3 bg-accent3/10 border border-accent3/30 rounded-xl text-accent3 text-sm">
+            Profile updated! Refreshing...
+          </div>
+        )}
+        <form onSubmit={save} className="space-y-5">
+          <div>
+            <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Full Name</label>
+            <input className="input" value={profile.full_name ?? ''} onChange={e => setProfile((p: any) => ({...p, full_name: e.target.value}))} placeholder="Your full name"/>
+          </div>
+          <div>
+            <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Email</label>
+            <input className="input opacity-60 cursor-not-allowed" value={profile.email ?? ''} disabled/>
+            <p className="text-xs text-muted mt-1">Email cannot be changed after signup</p>
+          </div>
+          <div>
+            <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Role</label>
+            <select className="select" value={profile.role ?? 'IT Project Manager'} onChange={e => setProfile((p: any) => ({...p, role: e.target.value}))}>
+              {ROLES.map(r => <option key={r}>{r}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Country</label>
+            <select className="select" value={profile.country ?? 'United States'} onChange={e => setProfile((p: any) => ({...p, country: e.target.value}))}>
+              {COUNTRIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <button type="submit" className="btn-primary w-full justify-center" disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
       </div>
-
-      {/* FEATURES */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 pb-24">
-        <p className="font-mono-code text-accent text-xs tracking-widest uppercase mb-3">// Core Features</p>
-        <h2 className="font-syne font-black text-4xl tracking-tight mb-12">
-          Everything a PM needs,<br/>nothing they don't.
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[
-            { icon:'📋', title:'Kanban Workflow', desc:'Visual drag-and-drop boards with custom columns, priority tags, assignees and due dates.', color:'bg-accent/10' },
-            { icon:'🤖', title:'AI Plan Generator', desc:'Describe your project and AI generates a full plan with milestones, tasks and timelines.', color:'bg-accent2/10' },
-            { icon:'🗺️', title:'Network Diagrams', desc:'Generate high-level network architecture diagrams automatically from project inputs.', color:'bg-accent3/10' },
-            { icon:'📚', title:'Knowledge Base', desc:'Centralized docs hub for runbooks, SOPs, lessons learned and team wikis.', color:'bg-warn/10' },
-            { icon:'📊', title:'Project Dashboard', desc:'Real-time KPIs, project health scores, budget tracking and resource utilization.', color:'bg-accent/10' },
-            { icon:'🔐', title:'SSO Authentication', desc:'Sign in with Gmail, Microsoft Outlook, or Facebook. Email mandatory for access.', color:'bg-accent2/10' },
-          ].map(f => (
-            <div key={f.title} className="card hover:border-accent/50 hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-              <div className={`w-12 h-12 rounded-xl ${f.color} flex items-center justify-center text-2xl mb-4`}>{f.icon}</div>
-              <h3 className="font-syne font-bold text-base mb-2">{f.title}</h3>
-              <p className="text-muted text-sm leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ROLES */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 pb-24">
-        <p className="font-mono-code text-accent text-xs tracking-widest uppercase mb-3">// Built for</p>
-        <h2 className="font-syne font-black text-4xl tracking-tight mb-8">Every role in the project ecosystem</h2>
-        <div className="flex gap-3 flex-wrap">
-          {['🧑‍💼 IT Project Manager','🌐 Network Engineer','💰 Project Sponsor','👥 Stakeholder','🔧 DevOps Engineer','🧪 QA Lead'].map((r, i) => (
-            <span key={r} className={`px-5 py-2.5 rounded-full border text-sm ${i < 4 ? 'border-accent/40 text-accent bg-accent/8' : 'border-border text-muted'}`}>{r}</span>
-          ))}
-        </div>
-      </div>
-
-      <footer className="relative z-10 text-center py-10 text-muted text-sm border-t border-border">
-        © 2025 ITProManager · Free for IT professionals worldwide · Built with ❤️ for Project Managers
-      </footer>
     </div>
   )
 }

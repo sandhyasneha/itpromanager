@@ -19,33 +19,56 @@ const COL_BORDERS: Record<TaskStatus, string> = {
   done:        'border-accent3/30',
 }
 
+const STATUSES: TaskStatus[] = ['backlog', 'in_progress', 'review', 'blocked', 'done']
+
+function buildColumns(tasks: Task[]): KanbanColumn[] {
+  const META: Record<TaskStatus, { title: string; emoji: string; color: string }> = {
+    backlog:     { title: 'Backlog',     emoji: '🗂',  color: 'text-muted' },
+    in_progress: { title: 'In Progress', emoji: '⚡',  color: 'text-accent' },
+    review:      { title: 'Review',      emoji: '👁',  color: 'text-warn' },
+    blocked:     { title: 'Blocked',     emoji: '🚫',  color: 'text-danger' },
+    done:        { title: 'Done',        emoji: '✅',  color: 'text-accent3' },
+  }
+  return STATUSES.map(id => ({
+    id,
+    ...META[id],
+    tasks: tasks.filter(t => t.status === id),
+  }))
+}
+
 export default function KanbanBoard({
   initialColumns,
   projects,
   initialProjectId,
-  allTasks,
 }: {
   initialColumns: KanbanColumn[]
   projects: Project[]
   initialProjectId: string | null
-  allTasks: Task[]
+  allTasks?: Task[]
 }) {
   const supabase = createClient()
   const [columns, setColumns] = useState(initialColumns)
   const [projectId, setProjectId] = useState(initialProjectId)
+  const [loading, setLoading] = useState(false)
   const [showAddTask, setShowAddTask] = useState<TaskStatus | null>(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showAddProject, setShowAddProject] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [localProjects, setLocalProjects] = useState(projects)
 
-  // Switch project — filter allTasks client-side
-  function switchProject(newProjectId: string) {
+  // Fetch tasks from Supabase when switching project
+  async function switchProject(newProjectId: string) {
+    if (newProjectId === projectId) return
     setProjectId(newProjectId)
-    setColumns(prev => prev.map(col => ({
-      ...col,
-      tasks: allTasks.filter(t => t.project_id === newProjectId && t.status === col.id)
-    })))
+    setLoading(true)
+    const { data } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('project_id', newProjectId)
+      .order('position', { ascending: true })
+    setColumns(buildColumns((data ?? []) as Task[]))
+    setLoading(false)
   }
 
   const onDragEnd = useCallback(async (result: DropResult) => {
@@ -103,8 +126,10 @@ export default function KanbanBoard({
     }).select().single()
 
     if (data) {
-      projects.unshift(data as Project)
-      switchProject(data.id)
+      const newProject = data as Project
+      setLocalProjects(p => [newProject, ...p])
+      setProjectId(newProject.id)
+      setColumns(buildColumns([]))
       setNewProjectName('')
       setShowAddProject(false)
     }
@@ -116,12 +141,12 @@ export default function KanbanBoard({
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          {projects.length > 0 ? (
+          {localProjects.length > 0 ? (
             <select
               className="select w-auto"
               value={projectId ?? ''}
               onChange={e => switchProject(e.target.value)}>
-              {projects.map(p => (
+              {localProjects.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
@@ -167,12 +192,15 @@ export default function KanbanBoard({
           <p className="text-muted mb-6">Create a project to start managing your Kanban board.</p>
           <button onClick={() => setShowAddProject(true)} className="btn-primary">+ Create First Project</button>
         </div>
+      ) : loading ? (
+        <div className="text-center py-24">
+          <p className="text-muted animate-pulse">Loading tasks...</p>
+        </div>
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
             {columns.map(col => (
               <div key={col.id} className={`flex-shrink-0 w-[272px] bg-surface border rounded-2xl p-4 ${COL_BORDERS[col.id]}`}>
-                {/* Column header */}
                 <div className="flex items-center gap-2 font-syne font-bold text-sm mb-4">
                   <span className={col.color}>{col.emoji} {col.title}</span>
                   <span className="w-5 h-5 rounded-md bg-surface2 flex items-center justify-center text-xs text-muted font-normal ml-auto">
@@ -180,7 +208,6 @@ export default function KanbanBoard({
                   </span>
                 </div>
 
-                {/* Cards */}
                 <Droppable droppableId={col.id}>
                   {(provided, snapshot) => (
                     <div
@@ -227,7 +254,6 @@ export default function KanbanBoard({
                   )}
                 </Droppable>
 
-                {/* Add card */}
                 {showAddTask === col.id ? (
                   <div className="mt-2">
                     <textarea

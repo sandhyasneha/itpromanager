@@ -20,11 +20,15 @@ const COL_BORDERS: Record<TaskStatus, string> = {
 }
 
 export default function KanbanBoard({
-  initialColumns, projects, initialProjectId
+  initialColumns,
+  projects,
+  initialProjectId,
+  allTasks,
 }: {
   initialColumns: KanbanColumn[]
   projects: Project[]
   initialProjectId: string | null
+  allTasks: Task[]
 }) {
   const supabase = createClient()
   const [columns, setColumns] = useState(initialColumns)
@@ -34,6 +38,15 @@ export default function KanbanBoard({
   const [showAddProject, setShowAddProject] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Switch project — filter allTasks client-side
+  function switchProject(newProjectId: string) {
+    setProjectId(newProjectId)
+    setColumns(prev => prev.map(col => ({
+      ...col,
+      tasks: allTasks.filter(t => t.project_id === newProjectId && t.status === col.id)
+    })))
+  }
 
   const onDragEnd = useCallback(async (result: DropResult) => {
     const { source, destination, draggableId } = result
@@ -68,7 +81,9 @@ export default function KanbanBoard({
     }).select().single()
 
     if (data) {
-      setColumns(prev => prev.map(c => c.id === colId ? { ...c, tasks: [...c.tasks, data as Task] } : c))
+      setColumns(prev => prev.map(c =>
+        c.id === colId ? { ...c, tasks: [...c.tasks, data as Task] } : c
+      ))
     }
     setNewTaskTitle('')
     setShowAddTask(null)
@@ -83,10 +98,13 @@ export default function KanbanBoard({
       name: newProjectName.trim(),
       owner_id: user!.id,
       color: '#00d4ff',
+      status: 'active',
+      progress: 0,
     }).select().single()
 
     if (data) {
-      setProjectId(data.id)
+      projects.unshift(data as Project)
+      switchProject(data.id)
       setNewProjectName('')
       setShowAddProject(false)
     }
@@ -99,15 +117,25 @@ export default function KanbanBoard({
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           {projects.length > 0 ? (
-            <select className="select w-auto" value={projectId ?? ''} onChange={e => setProjectId(e.target.value)}>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            <select
+              className="select w-auto"
+              value={projectId ?? ''}
+              onChange={e => switchProject(e.target.value)}>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
             </select>
           ) : (
             <span className="text-muted text-sm">No projects yet</span>
           )}
           <button onClick={() => setShowAddProject(true)} className="btn-ghost text-sm px-3 py-2">+ Project</button>
         </div>
-        <button onClick={() => setShowAddTask('backlog')} className="btn-primary text-sm px-4 py-2">+ Add Task</button>
+        <button
+          onClick={() => setShowAddTask('backlog')}
+          className="btn-primary text-sm px-4 py-2"
+          disabled={!projectId}>
+          + Add Task
+        </button>
       </div>
 
       {/* Add Project Modal */}
@@ -116,10 +144,18 @@ export default function KanbanBoard({
           <div className="card w-full max-w-md p-8">
             <h3 className="font-syne font-black text-xl mb-2">New Project</h3>
             <p className="text-muted text-sm mb-5">Give your project a name to get started.</p>
-            <input className="input mb-4" placeholder="e.g. Network Migration Q2" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addProject()} autoFocus/>
+            <input
+              className="input mb-4"
+              placeholder="e.g. Network Migration Q2"
+              value={newProjectName}
+              onChange={e => setNewProjectName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addProject()}
+              autoFocus/>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setShowAddProject(false)} className="btn-ghost">Cancel</button>
-              <button onClick={addProject} className="btn-primary" disabled={saving}>{saving ? 'Creating…' : 'Create Project'}</button>
+              <button onClick={addProject} className="btn-primary" disabled={saving}>
+                {saving ? 'Creating...' : 'Create Project'}
+              </button>
             </div>
           </div>
         </div>
@@ -127,7 +163,6 @@ export default function KanbanBoard({
 
       {!projectId ? (
         <div className="text-center py-24">
-          <p className="text-5xl mb-4">📋</p>
           <h3 className="font-syne font-bold text-xl mb-2">No project selected</h3>
           <p className="text-muted mb-6">Create a project to start managing your Kanban board.</p>
           <button onClick={() => setShowAddProject(true)} className="btn-primary">+ Create First Project</button>
@@ -138,47 +173,48 @@ export default function KanbanBoard({
             {columns.map(col => (
               <div key={col.id} className={`flex-shrink-0 w-[272px] bg-surface border rounded-2xl p-4 ${COL_BORDERS[col.id]}`}>
                 {/* Column header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`flex items-center gap-2 font-syne font-bold text-sm ${col.color}`}>
-                    <span>{col.emoji}</span> {col.title}
-                    <span className="w-5 h-5 rounded-md bg-surface2 flex items-center justify-center text-xs text-muted font-normal">
-                      {col.tasks.length}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 font-syne font-bold text-sm mb-4">
+                  <span className={col.color}>{col.emoji} {col.title}</span>
+                  <span className="w-5 h-5 rounded-md bg-surface2 flex items-center justify-center text-xs text-muted font-normal ml-auto">
+                    {col.tasks.length}
+                  </span>
                 </div>
 
                 {/* Cards */}
                 <Droppable droppableId={col.id}>
                   {(provided, snapshot) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps}
-                      className={`min-h-[40px] transition-colors rounded-xl ${snapshot.isDraggingOver ? 'bg-accent/5' : ''}`}>
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`min-h-[40px] rounded-xl transition-colors ${snapshot.isDraggingOver ? 'bg-accent/5' : ''}`}>
                       {col.tasks.map((task, idx) => (
                         <Draggable key={task.id} draggableId={task.id} index={idx}>
                           {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
                               className={`bg-card border rounded-xl p-4 mb-2.5 cursor-grab transition-all duration-150 ${
-                                snapshot.isDragging ? 'border-accent shadow-[0_8px_32px_rgba(0,0,0,0.6)] rotate-1 scale-105' : 'border-border hover:border-accent/40 hover:-translate-y-0.5'
+                                snapshot.isDragging
+                                  ? 'border-accent shadow-[0_8px_32px_rgba(0,0,0,0.6)] rotate-1 scale-105'
+                                  : 'border-border hover:border-accent/40 hover:-translate-y-0.5'
                               }`}>
                               <p className="text-sm font-semibold mb-2.5 leading-snug">{task.title}</p>
                               <div className="flex flex-wrap gap-1.5 mb-3">
-                                <span className={`tag-chip ${PRIORITY_COLORS[task.priority]}`}>
-                                  {task.priority}
-                                </span>
-                                {task.tags.map(tag => (
+                                <span className={`tag-chip ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
+                                {task.tags?.map((tag: string) => (
                                   <span key={tag} className="tag-chip bg-accent2/10 text-purple-300">{tag}</span>
                                 ))}
                               </div>
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1">
-                                  {task.assignee_name && (
-                                    <div className="w-6 h-6 rounded-full bg-accent2 flex items-center justify-center text-[10px] font-bold text-white">
-                                      {task.assignee_name.slice(0,2).toUpperCase()}
-                                    </div>
-                                  )}
-                                </div>
+                                {task.assignee_name && (
+                                  <div className="w-6 h-6 rounded-full bg-accent2 flex items-center justify-center text-[10px] font-bold text-white">
+                                    {task.assignee_name.slice(0, 2).toUpperCase()}
+                                  </div>
+                                )}
                                 {task.due_date && (
-                                  <span className="font-mono-code text-[11px] text-muted">
-                                    {new Date(task.due_date).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
+                                  <span className="font-mono-code text-[11px] text-muted ml-auto">
+                                    {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                                   </span>
                                 )}
                               </div>
@@ -194,16 +230,24 @@ export default function KanbanBoard({
                 {/* Add card */}
                 {showAddTask === col.id ? (
                   <div className="mt-2">
-                    <textarea className="input text-sm resize-none h-20 mb-2" placeholder="Task title…" value={newTaskTitle}
-                      onChange={e => setNewTaskTitle(e.target.value)} autoFocus
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTask(col.id) }}}/>
+                    <textarea
+                      className="input text-sm resize-none h-20 mb-2"
+                      placeholder="Task title..."
+                      value={newTaskTitle}
+                      onChange={e => setNewTaskTitle(e.target.value)}
+                      autoFocus
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTask(col.id) }
+                        if (e.key === 'Escape') { setShowAddTask(null); setNewTaskTitle('') }
+                      }}/>
                     <div className="flex gap-2">
                       <button onClick={() => addTask(col.id)} className="btn-primary text-xs px-3 py-1.5" disabled={saving}>Add</button>
                       <button onClick={() => { setShowAddTask(null); setNewTaskTitle('') }} className="btn-ghost text-xs px-3 py-1.5">Cancel</button>
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setShowAddTask(col.id)}
+                  <button
+                    onClick={() => setShowAddTask(col.id)}
                     className="w-full mt-2 py-2 border border-dashed border-border rounded-xl text-muted text-sm hover:border-accent/50 hover:text-accent transition-colors">
                     + Add card
                   </button>

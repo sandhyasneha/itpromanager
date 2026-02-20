@@ -1,9 +1,14 @@
-export default function KnowledgePage() {
-  return (
-    <div className="text-center py-24">
-      <p className="text-5xl mb-4">📚</p>
-      <h2 className="font-syne font-black text-2xl mb-2">Knowledge Base</h2>
-      <p className="text-muted mb-6 max-w-md mx-auto">Centralized documentation hub for runbooks, SOPs, lessons learned and team wikis — coming in Phase 2.</p>
-    </div>
-  )
+import { createClient } from '@/lib/supabase/server'
+import KnowledgeClient from '@/components/KnowledgeClient'
+
+export default async function KnowledgePage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: articles } = await supabase
+    .from('kb_articles')
+    .select('*, profiles(full_name, email)')
+    .order('created_at', { ascending: false })
+
+  return <KnowledgeClient articles={articles ?? []} userId={user!.id} />
 }

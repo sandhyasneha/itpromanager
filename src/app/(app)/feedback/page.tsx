@@ -1,14 +1,21 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const CATEGORIES = ['Feature Request', 'Bug Report', 'UI/UX Improvement', 'Performance', 'Documentation', 'General Feedback']
 const AREAS = ['Dashboard', 'Kanban Board', 'Project Plan', 'Knowledge Base', 'AI Generator', 'Network Diagram', 'Settings', 'Overall App']
+const ADMIN_EMAIL = 'admin@nexplan.io'
 
 export default function FeedbackPage() {
   const supabase = createClient()
   const router = useRouter()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email === ADMIN_EMAIL) router.replace('/admin')
+    })
+  }, [])
   const [saving, setSaving] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [form, setForm] = useState({

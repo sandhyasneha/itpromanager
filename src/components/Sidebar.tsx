@@ -11,7 +11,6 @@ const NAV = [
   { href: '/project-plan',  label: 'Project Plan',     icon: '📅' },
   { href: '/network',       label: 'Network Diagram',  icon: '🗺️' },
   { href: '/knowledge',     label: 'Knowledge Base',   icon: '📚' },
-  { href: '/feedback',      label: 'Feedback',         icon: '💬' },
 ]
 
 const ADMIN_NAV = [
@@ -20,7 +19,8 @@ const ADMIN_NAV = [
 ]
 
 const USER_NAV = [
-  { href: '/settings', label: 'Settings', icon: '⚙️' },
+  { href: '/feedback', label: 'Feedback',  icon: '💬' },
+  { href: '/settings', label: 'Settings',  icon: '⚙️' },
 ]
 
 const ADMIN_EMAIL = 'admin@nexplan.io'

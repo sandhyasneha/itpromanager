@@ -42,7 +42,7 @@ export default function LandingPage() {
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <Link href="/login" className="btn-primary px-8 py-3 text-base">Start for Free →</Link>
-          <Link href="/dashboard" className="btn-ghost px-8 py-3 text-base">View Demo</Link>
+          <Link href="/demo" className="btn-ghost px-8 py-3 text-base">View Demo</Link>
         </div>
       </div>
 

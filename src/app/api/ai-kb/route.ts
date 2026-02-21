@@ -1,55 +1,77 @@
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
-  const body = await request.json()
-  const { query, category, scopeDocument, title, saveToKB, userId } = body
+  const { query, category, scopeDocument, title, saveToKB, userId } = await request.json()
 
-  // Check API key
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({
-      content: 'ERROR: ANTHROPIC_API_KEY not found in environment variables. Please add it in Vercel Settings.',
+      content: 'ERROR: GEMINI_API_KEY not found. Please add it in Vercel Settings → Environment Variables.',
       saved: false,
     })
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
   const topic = query || title || 'IT best practices'
 
   const prompt = scopeDocument
-    ? `You are an expert IT Project Manager. Analyse this project scope document and produce a complete project plan with phases, steps, risks and success criteria.\n\nSCOPE:\n${scopeDocument.slice(0, 4000)}`
-    : `You are a senior IT expert. Write a comprehensive knowledge base article about: "${topic}"\nCategory: ${category || 'Networking'}\n\nInclude: Overview, Key Concepts, Step-by-Step Guide, Best Practices, Troubleshooting. Be detailed and practical.`
+    ? `You are an expert IT Project Manager. Analyse this project scope document and produce:
+
+1. PROJECT OVERVIEW - name, objectives, scope summary
+2. COMPLETE PROJECT PLAN - Phase 1 Discovery, Phase 2 Design, Phase 3 Implementation, Phase 4 Testing, Phase 5 Go Live (each with tasks, owners, duration)
+3. STEP-BY-STEP TECHNICAL GUIDE - detailed steps, tools, dependencies
+4. RISK REGISTER - top 5 risks with likelihood, impact, mitigation
+5. SUCCESS CRITERIA & KPIs
+
+SCOPE DOCUMENT:
+${scopeDocument.slice(0, 4000)}`
+    : `You are a senior IT expert writing for an enterprise IT knowledge base used by IT Project Managers and Network Engineers.
+
+Write a comprehensive professional article about: "${topic}"
+Category: ${category || 'Networking'}
+
+Structure:
+OVERVIEW
+(2-3 sentence introduction)
+
+KEY CONCEPTS
+(most important concepts)
+
+STEP-BY-STEP GUIDE
+(numbered detailed steps with real commands, IPs, tool names)
+
+BEST PRACTICES
+(5-7 industry best practices)
+
+COMMON ISSUES & TROUBLESHOOTING
+(3-5 common problems and solutions)
+
+TOOLS & RESOURCES
+(recommended tools, vendors, certifications)
+
+Be specific, practical and detailed. Include real examples and configurations.`
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
+        }),
+      }
+    )
 
     if (!response.ok) {
       const err = await response.text()
-      return NextResponse.json({
-        content: `API Error ${response.status}: ${err}`,
-        saved: false,
-      })
+      return NextResponse.json({ content: `Gemini API Error ${response.status}: ${err}`, saved: false })
     }
 
     const data = await response.json()
-    const content = data.content?.[0]?.text
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!content) {
-      return NextResponse.json({
-        content: `No content returned. API response: ${JSON.stringify(data)}`,
-        saved: false,
-      })
+      return NextResponse.json({ content: `No content returned: ${JSON.stringify(data)}`, saved: false })
     }
 
     // Auto-save to KB
@@ -64,11 +86,11 @@ export async function POST(request: Request) {
           title: query,
           content,
           category: category || 'General',
-          tags: [category?.toLowerCase() || 'ai-generated', 'ai-generated'],
+          tags: [category?.toLowerCase() || 'general', 'ai-generated'],
         }).select().single()
         if (article) { saved = true; articleId = article.id }
-      } catch (saveErr) {
-        console.error('Save to KB failed:', saveErr)
+      } catch (e) {
+        console.error('KB save error:', e)
       }
     }
 
@@ -76,7 +98,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     return NextResponse.json({
-      content: `Network error: ${error?.message ?? 'Unknown error'}. Check ANTHROPIC_API_KEY is valid.`,
+      content: `Network error: ${error?.message ?? 'Unknown'}. Check GEMINI_API_KEY is valid.`,
       saved: false,
     })
   }

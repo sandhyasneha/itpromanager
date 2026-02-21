@@ -35,7 +35,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
 
   async function signOut() {
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/')
   }
 
   const mgmtNav = isAdmin ? ADMIN_NAV : USER_NAV

@@ -23,8 +23,8 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect /dashboard and /kanban routes
-  const protectedPaths = ['/dashboard', '/kanban', '/project-plan', '/network', '/knowledge', '/admin']
+  // Protect app routes — redirect to login if not authenticated
+  const protectedPaths = ['/dashboard', '/kanban', '/project-plan', '/network', '/knowledge', '/admin', '/settings']
   const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
   if (isProtected && !user) {
@@ -33,8 +33,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect logged-in users away from auth pages
-  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/')) {
+  // Redirect logged-in users away from login page → dashboard
+  // But DO NOT redirect from '/' — let landing page show for everyone
+  if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

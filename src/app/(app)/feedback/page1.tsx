@@ -10,9 +10,14 @@ const ADMIN_EMAIL = 'admin@nexplan.io'
 export default function FeedbackPage() {
   const supabase = createClient()
   const router = useRouter()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email === ADMIN_EMAIL) router.replace('/admin')
+    })
+  }, [])
   const [saving, setSaving] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState('')
   const [form, setForm] = useState({
     rating: 0,
     category: 'General Feedback',
@@ -22,22 +27,12 @@ export default function FeedbackPage() {
     priority: 'medium',
   })
 
-  // Redirect admin away from feedback form
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email === ADMIN_EMAIL) router.replace('/admin')
-    })
-  }, [])
-
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.message.trim() || form.rating === 0) return
     setSaving(true)
-    setError('')
-
     const { data: { user } } = await supabase.auth.getUser()
-
-    const { error: insertError } = await supabase.from('feedback').insert({
+    const { error } = await supabase.from('feedback').insert({
       user_id: user!.id,
       user_email: user!.email,
       rating: form.rating,
@@ -48,40 +43,17 @@ export default function FeedbackPage() {
       priority: form.priority,
       status: 'new',
     })
-
     setSaving(false)
-
-    if (insertError) {
-      setError(`Failed to submit: ${insertError.message}. Please try again.`)
-    } else {
-      setSubmitted(true)
-    }
+    if (!error) setSubmitted(true)
   }
 
-  // Success screen
   if (submitted) {
     return (
       <div className="max-w-lg mx-auto text-center py-20">
-        <div className="w-24 h-24 rounded-3xl bg-accent3/10 border border-accent3/30 flex items-center justify-center text-5xl mx-auto mb-6 animate-bounce">
-          🎉
-        </div>
-        <h2 className="font-syne font-black text-3xl mb-3">Feedback Submitted!</h2>
-        <p className="text-muted mb-2 text-lg">Thank you for helping improve NexPlan.</p>
-        <p className="text-muted text-sm mb-8">Your feedback has been saved and our team will review it shortly.</p>
-        <div className="bg-surface2 border border-border rounded-xl p-4 mb-8 text-left text-sm space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted">Rating</span>
-            <span>{[,'😕','😕','😐','😊','🤩'][form.rating]} {form.rating}/5</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">Category</span>
-            <span>{form.category}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">Area</span>
-            <span>{form.feature_area}</span>
-          </div>
-        </div>
+        <div className="w-20 h-20 rounded-2xl bg-accent3/10 border border-accent3/30 flex items-center justify-center text-4xl mx-auto mb-6">🎉</div>
+        <h2 className="font-syne font-black text-2xl mb-3">Thank you!</h2>
+        <p className="text-muted mb-2">Your feedback has been submitted successfully.</p>
+        <p className="text-muted text-sm mb-8">Our team reviews every submission and uses it to shape what we build next.</p>
         <div className="flex gap-3 justify-center">
           <button onClick={() => {
             setSubmitted(false)
@@ -99,12 +71,6 @@ export default function FeedbackPage() {
         <h2 className="font-syne font-black text-2xl mb-2">Share Your Feedback</h2>
         <p className="text-muted text-sm">Help us improve NexPlan. Your feedback goes directly to our team and shapes what we build next.</p>
       </div>
-
-      {error && (
-        <div className="mb-5 px-4 py-3 bg-danger/10 border border-danger/30 rounded-xl text-danger text-sm">
-          {error}
-        </div>
-      )}
 
       <form onSubmit={submit} className="space-y-5">
         {/* Rating */}
@@ -127,7 +93,6 @@ export default function FeedbackPage() {
               </span>
             )}
           </div>
-          {form.rating === 0 && <p className="text-xs text-danger mt-2">Please select a rating</p>}
         </div>
 
         {/* Category + Area + Priority */}
@@ -150,10 +115,10 @@ export default function FeedbackPage() {
             <label className="block text-xs font-syne font-semibold text-muted mb-2">How important is this to you?</label>
             <div className="flex gap-2">
               {[
-                { val: 'low', label: 'Low' },
-                { val: 'medium', label: 'Medium' },
-                { val: 'high', label: 'High' },
-                { val: 'critical', label: 'Critical' },
+                { val: 'low', label: 'Low', cls: 'hover:border-muted' },
+                { val: 'medium', label: 'Medium', cls: 'hover:border-accent' },
+                { val: 'high', label: 'High', cls: 'hover:border-warn' },
+                { val: 'critical', label: 'Critical', cls: 'hover:border-danger' },
               ].map(p => (
                 <button type="button" key={p.val} onClick={() => setForm(f => ({ ...f, priority: p.val }))}
                   className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
@@ -162,7 +127,7 @@ export default function FeedbackPage() {
                         : p.val === 'high' ? 'bg-warn/10 border-warn text-warn'
                         : p.val === 'medium' ? 'bg-accent/10 border-accent text-accent'
                         : 'bg-surface2 border-border text-muted'
-                      : 'border-border text-muted hover:border-border'}`}>
+                      : `border-border text-muted ${p.cls}`}`}>
                   {p.label}
                 </button>
               ))}
@@ -182,23 +147,18 @@ export default function FeedbackPage() {
               Feedback <span className="text-danger">*</span>
             </label>
             <textarea className="input min-h-[140px] resize-y"
-              placeholder="What's working well? What could be better? What features would you love to see?"
+              placeholder="What's working well? What could be better? What features would you love to see? Be as specific as you like..."
               value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}/>
-            {form.message.length === 0 && <p className="text-xs text-danger mt-1">Please enter your feedback</p>}
+            <p className="text-xs text-muted mt-1">{form.message.length} characters</p>
           </div>
         </div>
 
         <button type="submit"
           disabled={saving || form.rating === 0 || !form.message.trim()}
-          className="btn-primary w-full py-4 text-base justify-center disabled:opacity-40">
-          {saving
-            ? <span className="flex items-center gap-2 justify-center">
-                <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"/>
-                Submitting your feedback...
-              </span>
-            : '✉️ Submit Feedback'}
+          className="btn-primary w-full py-3 text-base justify-center disabled:opacity-40">
+          {saving ? 'Submitting...' : 'Submit Feedback →'}
         </button>
-        <p className="text-xs text-muted text-center">We may reach out at your registered email for more details.</p>
+        <p className="text-xs text-muted text-center">We may reach out to you at your registered email for more details.</p>
       </form>
     </div>
   )

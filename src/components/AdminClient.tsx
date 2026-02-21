@@ -78,14 +78,14 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
     : '—'
 
   async function updateFeedbackStatus(id: string, status: string) {
-    await supabase.from('feedback').update({ status }).eq('id', id)
+    await fetch('/api/admin/feedback', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) })
     setFeedbackList(prev => prev.map(f => f.id === id ? { ...f, status } : f))
     if (selectedFeedback?.id === id) setSelectedFeedback((f: any) => ({ ...f, status }))
   }
 
   async function saveNote(id: string) {
     setSavingNote(true)
-    await supabase.from('feedback').update({ admin_note: adminNote }).eq('id', id)
+    await fetch('/api/admin/feedback', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, admin_note: adminNote }) })
     setFeedbackList(prev => prev.map(f => f.id === id ? { ...f, admin_note: adminNote } : f))
     setSelectedFeedback((f: any) => ({ ...f, admin_note: adminNote }))
     setSavingNote(false)

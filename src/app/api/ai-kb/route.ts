@@ -3,9 +3,11 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   const { query, category, scopeDocument, title, saveToKB, userId } = await request.json()
 
-  if (!process.env.GEMINI_API_KEY) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+
+  if (!apiKey) {
     return NextResponse.json({
-      content: 'ERROR: GEMINI_API_KEY not found. Please add it in Vercel Settings → Environment Variables.',
+      content: 'ERROR: ANTHROPIC_API_KEY not found in Vercel environment variables.',
       saved: false,
     })
   }
@@ -28,21 +30,22 @@ ${scopeDocument.slice(0, 4000)}`
 Write a comprehensive professional article about: "${topic}"
 Category: ${category || 'Networking'}
 
-Structure:
+Structure your response as:
+
 OVERVIEW
 (2-3 sentence introduction)
 
 KEY CONCEPTS
-(most important concepts)
+(most important concepts to understand)
 
 STEP-BY-STEP GUIDE
-(numbered detailed steps with real commands, IPs, tool names)
+(numbered detailed steps with real commands, IPs, tool names, config examples)
 
 BEST PRACTICES
 (5-7 industry best practices)
 
 COMMON ISSUES & TROUBLESHOOTING
-(3-5 common problems and solutions)
+(3-5 common problems and exact solutions)
 
 TOOLS & RESOURCES
 (recommended tools, vendors, certifications)
@@ -50,25 +53,27 @@ TOOLS & RESOURCES
 Be specific, practical and detailed. Include real examples and configurations.`
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
-        }),
-      }
-    )
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
 
     if (!response.ok) {
       const err = await response.text()
-      return NextResponse.json({ content: `Gemini API Error ${response.status}: ${err}`, saved: false })
+      return NextResponse.json({ content: `API Error ${response.status}: ${err}`, saved: false })
     }
 
     const data = await response.json()
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text
+    const content = data.content?.[0]?.text
 
     if (!content) {
       return NextResponse.json({ content: `No content returned: ${JSON.stringify(data)}`, saved: false })
@@ -98,7 +103,7 @@ Be specific, practical and detailed. Include real examples and configurations.`
 
   } catch (error: any) {
     return NextResponse.json({
-      content: `Network error: ${error?.message ?? 'Unknown'}. Check GEMINI_API_KEY is valid.`,
+      content: `Network error: ${error?.message ?? 'Unknown'}. Check ANTHROPIC_API_KEY is valid in Vercel settings.`,
       saved: false,
     })
   }

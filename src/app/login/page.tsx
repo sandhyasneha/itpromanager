@@ -61,8 +61,8 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="font-syne font-black text-2xl mb-1">IT<span className="text-accent">Pro</span>Manager</div>
-          <p className="text-muted text-sm">Free AI project management for IT teams</p>
+          <div className="font-syne font-black text-2xl mb-1">Nex<span className="text-accent">Plan</span></div>
+          <p className="text-muted text-sm">AI-Powered IT Project Management</p>
         </div>
 
         <div className="card p-8">

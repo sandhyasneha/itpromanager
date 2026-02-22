@@ -81,8 +81,35 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <footer className="relative z-10 text-center py-10 text-muted text-sm border-t border-border">
-        © 2025 NexPlan · Free for IT professionals worldwide · Built with ❤️ for Project Managers
+      <footer className="relative z-10 border-t border-border">
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div>
+              <div className="font-syne font-black text-lg mb-2">Nex<span className="text-accent">Plan</span></div>
+              <p className="text-muted text-sm leading-relaxed">Free AI-powered project management tool built for IT professionals worldwide.</p>
+            </div>
+            <div>
+              <p className="font-syne font-bold text-sm mb-3">Product</p>
+              <div className="space-y-2">
+                <Link href="/demo" className="block text-muted text-sm hover:text-accent transition-colors">View Demo</Link>
+                <Link href="/login" className="block text-muted text-sm hover:text-accent transition-colors">Sign Up Free</Link>
+                <Link href="/login" className="block text-muted text-sm hover:text-accent transition-colors">Sign In</Link>
+              </div>
+            </div>
+            <div>
+              <p className="font-syne font-bold text-sm mb-3">Contact</p>
+              <div className="space-y-2">
+                <a href="mailto:info@nexplan.io" className="block text-muted text-sm hover:text-accent transition-colors">📧 info@nexplan.io</a>
+                <p className="text-muted text-sm">🌐 www.nexplan.io</p>
+                <p className="text-muted text-sm">Support via in-app feedback form</p>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-muted text-xs">© 2025 NexPlan · Free for IT professionals worldwide · Built with ❤️ for Project Managers</p>
+            <p className="text-muted text-xs">Contact: <a href="mailto:info@nexplan.io" className="text-accent hover:underline">info@nexplan.io</a></p>
+          </div>
+        </div>
       </footer>
     </div>
   )

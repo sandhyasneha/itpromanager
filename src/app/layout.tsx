@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'NexPlan — Free AI-Powered IT Project Management',
     description: 'Free tool for IT PMs — Kanban boards, AI knowledge base, project plans. No credit card required.',
-    creator: '@nexplan',
+    creator: '@NexplanIT',
   },
   robots: {
     index: true,

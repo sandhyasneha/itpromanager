@@ -102,6 +102,10 @@ export default function LandingPage() {
                 <a href="mailto:info@nexplan.io" className="block text-muted text-sm hover:text-accent transition-colors">📧 info@nexplan.io</a>
                 <p className="text-muted text-sm">🌐 www.nexplan.io</p>
                 <p className="text-muted text-sm">Support via in-app feedback form</p>
+                <a href="https://x.com/NexplanIT" target="_blank" rel="noopener noreferrer"
+                  className="block text-muted text-sm hover:text-accent transition-colors">
+                  𝕏 @NexplanIT
+                </a>
               </div>
             </div>
           </div>

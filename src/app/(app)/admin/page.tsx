@@ -1,4 +1,3 @@
-import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
@@ -6,13 +5,11 @@ import AdminClient from '@/components/AdminClient'
 
 const ADMIN_EMAIL = 'admin@nexplan.io'
 
-export default async function AdminPage(): Promise<React.ReactElement> {
-  // Regular client to verify the logged in user
+export default async function AdminPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user?.email !== ADMIN_EMAIL) redirect('/dashboard')
 
-  // Service role client — bypasses RLS, can read ALL data
   const adminClient = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!

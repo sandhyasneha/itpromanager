@@ -263,13 +263,13 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}>
-      <div className="card w-full max-w-lg max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="card w-full max-w-lg max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
           <h3 className="font-syne font-black text-lg">Edit Task</h3>
           <button onClick={onClose} className="text-muted hover:text-text text-xl">✕</button>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-4 flex-1">
+        <div className="overflow-y-auto p-6 space-y-4 flex-1 min-h-0">
           {/* Title */}
           <div>
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Task Title</label>
@@ -279,7 +279,7 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
           {/* Description */}
           <div>
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Description</label>
-            <textarea className="input resize-none h-20" placeholder="Task details..."
+            <textarea className="input resize-none h-14" placeholder="Task details..."
               value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}/>
           </div>
 
@@ -299,12 +299,12 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
           </div>
 
           {/* Timeline dates */}
-          <div className="bg-surface2 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-syne font-bold text-accent uppercase tracking-wide">📅 Task Timeline</p>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="bg-surface2 rounded-xl p-4">
+            <p className="text-xs font-syne font-bold text-accent uppercase tracking-wide mb-3">📅 Task Timeline</p>
+            <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Start Date</label>
-                <input type="date" className="input text-sm" value={form.start_date}
+                <label className="block text-xs font-syne font-semibold text-muted mb-1">Start Date</label>
+                <input type="date" className="input text-xs py-2" value={form.start_date}
                   onChange={e => {
                     const start = e.target.value
                     setForm(f => ({
@@ -315,23 +315,23 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
                   }}/>
               </div>
               <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">End Date</label>
-                <input type="date" className="input text-sm" value={form.end_date}
+                <label className="block text-xs font-syne font-semibold text-muted mb-1">End Date</label>
+                <input type="date" className="input text-xs py-2" value={form.end_date}
                   min={form.start_date}
                   onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}/>
               </div>
+              <div>
+                <label className="block text-xs font-syne font-semibold text-muted mb-1">Due Date</label>
+                <input type="date" className="input text-xs py-2" value={form.due_date}
+                  onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}/>
+              </div>
             </div>
             {duration && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-accent/10 rounded-lg">
+              <div className="flex items-center gap-2 px-3 py-2 bg-accent/10 rounded-lg mt-3">
                 <span className="text-accent text-sm">⏱</span>
                 <span className="text-sm font-semibold text-accent">Duration: {duration} day{duration !== 1 ? 's' : ''}</span>
               </div>
             )}
-            <div>
-              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Due Date (Deadline)</label>
-              <input type="date" className="input text-sm" value={form.due_date}
-                onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}/>
-            </div>
           </div>
 
           {/* Tags */}

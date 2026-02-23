@@ -24,6 +24,10 @@ export interface Task {
   assignee_name?: string
   tags: string[]
   due_date?: string
+  start_date?: string
+  end_date?: string
+  duration?: number
+  dependencies?: string[]
   position: number
   created_at: string
 }

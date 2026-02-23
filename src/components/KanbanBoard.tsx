@@ -220,15 +220,45 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
     description: task.description ?? '',
     priority: task.priority,
     assignee_name: task.assignee_name ?? '',
+    assignee_email: task.assignee_email ?? '',
     start_date: task.start_date ?? '',
     end_date: task.end_date ?? '',
     due_date: task.due_date ?? '',
     tags: (task.tags ?? []).join(', '),
   })
+  const [sending, setSending] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const duration = form.start_date && form.end_date
     ? daysBetween(form.start_date, form.end_date) + 1
     : null
+
+  async function sendEmail(projectName: string, assignedBy: string) {
+    if (!form.assignee_email) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/send-task-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assigneeEmail: form.assignee_email,
+          assigneeName: form.assignee_name,
+          taskTitle: form.title,
+          taskDescription: form.description,
+          projectName,
+          priority: form.priority,
+          startDate: form.start_date,
+          endDate: form.end_date,
+          duration,
+          dueDate: form.due_date,
+          assignedBy,
+        }),
+      })
+      if (res.ok) setEmailSent(true)
+    } finally {
+      setSending(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -262,8 +292,8 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Assignee</label>
-              <input className="input" placeholder="Name" value={form.assignee_name}
+              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Assignee Name</label>
+              <input className="input" placeholder="John Smith" value={form.assignee_name}
                 onChange={e => setForm(f => ({ ...f, assignee_name: e.target.value }))}/>
             </div>
           </div>
@@ -310,6 +340,34 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
             <input className="input" placeholder="network, router, config" value={form.tags}
               onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}/>
           </div>
+
+          {/* Assignee Email */}
+          <div className="bg-surface2 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-syne font-bold text-accent2 uppercase tracking-wide">📧 Notify Assignee</p>
+            <div>
+              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Assignee Email</label>
+              <input type="email" className="input" placeholder="john@company.com" value={form.assignee_email}
+                onChange={e => setForm(f => ({ ...f, assignee_email: e.target.value }))}/>
+            </div>
+            {form.assignee_email && (
+              <div className="flex items-center gap-2">
+                {emailSent ? (
+                  <div className="flex items-center gap-2 text-accent3 text-sm font-semibold">
+                    <span>✅</span> Email sent to {form.assignee_email}
+                  </div>
+                ) : (
+                  <button type="button"
+                    onClick={() => sendEmail('Project', 'PM')}
+                    disabled={sending}
+                    className="flex items-center gap-2 px-4 py-2 bg-accent2/10 border border-accent2/30 text-purple-300 rounded-xl text-xs font-semibold hover:bg-accent2/20 transition-all disabled:opacity-50">
+                    {sending
+                      ? <><span className="w-3 h-3 border-2 border-purple-300/30 border-t-purple-300 rounded-full animate-spin"/>Sending...</>
+                      : <><span>📧</span> Send Task Notification</>}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between p-6 pt-4 border-t border-border shrink-0">
@@ -321,6 +379,7 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
               description: form.description,
               priority: form.priority as TaskPriority,
               assignee_name: form.assignee_name,
+              assignee_email: form.assignee_email || undefined,
               start_date: form.start_date || undefined,
               end_date: form.end_date || undefined,
               due_date: form.due_date || undefined,
@@ -645,13 +704,17 @@ export default function KanbanBoard({
                               </div>
                               {/* Show dates if set */}
                               {task.start_date && task.end_date && (
-                                <div className="flex items-center gap-1 mb-2 px-2 py-1 bg-accent/5 rounded-lg">
-                                  <span className="text-[10px] font-mono-code text-accent">
-                                    {new Date(task.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                    {' → '}
-                                    {new Date(task.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                  </span>
-                                  <span className="text-[10px] text-muted ml-auto">{task.duration ?? daysBetween(task.start_date, task.end_date) + 1}d</span>
+                                <div className="mb-2 px-2 py-1.5 bg-accent/5 border border-accent/10 rounded-lg">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="text-[10px] font-mono-code text-accent">
+                                      {new Date(task.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                      {' → '}
+                                      {new Date(task.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded">
+                                      ⏱ {task.duration ?? daysBetween(task.start_date, task.end_date) + 1}d
+                                    </span>
+                                  </div>
                                 </div>
                               )}
                               <div className="flex items-center justify-between">

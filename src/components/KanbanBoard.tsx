@@ -41,15 +41,22 @@ function addDays(date: string, days: number) {
 }
 
 // Timeline / Gantt View
-function TimelineView({ tasks, project }: { tasks: Task[], project: Project | null }) {
+function TimelineView({ tasks, project, onEditTask, onEditProject }: {
+  tasks: Task[]
+  project: Project | null
+  onEditTask: (t: Task) => void
+  onEditProject: () => void
+}) {
   const allTasks = tasks.filter(t => t.start_date && t.end_date)
+  const unscheduled = tasks.filter(t => !t.start_date || !t.end_date)
 
   if (!project?.start_date || !project?.end_date) {
     return (
       <div className="card text-center py-16">
         <p className="text-4xl mb-3">📅</p>
         <h3 className="font-syne font-bold text-lg mb-2">Set Project Dates First</h3>
-        <p className="text-muted text-sm">Add a start date and end date to your project to see the timeline.</p>
+        <p className="text-muted text-sm mb-4">Add a start date and end date to your project to see the Gantt timeline.</p>
+        <button onClick={onEditProject} className="btn-primary px-5 py-2">Set Project Dates</button>
       </div>
     )
   }
@@ -59,7 +66,7 @@ function TimelineView({ tasks, project }: { tasks: Task[], project: Project | nu
       <div className="card text-center py-16">
         <p className="text-4xl mb-3">🗓️</p>
         <h3 className="font-syne font-bold text-lg mb-2">No Tasks with Dates Yet</h3>
-        <p className="text-muted text-sm">Click any task card and add start/end dates to see the Gantt timeline.</p>
+        <p className="text-muted text-sm">Click <strong>edit</strong> on any task card → add Start Date + End Date → it appears here.</p>
       </div>
     )
   }
@@ -144,9 +151,21 @@ function TimelineView({ tasks, project }: { tasks: Task[], project: Project | nu
               <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide">Task</p>
             </div>
             {sortedTasks.map(t => (
-              <div key={t.id} className={`h-12 border-b border-border/50 px-4 flex items-center gap-2 ${criticalTaskIds.has(t.id) ? 'bg-danger/5' : ''}`}>
-                {criticalTaskIds.has(t.id) && <span className="text-danger text-xs">⚠</span>}
-                <span className="text-sm font-semibold truncate">{t.title}</span>
+              <div key={t.id}
+                onClick={() => onEditTask(t)}
+                className={`h-16 border-b border-border/50 px-3 flex flex-col justify-center gap-0.5 cursor-pointer hover:bg-surface2/50 transition-colors ${criticalTaskIds.has(t.id) ? 'bg-danger/5' : ''}`}>
+                <div className="flex items-center gap-1.5">
+                  {criticalTaskIds.has(t.id) && <span className="text-danger text-xs">⚠</span>}
+                  <span className="text-sm font-semibold truncate">{t.title}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono-code ${
+                    t.priority === 'critical' ? 'bg-danger/10 text-danger' :
+                    t.priority === 'high' ? 'bg-warn/10 text-warn' :
+                    t.priority === 'medium' ? 'bg-accent/10 text-accent' : 'bg-surface2 text-muted'
+                  }`}>{t.priority}</span>
+                  {t.assignee_name && <span className="text-[10px] text-muted truncate">👤 {t.assignee_name}</span>}
+                </div>
               </div>
             ))}
           </div>
@@ -172,7 +191,7 @@ function TimelineView({ tasks, project }: { tasks: Task[], project: Project | nu
               const isCritical = criticalTaskIds.has(t.id)
 
               return (
-                <div key={t.id} className={`h-12 border-b border-border/50 relative ${isCritical ? 'bg-danger/5' : ''}`}
+                <div key={t.id} className={`h-16 border-b border-border/50 relative ${isCritical ? 'bg-danger/5' : ''}`}
                   style={{ minWidth: '600px' }}>
                   {/* Grid lines */}
                   {months.map((m, i) => (
@@ -181,11 +200,12 @@ function TimelineView({ tasks, project }: { tasks: Task[], project: Project | nu
                   ))}
                   {/* Bar */}
                   <div
-                    className={`absolute top-2.5 h-7 rounded-lg flex items-center px-2 text-xs font-semibold text-black transition-all
+                    className={`absolute top-4 h-8 rounded-lg flex items-center px-2 text-xs font-semibold text-black transition-all cursor-pointer hover:opacity-80
                       ${isCritical ? 'bg-danger shadow-[0_0_8px_rgba(255,50,50,0.4)]' : statusColors[t.status] || 'bg-accent'}`}
                     style={{ left: `${left}%`, width: `${width}%`, minWidth: '40px' }}
-                    title={`${t.title}: ${t.start_date} → ${t.end_date} (${taskDuration} days)`}>
-                    <span className="truncate">{taskDuration}d</span>
+                    title={`${t.title}: ${t.start_date} → ${t.end_date} (${taskDuration} days)`}
+                    onClick={() => onEditTask(t)}>
+                    <span className="truncate font-semibold">{width > 8 ? `${t.title} · ${taskDuration}d` : `${taskDuration}d`}</span>
                   </div>
                 </div>
               )
@@ -195,15 +215,38 @@ function TimelineView({ tasks, project }: { tasks: Task[], project: Project | nu
 
         {/* Critical path legend */}
         {criticalTaskIds.size > 0 && (
-          <div className="px-4 py-3 bg-danger/5 border-t border-danger/20 flex items-center gap-2">
+          <div className="px-4 py-3 bg-danger/5 border-t border-danger/20 flex items-center gap-2 flex-wrap">
             <span className="text-danger text-sm">⚠</span>
-            <p className="text-xs text-danger font-semibold">Critical Path Tasks:</p>
+            <p className="text-xs text-danger font-semibold">Critical Path:</p>
             <p className="text-xs text-muted">
               {sortedTasks.filter(t => criticalTaskIds.has(t.id)).map(t => t.title).join(' → ')}
             </p>
           </div>
         )}
       </div>
+
+      {/* Unscheduled tasks */}
+      {unscheduled.length > 0 && (
+        <div className="card p-4">
+          <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-3">
+            ⏳ Unscheduled Tasks ({unscheduled.length}) — click to add dates
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {unscheduled.map(t => (
+              <button key={t.id} onClick={() => onEditTask(t)}
+                className="flex items-center gap-2 px-3 py-2 bg-surface2 border border-dashed border-border hover:border-accent/50 rounded-xl text-xs transition-colors">
+                <span className={`w-2 h-2 rounded-full ${
+                  t.priority === 'critical' ? 'bg-danger' :
+                  t.priority === 'high' ? 'bg-warn' :
+                  t.priority === 'medium' ? 'bg-accent' : 'bg-muted'
+                }`}/>
+                {t.title}
+                <span className="text-muted">+ dates</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -301,28 +344,30 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
           {/* Timeline dates */}
           <div className="bg-surface2 rounded-xl p-4">
             <p className="text-xs font-syne font-bold text-accent uppercase tracking-wide mb-3">📅 Task Timeline</p>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1">Start Date</label>
-                <input type="date" className="input text-xs py-2" value={form.start_date}
-                  onChange={e => {
-                    const start = e.target.value
-                    setForm(f => ({
-                      ...f,
-                      start_date: start,
-                      end_date: f.end_date && f.end_date < start ? start : f.end_date
-                    }))
-                  }}/>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Start Date</label>
+                  <input type="date" className="input text-sm w-full" value={form.start_date}
+                    onChange={e => {
+                      const start = e.target.value
+                      setForm(f => ({
+                        ...f,
+                        start_date: start,
+                        end_date: f.end_date && f.end_date < start ? start : f.end_date
+                      }))
+                    }}/>
+                </div>
+                <div>
+                  <label className="block text-xs font-syne font-semibold text-muted mb-1.5">End Date</label>
+                  <input type="date" className="input text-sm w-full" value={form.end_date}
+                    min={form.start_date}
+                    onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}/>
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1">End Date</label>
-                <input type="date" className="input text-xs py-2" value={form.end_date}
-                  min={form.start_date}
-                  onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}/>
-              </div>
-              <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1">Due Date</label>
-                <input type="date" className="input text-xs py-2" value={form.due_date}
+                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Due Date (Deadline)</label>
+                <input type="date" className="input text-sm w-full" value={form.due_date}
                   onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}/>
               </div>
             </div>
@@ -589,12 +634,19 @@ export default function KanbanBoard({
             <span className="text-muted text-sm">No projects yet</span>
           )}
           {currentProject && (
-            <button onClick={() => setEditingProject(true)}
-              className="text-xs text-muted hover:text-accent font-mono-code px-2 py-1 border border-border rounded-lg transition-colors">
-              {currentProject.start_date && currentProject.end_date
-                ? `${new Date(currentProject.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → ${new Date(currentProject.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${daysBetween(currentProject.start_date, currentProject.end_date)} days`
-                : '+ Set dates'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setEditingProject(true)}
+                className="text-xs text-muted hover:text-accent font-mono-code px-2 py-1 border border-border rounded-lg transition-colors">
+                {currentProject.start_date && currentProject.end_date
+                  ? `📅 ${new Date(currentProject.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} → ${new Date(currentProject.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                  : '📅 Set project dates'}
+              </button>
+              {currentProject.start_date && currentProject.end_date && (
+                <span className="text-xs font-mono-code text-accent bg-accent/10 px-2 py-1 rounded-lg">
+                  {daysBetween(currentProject.start_date, currentProject.end_date)} days
+                </span>
+              )}
+            </div>
           )}
           <button onClick={() => setShowAddProject(true)} className="btn-ghost text-sm px-3 py-2">+ Project</button>
         </div>
@@ -670,7 +722,7 @@ export default function KanbanBoard({
       ) : loading ? (
         <div className="text-center py-24"><p className="text-muted animate-pulse">Loading tasks...</p></div>
       ) : view === 'timeline' ? (
-        <TimelineView tasks={allTasks} project={currentProject}/>
+        <TimelineView tasks={allTasks} project={currentProject} onEditTask={setEditingTask} onEditProject={() => setEditingProject(true)}/>
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">

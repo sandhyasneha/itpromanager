@@ -15,6 +15,7 @@ export default function LandingPage() {
         <div className="font-syne font-black text-xl">Nex<span className="text-accent">Plan</span></div>
         <div className="hidden md:flex gap-8">
           <Link href="#features" className="text-muted text-sm hover:text-text transition-colors">Features</Link>
+          <Link href="/kb" className="text-muted text-sm hover:text-text transition-colors">Knowledge Base</Link>
           <Link href="/pricing" className="text-muted text-sm hover:text-text transition-colors">Pricing</Link>
           <Link href="/docs" className="text-muted text-sm hover:text-text transition-colors">Docs</Link>
           <Link href="/about" className="text-muted text-sm hover:text-text transition-colors">About</Link>

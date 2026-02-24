@@ -631,6 +631,7 @@ export default function KanbanBoard({
   const [editingProject, setEditingProject] = useState(false)
   const [showPCR, setShowPCR] = useState(false)
   const [showPCRWarning, setShowPCRWarning] = useState(false)
+  const [showDownloadPlan, setShowDownloadPlan] = useState(false)
 
   const currentProject = localProjects.find(p => p.id === projectId) ?? null
   const allTasks = columns.flatMap(c => c.tasks)
@@ -751,33 +752,49 @@ export default function KanbanBoard({
           )}
           <button onClick={() => setShowAddProject(true)} className="btn-ghost text-sm px-3 py-2">+ Project</button>
           {currentProject && (
-            currentProject.start_date && currentProject.end_date ? (
-              <button onClick={() => setShowPCR(true)}
-                className="text-xs font-semibold px-3 py-2 bg-warn/10 border border-warn/30 text-warn rounded-xl hover:bg-warn/20 transition-colors">
-                📋 PCR
+            <div className="flex items-center gap-1 p-1 bg-surface2 rounded-xl">
+              {/* Board / Timeline toggle */}
+              <button onClick={() => setView('board')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${view === 'board' ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
+                📋 Board
               </button>
-            ) : (
-              <button onClick={() => setShowPCRWarning(true)}
-                className="text-xs font-semibold px-3 py-2 bg-surface2 border border-border text-muted rounded-xl hover:border-warn/30 hover:text-warn transition-colors"
-                title="Set project start and end date to enable PCR">
-                📋 PCR
+              <button
+                onClick={() => {
+                  if (!currentProject.start_date || !currentProject.end_date) { setShowPCRWarning(true); return }
+                  setView('timeline')
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${view === 'timeline' ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
+                📅 Timeline
               </button>
-            )
+              {/* Divider */}
+              <div className="w-px h-4 bg-border mx-0.5"/>
+              {/* PCR */}
+              <button
+                onClick={() => {
+                  if (!currentProject.start_date || !currentProject.end_date) { setShowPCRWarning(true); return }
+                  setShowPCR(true)
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+                  ${currentProject.start_date && currentProject.end_date
+                    ? 'text-warn hover:bg-warn/10 hover:text-warn'
+                    : 'text-muted hover:text-warn'}`}>
+                🔀 PCR
+              </button>
+              {/* Download Plan */}
+              <button
+                onClick={() => {
+                  if (!currentProject.start_date || !currentProject.end_date) { setShowPCRWarning(true); return }
+                  setShowDownloadPlan(true)
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent2 hover:bg-accent2/10"
+                title="View & Download Project Plan">
+                📥 Plan
+              </button>
+            </div>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex gap-1 p-1 bg-surface2 rounded-lg">
-            <button onClick={() => setView('board')}
-              className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${view === 'board' ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
-              📋 Board
-            </button>
-            <button onClick={() => setView('timeline')}
-              className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${view === 'timeline' ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
-              📅 Timeline
-            </button>
-          </div>
           <button onClick={() => setShowAddTask('backlog')} className="btn-primary text-sm px-4 py-2" disabled={!projectId}>
             + Add Task
           </button>
@@ -822,6 +839,202 @@ export default function KanbanBoard({
       {editingProject && currentProject && (
         <ProjectModal project={currentProject} onSave={saveProject} onClose={() => setEditingProject(false)}/>
       )}
+
+      {/* Download Plan Modal */}
+      {showDownloadPlan && currentProject && (() => {
+        const planTasks = [...allTasks].sort((a, b) =>
+          new Date(a.start_date || '9999').getTime() - new Date(b.start_date || '9999').getTime()
+        )
+        const doneTasks = planTasks.filter(t => t.status === 'done').length
+        const progress = planTasks.length > 0 ? Math.round((doneTasks / planTasks.length) * 100) : 0
+
+        function fmtDate(d?: string) {
+          if (!d) return '—'
+          return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        }
+
+        function downloadCSV() {
+          const rows = [
+            ['Project Plan:', currentProject.name],
+            ['Start Date:', fmtDate(currentProject.start_date)],
+            ['End Date:', fmtDate(currentProject.end_date)],
+            ['Duration:', currentProject.start_date && currentProject.end_date ? `${daysBetween(currentProject.start_date, currentProject.end_date)} days` : '—'],
+            ['Overall Progress:', `${progress}%`],
+            ['Generated:', new Date().toLocaleDateString('en-GB')],
+            [],
+            ['Task', 'Status', 'Priority', 'Assignee', 'Start Date', 'End Date', 'Due Date', 'Duration', 'Tags'],
+            ...planTasks.map(t => [
+              t.title,
+              t.status.replace('_', ' ').toUpperCase(),
+              t.priority.toUpperCase(),
+              t.assignee_name || '—',
+              fmtDate(t.start_date),
+              fmtDate(t.end_date),
+              fmtDate(t.due_date),
+              t.start_date && t.end_date ? `${daysBetween(t.start_date, t.end_date) + 1} days` : '—',
+              (t.tags || []).join('; '),
+            ])
+          ]
+          const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+          const blob = new Blob([csv], { type: 'text/csv' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${currentProject.name.replace(/\s+/g, '-')}-Project-Plan.csv`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+
+        function downloadTXT() {
+          const lines = [
+            `PROJECT PLAN`,
+            `${'='.repeat(60)}`,
+            `Project  : ${currentProject.name}`,
+            `Start    : ${fmtDate(currentProject.start_date)}`,
+            `End      : ${fmtDate(currentProject.end_date)}`,
+            `Duration : ${currentProject.start_date && currentProject.end_date ? daysBetween(currentProject.start_date, currentProject.end_date) + ' days' : '—'}`,
+            `Progress : ${progress}% (${doneTasks}/${planTasks.length} tasks done)`,
+            `Generated: ${new Date().toLocaleDateString('en-GB')}`,
+            `${'='.repeat(60)}`,
+            '',
+            `TASK SCHEDULE`,
+            `${'-'.repeat(60)}`,
+            ...planTasks.map((t, i) => [
+              `${String(i+1).padStart(2,'0')}. ${t.title}`,
+              `    Status   : ${t.status.replace('_',' ').toUpperCase()}`,
+              `    Priority : ${t.priority.toUpperCase()}`,
+              `    Assignee : ${t.assignee_name || '—'}`,
+              `    Start    : ${fmtDate(t.start_date)}`,
+              `    End      : ${fmtDate(t.end_date)}`,
+              `    Due      : ${fmtDate(t.due_date)}`,
+              `    Duration : ${t.start_date && t.end_date ? daysBetween(t.start_date, t.end_date) + 1 + ' days' : '—'}`,
+              t.description ? `    Notes    : ${t.description}` : '',
+              '',
+            ].filter(Boolean).join('\n')),
+            `${'='.repeat(60)}`,
+            `NexPlan — nexplan.io`,
+          ]
+          const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${currentProject.name.replace(/\s+/g, '-')}-Project-Plan.txt`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+
+        const statusColors: Record<string, string> = {
+          done:        'text-accent3 bg-accent3/10',
+          in_progress: 'text-accent bg-accent/10',
+          review:      'text-warn bg-warn/10',
+          blocked:     'text-danger bg-danger/10',
+          backlog:     'text-muted bg-surface2',
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowDownloadPlan(false)}>
+            <div className="card w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
+                <div>
+                  <p className="font-mono-code text-xs text-accent2 uppercase tracking-widest mb-1">Project Plan</p>
+                  <h2 className="font-syne font-black text-2xl">{currentProject.name}</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={downloadTXT}
+                    className="flex items-center gap-2 px-4 py-2 bg-accent2/10 border border-accent2/30 text-accent2 rounded-xl text-xs font-semibold hover:bg-accent2/20 transition-colors">
+                    📄 Download TXT
+                  </button>
+                  <button onClick={downloadCSV}
+                    className="flex items-center gap-2 px-4 py-2 bg-accent3/10 border border-accent3/30 text-accent3 rounded-xl text-xs font-semibold hover:bg-accent3/20 transition-colors">
+                    📊 Download CSV
+                  </button>
+                  <button onClick={() => setShowDownloadPlan(false)} className="text-muted hover:text-text text-xl ml-2">✕</button>
+                </div>
+              </div>
+
+              {/* Project summary */}
+              <div className="grid grid-cols-4 gap-3 p-6 pb-4 shrink-0">
+                {[
+                  { label: 'Start Date', value: fmtDate(currentProject.start_date) },
+                  { label: 'End Date',   value: fmtDate(currentProject.end_date) },
+                  { label: 'Duration',   value: currentProject.start_date && currentProject.end_date ? `${daysBetween(currentProject.start_date, currentProject.end_date)} days` : '—' },
+                  { label: 'Progress',   value: `${progress}% (${doneTasks}/${planTasks.length})` },
+                ].map(s => (
+                  <div key={s.label} className="bg-surface2 rounded-xl p-3 text-center">
+                    <p className="text-xs text-muted font-mono-code mb-1">{s.label}</p>
+                    <p className="font-syne font-bold text-sm">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress bar */}
+              <div className="px-6 pb-4 shrink-0">
+                <div className="h-2 bg-surface2 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all"
+                    style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #00d4ff, #22d3a5)' }}/>
+                </div>
+              </div>
+
+              {/* Task table */}
+              <div className="overflow-y-auto flex-1 min-h-0">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-surface2 border-b border-border">
+                    <tr>
+                      {['#', 'Task', 'Status', 'Priority', 'Assignee', 'Start', 'End', 'Due', 'Duration'].map(h => (
+                        <th key={h} className="px-3 py-2.5 text-left text-xs font-syne font-bold text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {planTasks.map((t, i) => (
+                      <tr key={t.id} className="border-b border-border/40 hover:bg-surface2/30 transition-colors">
+                        <td className="px-3 py-3 text-xs text-muted font-mono-code">{String(i+1).padStart(2,'0')}</td>
+                        <td className="px-3 py-3">
+                          <p className="font-semibold text-sm">{t.title}</p>
+                          {t.assignee_name && <p className="text-xs text-muted">👤 {t.assignee_name}</p>}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className={`text-xs px-2 py-1 rounded-lg font-semibold whitespace-nowrap ${statusColors[t.status] || 'text-muted bg-surface2'}`}>
+                            {t.status.replace('_',' ')}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className={`text-xs px-2 py-1 rounded-lg font-mono-code ${
+                            t.priority === 'critical' ? 'bg-danger/10 text-danger' :
+                            t.priority === 'high'     ? 'bg-warn/10 text-warn' :
+                            t.priority === 'medium'   ? 'bg-accent/10 text-accent' : 'bg-surface2 text-muted'
+                          }`}>{t.priority}</span>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-muted whitespace-nowrap">{t.assignee_name || '—'}</td>
+                        <td className="px-3 py-3 text-xs font-mono-code whitespace-nowrap text-accent">{fmtDate(t.start_date)}</td>
+                        <td className="px-3 py-3 text-xs font-mono-code whitespace-nowrap text-accent">{fmtDate(t.end_date)}</td>
+                        <td className="px-3 py-3 text-xs font-mono-code whitespace-nowrap text-warn">{fmtDate(t.due_date)}</td>
+                        <td className="px-3 py-3 text-xs font-mono-code text-muted whitespace-nowrap">
+                          {t.start_date && t.end_date ? `${daysBetween(t.start_date, t.end_date) + 1}d` : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {planTasks.length === 0 && (
+                  <div className="text-center py-10">
+                    <p className="text-muted text-sm">No tasks added yet. Add tasks to your project to see the plan.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-3 border-t border-border shrink-0 flex items-center justify-between">
+                <p className="text-xs text-muted font-mono-code">Generated by NexPlan · nexplan.io</p>
+                <p className="text-xs text-muted">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* PCR Warning Modal — no project dates */}
       {showPCRWarning && (

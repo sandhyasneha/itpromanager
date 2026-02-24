@@ -139,6 +139,82 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
     backlog:     '#6b7280',
   }
 
+  // Download timeline as CSV
+  function downloadTimelineCSV() {
+    const rows = [
+      ['Gantt / Timeline Export'],
+      ['Project:', project?.name ?? ''],
+      ['Start:', projectStart],
+      ['End:', projectEnd],
+      ['Duration:', totalDays + ' days'],
+      ['Progress:', totalProgress + '%'],
+      ['Generated:', new Date().toLocaleDateString('en-GB')],
+      [],
+      ['Task', 'Status', 'Priority', 'Assignee', 'Start Date', 'End Date', 'Duration (days)', 'Progress %'],
+      ...sortedTasks.map(t => [
+        t.title,
+        t.status.replace('_', ' ').toUpperCase(),
+        t.priority.toUpperCase(),
+        t.assignee_name || '—',
+        t.start_date || '—',
+        t.end_date || '—',
+        t.start_date && t.end_date ? String(daysBetween(t.start_date, t.end_date) + 1) : '—',
+        String(progressByStatus[t.status] ?? 0) + '%',
+      ]),
+    ]
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${(project?.name ?? 'project').replace(/\s+/g, '-')}-Gantt.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Download timeline as TXT
+  function downloadTimelineTXT() {
+    const lines = [
+      'GANTT CHART / TIMELINE',
+      '='.repeat(70),
+      `Project  : ${project?.name ?? ''}`,
+      `Start    : ${new Date(projectStart).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}`,
+      `End      : ${new Date(projectEnd).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}`,
+      `Duration : ${totalDays} days`,
+      `Progress : ${totalProgress}% (${doneCount}/${allTasks.length} tasks done)`,
+      `Generated: ${new Date().toLocaleDateString('en-GB')}`,
+      '='.repeat(70),
+      '',
+      'TASK SCHEDULE',
+      '-'.repeat(70),
+      ...sortedTasks.map((t, i) => {
+        const dur = t.start_date && t.end_date ? daysBetween(t.start_date, t.end_date) + 1 : 0
+        const prog = progressByStatus[t.status] ?? 0
+        const bar = '█'.repeat(Math.round(prog / 10)) + '░'.repeat(10 - Math.round(prog / 10))
+        return [
+          `${String(i+1).padStart(2,'0')}. ${t.title}`,
+          `    [${bar}] ${prog}%`,
+          `    Status   : ${t.status.replace('_',' ').toUpperCase()}`,
+          `    Priority : ${t.priority.toUpperCase()}`,
+          `    Assignee : ${t.assignee_name || '—'}`,
+          `    Start    : ${t.start_date ? new Date(t.start_date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '—'}`,
+          `    End      : ${t.end_date ? new Date(t.end_date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '—'}`,
+          `    Duration : ${dur ? dur + ' days' : '—'}`,
+          '',
+        ].join('\n')
+      }),
+      '='.repeat(70),
+      'NexPlan — nexplan.io',
+    ]
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${(project?.name ?? 'project').replace(/\s+/g, '-')}-Gantt.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-4">
 
@@ -172,6 +248,16 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
                 {l.label}
               </span>
             ))}
+            <div className="flex items-center gap-2 ml-2 border-l border-border pl-2">
+              <button onClick={downloadTimelineTXT}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-accent2/10 border border-accent2/30 text-accent2 rounded-lg hover:bg-accent2/20 transition-colors font-semibold">
+                📄 TXT
+              </button>
+              <button onClick={downloadTimelineCSV}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-accent3/10 border border-accent3/30 text-accent3 rounded-lg hover:bg-accent3/20 transition-colors font-semibold">
+                📊 CSV
+              </button>
+            </div>
           </div>
         </div>
         {/* Overall progress bar */}

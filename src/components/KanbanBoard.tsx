@@ -56,7 +56,7 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
       <div className="card text-center py-16">
         <p className="text-4xl mb-3">📅</p>
         <h3 className="font-syne font-bold text-lg mb-2">Set Project Dates First</h3>
-        <p className="text-muted text-sm mb-4">Add a start date and end date to your project to see the Gantt timeline.</p>
+        <p className="text-muted text-sm mb-4">Add a start and end date to your project to see the Gantt chart.</p>
         <button onClick={onEditProject} className="btn-primary px-5 py-2">Set Project Dates</button>
       </div>
     )
@@ -67,166 +67,256 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
       <div className="card text-center py-16">
         <p className="text-4xl mb-3">🗓️</p>
         <h3 className="font-syne font-bold text-lg mb-2">No Tasks with Dates Yet</h3>
-        <p className="text-muted text-sm">Click <strong>edit</strong> on any task card → add Start Date + End Date → it appears here.</p>
+        <p className="text-muted text-sm">Click <strong>edit</strong> on any task card → add Start Date + End Date → it appears on the Gantt.</p>
       </div>
     )
   }
 
   const projectStart = project.start_date!
-  const projectEnd = project.end_date!
-  const totalDays = daysBetween(projectStart, projectEnd) || 1
+  const projectEnd   = project.end_date!
+  const totalDays    = daysBetween(projectStart, projectEnd) + 1
 
-  // Find critical path — longest chain of tasks
+  // Sort tasks by start date
   const sortedTasks = [...allTasks].sort((a, b) =>
     new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime()
   )
 
-  // Simple critical path — tasks with no float (end date = next task start date or project end)
+  // Critical path
   const criticalTaskIds = new Set<string>()
   let latestEnd = projectStart
   sortedTasks.forEach(t => {
-    if (t.end_date! >= latestEnd) {
-      latestEnd = t.end_date!
-      criticalTaskIds.add(t.id)
-    }
+    if (t.end_date! >= latestEnd) { latestEnd = t.end_date!; criticalTaskIds.add(t.id) }
   })
 
-  // Generate month headers
-  const months: { label: string; left: number; width: number }[] = []
-  const start = new Date(projectStart)
-  const end = new Date(projectEnd)
-  let cur = new Date(start.getFullYear(), start.getMonth(), 1)
-  while (cur <= end) {
-    const monthStart = new Date(Math.max(cur.getTime(), start.getTime()))
-    const monthEnd = new Date(Math.min(new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getTime(), end.getTime()))
-    const left = (daysBetween(projectStart, monthStart.toISOString().split('T')[0]) / totalDays) * 100
-    const width = ((daysBetween(monthStart.toISOString().split('T')[0], monthEnd.toISOString().split('T')[0]) + 1) / totalDays) * 100
-    months.push({ label: cur.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }), left: Math.max(0, left), width })
-    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1)
+  // Progress % per status
+  const progressByStatus: Record<string, number> = {
+    done: 100, in_progress: 50, review: 80, blocked: 25, backlog: 0,
   }
 
-  const statusColors: Record<string, string> = {
-    done: 'bg-accent3',
-    in_progress: 'bg-accent',
-    review: 'bg-warn',
-    blocked: 'bg-danger',
-    backlog: 'bg-muted',
+  // Overall project progress
+  const totalProgress = Math.round(
+    allTasks.reduce((sum, t) => sum + (progressByStatus[t.status] ?? 0), 0) / allTasks.length
+  )
+
+  // Done tasks count
+  const doneCount = allTasks.filter(t => t.status === 'done').length
+
+  // Build daily columns — group by month for headers, show every day
+  const days: { date: Date; label: string; dayNum: number }[] = []
+  const monthGroups: { label: string; startIdx: number; count: number }[] = []
+  let curDate = new Date(projectStart + 'T00:00:00')
+  const endDate = new Date(projectEnd + 'T00:00:00')
+  let lastMonth = -1
+  while (curDate <= endDate) {
+    if (curDate.getMonth() !== lastMonth) {
+      monthGroups.push({
+        label: curDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+        startIdx: days.length,
+        count: 0,
+      })
+      lastMonth = curDate.getMonth()
+    }
+    monthGroups[monthGroups.length - 1].count++
+    days.push({
+      date: new Date(curDate),
+      label: String(curDate.getDate()),
+      dayNum: curDate.getDate(),
+    })
+    curDate.setDate(curDate.getDate() + 1)
+  }
+
+  const COL_W = 28 // px per day column
+  const ROW_H = 44 // px per task row
+  const NAME_W = 200 // px for task name column
+  const today = new Date().toISOString().split('T')[0]
+  const todayIdx = days.findIndex(d => d.date.toISOString().split('T')[0] === today)
+
+  const barColors: Record<string, string> = {
+    done:        '#22d3a5',
+    in_progress: '#00d4ff',
+    review:      '#f59e0b',
+    blocked:     '#ef4444',
+    backlog:     '#6b7280',
   }
 
   return (
     <div className="space-y-4">
-      {/* Project summary */}
-      <div className="card p-4 flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-6">
-          <div>
-            <p className="text-xs text-muted font-mono-code">Project Start</p>
-            <p className="font-syne font-bold">{new Date(projectStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+
+      {/* Summary bar */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-3">
+          <div className="flex items-center gap-6 flex-wrap text-sm">
+            <div>
+              <p className="text-xs text-muted font-mono-code">Target Date</p>
+              <p className="font-syne font-bold">{new Date(projectEnd).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted font-mono-code">Duration</p>
+              <p className="font-syne font-bold">{totalDays} days</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted font-mono-code">Tasks</p>
+              <p className="font-syne font-bold">{doneCount} / {allTasks.length} done</p>
+            </div>
           </div>
-          <div className="text-2xl text-muted">→</div>
-          <div>
-            <p className="text-xs text-muted font-mono-code">Project End</p>
-            <p className="font-syne font-bold">{new Date(projectEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted font-mono-code">Total Duration</p>
-            <p className="font-syne font-bold">{totalDays} days</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted font-mono-code">Tasks Scheduled</p>
-            <p className="font-syne font-bold">{allTasks.length} / {tasks.length}</p>
+          <div className="flex items-center gap-3 text-xs flex-wrap">
+            {[
+              { color: '#22d3a5', label: 'Done' },
+              { color: '#00d4ff', label: 'In Progress' },
+              { color: '#f59e0b', label: 'Review' },
+              { color: '#ef4444', label: 'Blocked / Critical' },
+              { color: '#6b7280', label: 'Backlog' },
+            ].map(l => (
+              <span key={l.label} className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm inline-block" style={{ background: l.color }}/>
+                {l.label}
+              </span>
+            ))}
           </div>
         </div>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-danger inline-block"/>Critical Path</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-accent inline-block"/>In Progress</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-accent3 inline-block"/>Done</span>
+        {/* Overall progress bar */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-3 bg-surface2 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${totalProgress}%`, background: 'linear-gradient(90deg, #00d4ff, #22d3a5)' }}/>
+          </div>
+          <span className="text-sm font-syne font-bold text-accent3 w-12 text-right">{totalProgress}% completed</span>
         </div>
       </div>
 
       {/* Gantt chart */}
       <div className="card p-0 overflow-hidden">
-        <div className="flex">
-          {/* Task names column */}
-          <div className="w-56 shrink-0 border-r border-border">
-            <div className="h-10 border-b border-border px-4 flex items-center">
-              <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide">Task</p>
-            </div>
-            {sortedTasks.map(t => (
-              <div key={t.id}
-                onClick={() => onEditTask(t)}
-                className={`h-16 border-b border-border/50 px-3 flex flex-col justify-center gap-0.5 cursor-pointer hover:bg-surface2/50 transition-colors ${criticalTaskIds.has(t.id) ? 'bg-danger/5' : ''}`}>
-                <div className="flex items-center gap-1.5">
-                  {criticalTaskIds.has(t.id) && <span className="text-danger text-xs">⚠</span>}
-                  <span className="text-sm font-semibold truncate">{t.title}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono-code ${
-                    t.priority === 'critical' ? 'bg-danger/10 text-danger' :
-                    t.priority === 'high' ? 'bg-warn/10 text-warn' :
-                    t.priority === 'medium' ? 'bg-accent/10 text-accent' : 'bg-surface2 text-muted'
-                  }`}>{t.priority}</span>
-                  {t.assignee_name && <span className="text-[10px] text-muted truncate">👤 {t.assignee_name}</span>}
-                </div>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: `${NAME_W + days.length * COL_W}px` }}>
+
+            {/* Month headers row */}
+            <div className="flex border-b border-border bg-surface2/50">
+              <div style={{ width: NAME_W, minWidth: NAME_W }} className="shrink-0 border-r border-border px-3 flex items-center">
+                <span className="text-xs font-syne font-bold text-muted uppercase tracking-wide">TASK</span>
               </div>
-            ))}
-          </div>
-
-          {/* Gantt bars */}
-          <div className="flex-1 overflow-x-auto">
-            {/* Month headers */}
-            <div className="h-10 border-b border-border relative" style={{ minWidth: '600px' }}>
-              {months.map((m, i) => (
-                <div key={i} className="absolute top-0 h-full border-r border-border/30 flex items-center px-2"
-                  style={{ left: `${m.left}%`, width: `${m.width}%` }}>
-                  <span className="text-[10px] font-mono-code text-muted whitespace-nowrap">{m.label}</span>
-                </div>
-              ))}
+              <div className="flex">
+                {monthGroups.map((mg, i) => (
+                  <div key={i} className="border-r border-border/50 flex items-center justify-center"
+                    style={{ width: mg.count * COL_W, height: 28 }}>
+                    <span className="text-xs font-syne font-bold text-text px-2 truncate">{mg.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Task bars */}
+            {/* Day number headers */}
+            <div className="flex border-b border-border">
+              <div style={{ width: NAME_W, minWidth: NAME_W }} className="shrink-0 border-r border-border h-7"/>
+              <div className="flex">
+                {days.map((d, i) => {
+                  const isToday = i === todayIdx
+                  const isWeekend = d.date.getDay() === 0 || d.date.getDay() === 6
+                  return (
+                    <div key={i}
+                      className={`flex items-center justify-center border-r border-border/20 h-7
+                        ${isToday ? 'bg-accent/20' : isWeekend ? 'bg-surface2/40' : ''}`}
+                      style={{ width: COL_W, minWidth: COL_W }}>
+                      <span className={`text-[9px] font-mono-code ${isToday ? 'text-accent font-bold' : isWeekend ? 'text-muted/50' : 'text-muted'}`}>
+                        {d.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Task rows */}
             {sortedTasks.map(t => {
-              const taskStart = daysBetween(projectStart, t.start_date!)
+              const taskStartIdx = daysBetween(projectStart, t.start_date!)
               const taskDuration = daysBetween(t.start_date!, t.end_date!) + 1
-              const left = (Math.max(0, taskStart) / totalDays) * 100
-              const width = Math.max(1, (taskDuration / totalDays) * 100)
               const isCritical = criticalTaskIds.has(t.id)
+              const progress = progressByStatus[t.status] ?? 0
+              const barColor = isCritical ? '#ef4444' : barColors[t.status] || '#00d4ff'
 
               return (
-                <div key={t.id} className={`h-16 border-b border-border/50 relative ${isCritical ? 'bg-danger/5' : ''}`}
-                  style={{ minWidth: '600px' }}>
-                  {/* Grid lines */}
-                  {months.map((m, i) => (
-                    <div key={i} className="absolute top-0 h-full border-r border-border/20"
-                      style={{ left: `${m.left}%` }}/>
-                  ))}
-                  {/* Bar */}
-                  <div
-                    className={`absolute top-4 h-8 rounded-lg flex items-center px-2 text-xs font-semibold text-black transition-all cursor-pointer hover:opacity-80
-                      ${isCritical ? 'bg-danger shadow-[0_0_8px_rgba(255,50,50,0.4)]' : statusColors[t.status] || 'bg-accent'}`}
-                    style={{ left: `${left}%`, width: `${width}%`, minWidth: '40px' }}
-                    title={`${t.title}: ${t.start_date} → ${t.end_date} (${taskDuration} days)`}
+                <div key={t.id} className={`flex border-b border-border/40 hover:bg-surface2/20 transition-colors group
+                  ${isCritical ? 'bg-danger/5' : ''}`}
+                  style={{ height: ROW_H }}>
+
+                  {/* Task name cell */}
+                  <div style={{ width: NAME_W, minWidth: NAME_W }}
+                    className="shrink-0 border-r border-border px-3 flex flex-col justify-center cursor-pointer"
                     onClick={() => onEditTask(t)}>
-                    <span className="truncate font-semibold">{width > 8 ? `${t.title} · ${taskDuration}d` : `${taskDuration}d`}</span>
+                    <div className="flex items-center gap-1.5">
+                      {isCritical && <span className="text-danger text-[10px]">⚠</span>}
+                      <span className="text-xs font-semibold truncate group-hover:text-accent transition-colors">{t.title}</span>
+                    </div>
+                    <span className={`text-[9px] px-1 py-0.5 rounded font-mono-code w-fit mt-0.5 ${
+                      t.priority === 'critical' ? 'bg-danger/10 text-danger' :
+                      t.priority === 'high'     ? 'bg-warn/10 text-warn' :
+                      t.priority === 'medium'   ? 'bg-accent/10 text-accent' : 'bg-surface2 text-muted'
+                    }`}>{t.priority}</span>
+                  </div>
+
+                  {/* Day cells + bar */}
+                  <div className="relative flex">
+                    {days.map((d, i) => {
+                      const isWeekend = d.date.getDay() === 0 || d.date.getDay() === 6
+                      const isToday = i === todayIdx
+                      return (
+                        <div key={i}
+                          className={`border-r border-border/10 h-full
+                            ${isToday ? 'bg-accent/5' : isWeekend ? 'bg-surface2/30' : ''}`}
+                          style={{ width: COL_W, minWidth: COL_W }}/>
+                      )
+                    })}
+
+                    {/* Gantt bar */}
+                    <div
+                      className="absolute top-2.5 rounded-md cursor-pointer hover:brightness-110 transition-all overflow-hidden"
+                      style={{
+                        left: taskStartIdx * COL_W,
+                        width: Math.max(taskDuration * COL_W, COL_W),
+                        height: ROW_H - 20,
+                        backgroundColor: barColor + '33',
+                        border: `1.5px solid ${barColor}`,
+                      }}
+                      onClick={() => onEditTask(t)}
+                      title={`${t.title}: ${t.start_date} → ${t.end_date} (${taskDuration} days) — ${progress}%`}>
+
+                      {/* Progress fill */}
+                      <div className="h-full rounded-sm transition-all"
+                        style={{ width: `${progress}%`, backgroundColor: barColor, opacity: 0.7 }}/>
+
+                      {/* Label */}
+                      <div className="absolute inset-0 flex items-center px-2">
+                        <span className="text-[10px] font-bold text-white whitespace-nowrap drop-shadow">
+                          {taskDuration * COL_W > 50 ? `${progress}%` : ''}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )
             })}
+
+            {/* Today line */}
+            {todayIdx >= 0 && (
+              <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: NAME_W + todayIdx * COL_W + COL_W / 2 }}>
+                <div className="w-0.5 h-full bg-accent/60 relative">
+                  <div className="absolute -top-1 -left-6 bg-accent text-black text-[9px] font-bold px-1 py-0.5 rounded whitespace-nowrap">TODAY</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Critical path legend */}
+        {/* Critical path footer */}
         {criticalTaskIds.size > 0 && (
-          <div className="px-4 py-3 bg-danger/5 border-t border-danger/20 flex items-center gap-2 flex-wrap">
+          <div className="px-4 py-2 bg-danger/5 border-t border-danger/20 flex items-center gap-2 flex-wrap">
             <span className="text-danger text-sm">⚠</span>
             <p className="text-xs text-danger font-semibold">Critical Path:</p>
-            <p className="text-xs text-muted">
-              {sortedTasks.filter(t => criticalTaskIds.has(t.id)).map(t => t.title).join(' → ')}
-            </p>
+            <p className="text-xs text-muted">{sortedTasks.filter(t => criticalTaskIds.has(t.id)).map(t => t.title).join(' → ')}</p>
           </div>
         )}
       </div>
 
-      {/* Unscheduled tasks */}
+      {/* Unscheduled */}
       {unscheduled.length > 0 && (
         <div className="card p-4">
           <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-3">
@@ -238,8 +328,8 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
                 className="flex items-center gap-2 px-3 py-2 bg-surface2 border border-dashed border-border hover:border-accent/50 rounded-xl text-xs transition-colors">
                 <span className={`w-2 h-2 rounded-full ${
                   t.priority === 'critical' ? 'bg-danger' :
-                  t.priority === 'high' ? 'bg-warn' :
-                  t.priority === 'medium' ? 'bg-accent' : 'bg-muted'
+                  t.priority === 'high'     ? 'bg-warn' :
+                  t.priority === 'medium'   ? 'bg-accent' : 'bg-muted'
                 }`}/>
                 {t.title}
                 <span className="text-muted">+ dates</span>

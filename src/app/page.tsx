@@ -14,11 +14,11 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 py-5 backdrop-blur-xl bg-bg/70 border-b border-border">
         <div className="font-syne font-black text-xl">Nex<span className="text-accent">Plan</span></div>
         <div className="hidden md:flex gap-8">
-          <Link href="#features" className="text-muted text-sm hover:text-text transition-colors">Features</Link>
-          <Link href="/kb" className="text-muted text-sm hover:text-text transition-colors">Knowledge Base</Link>
-          <Link href="/pricing" className="text-muted text-sm hover:text-text transition-colors">Pricing</Link>
-          <Link href="/docs" className="text-muted text-sm hover:text-text transition-colors">Docs</Link>
-          <Link href="/about" className="text-muted text-sm hover:text-text transition-colors">About</Link>
+          <Link href="#features" className="text-text/80 text-sm hover:text-white transition-colors font-medium">Features</Link>
+          <Link href="/kb" className="text-text/80 text-sm hover:text-white transition-colors font-medium">Knowledge Base</Link>
+          <Link href="/pricing" className="text-text/80 text-sm hover:text-white transition-colors font-medium">Pricing</Link>
+          <Link href="/docs" className="text-text/80 text-sm hover:text-white transition-colors font-medium">Docs</Link>
+          <Link href="/about" className="text-text/80 text-sm hover:text-white transition-colors font-medium">About</Link>
         </div>
         <div className="flex gap-3">
           <Link href="/login" className="btn-ghost text-sm px-4 py-2">Sign In</Link>

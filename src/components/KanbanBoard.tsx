@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback } from 'react'
+import PCRManager from '@/components/PCRManager'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
@@ -252,8 +253,9 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
 }
 
 // Task Edit Modal
-function TaskModal({ task, onSave, onClose, onDelete }: {
+function TaskModal({ task, project, onSave, onClose, onDelete }: {
   task: Task
+  project: Project | null
   onSave: (updates: Partial<Task>) => void
   onClose: () => void
   onDelete: (id: string) => void
@@ -343,7 +345,14 @@ function TaskModal({ task, onSave, onClose, onDelete }: {
 
           {/* Timeline dates */}
           <div className="bg-surface2 rounded-xl p-4">
-            <p className="text-xs font-syne font-bold text-accent uppercase tracking-wide mb-3">📅 Task Timeline</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-syne font-bold text-accent uppercase tracking-wide">📅 Task Timeline</p>
+              {project?.start_date && project?.end_date && (
+                <span className="text-[10px] font-mono-code text-muted bg-surface px-2 py-1 rounded-lg">
+                  Project: {new Date(project.start_date).toLocaleDateString('en-GB', { day:'numeric', month:'short' })} → {new Date(project.end_date).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-1 gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -530,6 +539,7 @@ export default function KanbanBoard({
   const [localProjects, setLocalProjects] = useState(projects)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editingProject, setEditingProject] = useState(false)
+  const [showPCR, setShowPCR] = useState(false)
 
   const currentProject = localProjects.find(p => p.id === projectId) ?? null
   const allTasks = columns.flatMap(c => c.tasks)
@@ -649,6 +659,12 @@ export default function KanbanBoard({
             </div>
           )}
           <button onClick={() => setShowAddProject(true)} className="btn-ghost text-sm px-3 py-2">+ Project</button>
+          {currentProject && (
+            <button onClick={() => setShowPCR(true)}
+              className="text-xs font-semibold px-3 py-2 bg-warn/10 border border-warn/30 text-warn rounded-xl hover:bg-warn/20 transition-colors">
+              📋 PCR
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -708,9 +724,29 @@ export default function KanbanBoard({
         <ProjectModal project={currentProject} onSave={saveProject} onClose={() => setEditingProject(false)}/>
       )}
 
+      {/* PCR Manager Modal */}
+      {showPCR && currentProject && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPCR(false)}>
+          <div className="card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-syne font-black text-xl">Change Requests</h2>
+              <button onClick={() => setShowPCR(false)} className="text-muted hover:text-text text-xl">✕</button>
+            </div>
+            <PCRManager
+              project={currentProject}
+              onProjectUpdated={(updates) => {
+                setLocalProjects(prev => prev.map(p => p.id === currentProject.id ? { ...p, ...updates } : p))
+                setShowPCR(false)
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Task Edit Modal */}
       {editingTask && (
-        <TaskModal task={editingTask} onSave={saveTask} onClose={() => setEditingTask(null)} onDelete={deleteTask}/>
+        <TaskModal task={editingTask} project={currentProject} onSave={saveTask} onClose={() => setEditingTask(null)} onDelete={deleteTask}/>
       )}
 
       {!projectId ? (

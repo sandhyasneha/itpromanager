@@ -1,11 +1,35 @@
+'use client'
 import Link from 'next/link'
-
-export const metadata = {
-  title: 'Pricing — NexPlan | Free for IT Professionals',
-  description: 'NexPlan is completely free for all IT Project Managers and the PM community. Enterprise plan with AI/ML IDS coming soon.',
-}
+import { useState } from 'react'
 
 export default function PricingPage() {
+  const [showModal, setShowModal] = useState<'enterprise' | 'ids' | null>(null)
+  const [form, setForm] = useState({ name: '', email: '', company: '', size: '', message: '' })
+  const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+
+  async function handleSubmit() {
+    if (!form.name || !form.email) return
+    setSending(true)
+    try {
+      await fetch('/api/send-task-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assigneeEmail: 'info@nexplan.io',
+          assigneeName: 'NexPlan Team',
+          taskTitle: `Enterprise Interest: ${showModal === 'ids' ? 'AI/ML IDS' : 'Enterprise Plan'}`,
+          taskDescription: `Name: ${form.name}\nCompany: ${form.company}\nSize: ${form.size}\nMessage: ${form.message}`,
+          projectName: 'Enterprise Leads',
+          priority: 'high',
+          assignedBy: `${form.name} <${form.email}>`,
+        }),
+      })
+      setSubmitted(true)
+    } finally {
+      setSending(false)
+    }
+  }
   const freeFeatures = [
     'Unlimited Kanban boards',
     'Unlimited projects & tasks',
@@ -141,11 +165,11 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-            <a href="mailto:info@nexplan.io?subject=Enterprise Plan Interest"
+            <button onClick={() => setShowModal('enterprise')}
               className="w-full py-3 border border-accent2/50 text-accent2 rounded-xl text-sm font-semibold hover:bg-accent2/10 transition-colors block text-center">
               Express Interest →
-            </a>
-            <p className="text-xs text-muted text-center mt-3">Email us to be first notified</p>
+            </button>
+            <p className="text-xs text-muted text-center mt-3">We will notify you on launch</p>
           </div>
 
           {/* Enterprise Security — IDS */}
@@ -176,10 +200,10 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-            <a href="mailto:info@nexplan.io?subject=AI/ML IDS Enterprise Interest"
+            <button onClick={() => setShowModal('ids')}
               className="w-full py-3 border border-danger/50 text-danger rounded-xl text-sm font-semibold hover:bg-danger/10 transition-colors block text-center">
               Register Interest →
-            </a>
+            </button>
             <p className="text-xs text-muted text-center mt-3">Early access for enterprise teams</p>
           </div>
         </div>
@@ -250,10 +274,79 @@ export default function PricingPage() {
           </p>
           <div className="mt-8 flex gap-3 justify-center">
             <Link href="/about" className="btn-ghost px-6 py-3">Read our story →</Link>
-            <a href="mailto:info@nexplan.io?subject=Enterprise Enquiry" className="btn-ghost px-6 py-3">Contact Enterprise →</a>
+            <button onClick={() => setShowModal('enterprise')} className="btn-ghost px-6 py-3">Contact Enterprise →</button>
           </div>
         </div>
       </div>
+
+      {/* Interest Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => { setShowModal(null); setSubmitted(false); setForm({ name: '', email: '', company: '', size: '', message: '' }) }}>
+          <div className="card w-full max-w-md p-8" onClick={e => e.stopPropagation()}>
+            {submitted ? (
+              <div className="text-center py-6">
+                <div className="text-5xl mb-4">🎉</div>
+                <h3 className="font-syne font-black text-2xl mb-2">Thank you!</h3>
+                <p className="text-muted mb-6">We have received your interest. Our team will be in touch within 1-2 business days.</p>
+                <button onClick={() => { setShowModal(null); setSubmitted(false) }} className="btn-primary px-6 py-2">Close</button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="font-mono-code text-xs text-accent uppercase tracking-widest mb-1">
+                      {showModal === 'ids' ? '🛡️ AI/ML IDS' : '🏢 Enterprise Plan'}
+                    </p>
+                    <h3 className="font-syne font-black text-xl">Register Your Interest</h3>
+                  </div>
+                  <button onClick={() => setShowModal(null)} className="text-muted hover:text-text text-xl">✕</button>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Your Name *</label>
+                      <input className="input text-sm" placeholder="John Smith"
+                        value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}/>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Work Email *</label>
+                      <input type="email" className="input text-sm" placeholder="john@company.com"
+                        value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}/>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Company Name</label>
+                    <input className="input text-sm" placeholder="Acme Corporation"
+                      value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))}/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Company Size</label>
+                    <select className="select text-sm" value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))}>
+                      <option value="">Select size</option>
+                      <option>1-50 employees</option>
+                      <option>51-200 employees</option>
+                      <option>201-1000 employees</option>
+                      <option>1000+ employees</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Tell us about your needs</label>
+                    <textarea className="input text-sm resize-none h-20"
+                      placeholder={showModal === 'ids' ? 'How many devices on your network? Current security tools?' : 'How many team members? Current PM tools?'}
+                      value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}/>
+                  </div>
+                </div>
+                <button onClick={handleSubmit} disabled={!form.name || !form.email || sending}
+                  className="btn-primary w-full py-3 mt-5 disabled:opacity-50">
+                  {sending ? 'Sending...' : 'Submit Interest →'}
+                </button>
+                <p className="text-xs text-muted text-center mt-3">We will respond within 1-2 business days</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <footer className="relative z-10 text-center py-8 text-muted text-sm border-t border-border">
         © 2025 NexPlan ·

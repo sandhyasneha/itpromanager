@@ -842,6 +842,8 @@ export default function KanbanBoard({
 
       {/* Download Plan Modal */}
       {showDownloadPlan && currentProject && (() => {
+        if (!currentProject) return null
+        const proj = currentProject
         const planTasks = [...allTasks].sort((a, b) =>
           new Date(a.start_date || '9999').getTime() - new Date(b.start_date || '9999').getTime()
         )
@@ -855,10 +857,10 @@ export default function KanbanBoard({
 
         function downloadCSV() {
           const rows = [
-            ['Project Plan:', currentProject.name],
-            ['Start Date:', fmtDate(currentProject.start_date)],
-            ['End Date:', fmtDate(currentProject.end_date)],
-            ['Duration:', currentProject.start_date && currentProject.end_date ? `${daysBetween(currentProject.start_date, currentProject.end_date)} days` : '—'],
+            ['Project Plan:', proj.name],
+            ['Start Date:', fmtDate(proj.start_date)],
+            ['End Date:', fmtDate(proj.end_date)],
+            ['Duration:', proj.start_date && proj.end_date ? `${daysBetween(proj.start_date, proj.end_date)} days` : '—'],
             ['Overall Progress:', `${progress}%`],
             ['Generated:', new Date().toLocaleDateString('en-GB')],
             [],
@@ -880,7 +882,7 @@ export default function KanbanBoard({
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
-          a.download = `${currentProject.name.replace(/\s+/g, '-')}-Project-Plan.csv`
+          a.download = `${proj.name.replace(/\s+/g, '-')}-Project-Plan.csv`
           a.click()
           URL.revokeObjectURL(url)
         }
@@ -889,10 +891,10 @@ export default function KanbanBoard({
           const lines = [
             `PROJECT PLAN`,
             `${'='.repeat(60)}`,
-            `Project  : ${currentProject.name}`,
-            `Start    : ${fmtDate(currentProject.start_date)}`,
-            `End      : ${fmtDate(currentProject.end_date)}`,
-            `Duration : ${currentProject.start_date && currentProject.end_date ? daysBetween(currentProject.start_date, currentProject.end_date) + ' days' : '—'}`,
+            `Project  : ${proj.name}`,
+            `Start    : ${fmtDate(proj.start_date)}`,
+            `End      : ${fmtDate(proj.end_date)}`,
+            `Duration : ${proj.start_date && proj.end_date ? daysBetween(proj.start_date, proj.end_date) + ' days' : '—'}`,
             `Progress : ${progress}% (${doneTasks}/${planTasks.length} tasks done)`,
             `Generated: ${new Date().toLocaleDateString('en-GB')}`,
             `${'='.repeat(60)}`,
@@ -918,7 +920,7 @@ export default function KanbanBoard({
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
-          a.download = `${currentProject.name.replace(/\s+/g, '-')}-Project-Plan.txt`
+          a.download = `${proj.name.replace(/\s+/g, '-')}-Project-Plan.txt`
           a.click()
           URL.revokeObjectURL(url)
         }
@@ -940,7 +942,7 @@ export default function KanbanBoard({
               <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
                 <div>
                   <p className="font-mono-code text-xs text-accent2 uppercase tracking-widest mb-1">Project Plan</p>
-                  <h2 className="font-syne font-black text-2xl">{currentProject.name}</h2>
+                  <h2 className="font-syne font-black text-2xl">{proj.name}</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={downloadTXT}
@@ -958,9 +960,9 @@ export default function KanbanBoard({
               {/* Project summary */}
               <div className="grid grid-cols-4 gap-3 p-6 pb-4 shrink-0">
                 {[
-                  { label: 'Start Date', value: fmtDate(currentProject.start_date) },
-                  { label: 'End Date',   value: fmtDate(currentProject.end_date) },
-                  { label: 'Duration',   value: currentProject.start_date && currentProject.end_date ? `${daysBetween(currentProject.start_date, currentProject.end_date)} days` : '—' },
+                  { label: 'Start Date', value: fmtDate(proj.start_date) },
+                  { label: 'End Date',   value: fmtDate(proj.end_date) },
+                  { label: 'Duration',   value: proj.start_date && proj.end_date ? `${daysBetween(proj.start_date, proj.end_date)} days` : '—' },
                   { label: 'Progress',   value: `${progress}% (${doneTasks}/${planTasks.length})` },
                 ].map(s => (
                   <div key={s.label} className="bg-surface2 rounded-xl p-3 text-center">

@@ -540,6 +540,7 @@ export default function KanbanBoard({
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editingProject, setEditingProject] = useState(false)
   const [showPCR, setShowPCR] = useState(false)
+  const [showPCRWarning, setShowPCRWarning] = useState(false)
 
   const currentProject = localProjects.find(p => p.id === projectId) ?? null
   const allTasks = columns.flatMap(c => c.tasks)
@@ -660,10 +661,18 @@ export default function KanbanBoard({
           )}
           <button onClick={() => setShowAddProject(true)} className="btn-ghost text-sm px-3 py-2">+ Project</button>
           {currentProject && (
-            <button onClick={() => setShowPCR(true)}
-              className="text-xs font-semibold px-3 py-2 bg-warn/10 border border-warn/30 text-warn rounded-xl hover:bg-warn/20 transition-colors">
-              📋 PCR
-            </button>
+            currentProject.start_date && currentProject.end_date ? (
+              <button onClick={() => setShowPCR(true)}
+                className="text-xs font-semibold px-3 py-2 bg-warn/10 border border-warn/30 text-warn rounded-xl hover:bg-warn/20 transition-colors">
+                📋 PCR
+              </button>
+            ) : (
+              <button onClick={() => setShowPCRWarning(true)}
+                className="text-xs font-semibold px-3 py-2 bg-surface2 border border-border text-muted rounded-xl hover:border-warn/30 hover:text-warn transition-colors"
+                title="Set project start and end date to enable PCR">
+                📋 PCR
+              </button>
+            )
           )}
         </div>
 
@@ -722,6 +731,34 @@ export default function KanbanBoard({
       {/* Project Edit Modal */}
       {editingProject && currentProject && (
         <ProjectModal project={currentProject} onSave={saveProject} onClose={() => setEditingProject(false)}/>
+      )}
+
+      {/* PCR Warning Modal — no project dates */}
+      {showPCRWarning && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPCRWarning(false)}>
+          <div className="card w-full max-w-sm p-8 text-center" onClick={e => e.stopPropagation()}>
+            <div className="text-5xl mb-4">📅</div>
+            <h3 className="font-syne font-black text-xl mb-2">Project Dates Required</h3>
+            <p className="text-muted text-sm leading-relaxed mb-6">
+              To create a Project Change Request, your project must have a
+              <strong className="text-text"> Start Date</strong> and
+              <strong className="text-text"> End Date</strong> set first.
+            </p>
+            <div className="bg-surface2 rounded-xl p-3 mb-6 text-left">
+              <p className="text-xs font-mono-code text-muted mb-2">How to set project dates:</p>
+              <p className="text-xs text-muted">1. Click the <span className="text-accent font-semibold">📅 date pill</span> next to your project name</p>
+              <p className="text-xs text-muted">2. Set Start Date and End Date</p>
+              <p className="text-xs text-muted">3. Click Save Project</p>
+              <p className="text-xs text-muted">4. Then click 📋 PCR</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowPCRWarning(false)} className="btn-ghost flex-1 py-2">Close</button>
+              <button onClick={() => { setShowPCRWarning(false); setEditingProject(true) }}
+                className="btn-primary flex-1 py-2">Set Dates Now →</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* PCR Manager Modal */}

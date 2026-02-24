@@ -122,7 +122,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'NexPlan <notifications@nexplan.io>',
+        from: 'NexPlan <info@nexplan.io>',
         to: [assigneeEmail],
         subject: `📋 New Task Assigned: ${taskTitle} — ${projectName}`,
         html,
@@ -130,7 +130,8 @@ export async function POST(request: Request) {
     })
 
     const data = await res.json()
-    if (!res.ok) return NextResponse.json({ error: data.message ?? 'Send failed' }, { status: 500 })
+    console.log('Resend response:', res.status, JSON.stringify(data))
+    if (!res.ok) return NextResponse.json({ error: data.message ?? data.name ?? 'Send failed', details: data }, { status: 500 })
     return NextResponse.json({ success: true, id: data.id })
   } catch (err) {
     return NextResponse.json({ error: 'Email service error' }, { status: 500 })

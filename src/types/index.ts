@@ -41,6 +41,9 @@ export interface Project {
   scope?: string
   attachment_url?: string
   attachment_name?: string
+  report_frequency?: string
+  stakeholder_emails?: string[]
+  report_day?: string
   status: 'active' | 'completed' | 'on_hold' | 'cancelled'
   progress: number
   start_date?: string

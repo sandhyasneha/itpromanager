@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
+import StatusReport from '@/components/StatusReport'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
@@ -785,6 +786,7 @@ export default function KanbanBoard({
   const [showPCRWarning, setShowPCRWarning] = useState(false)
   const [showDownloadPlan, setShowDownloadPlan] = useState(false)
   const [showRiskRegister, setShowRiskRegister] = useState(false)
+  const [showStatusReport, setShowStatusReport] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
 
   async function downloadExcel() {
@@ -1041,6 +1043,13 @@ export default function KanbanBoard({
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-danger hover:bg-danger/10"
                 title="Risk & Issue Register">
                 🛡️ Risks
+              </button>
+              {/* Status Report */}
+              <button
+                onClick={() => setShowStatusReport(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent2 hover:bg-accent2/10"
+                title="Generate Status Report">
+                📊 Report
               </button>
               {/* Download Plan */}
               <button
@@ -1416,6 +1425,15 @@ export default function KanbanBoard({
           </div>
         )
       })()}
+
+      {/* Status Report Modal */}
+      {showStatusReport && currentProject && (
+        <StatusReport
+          project={currentProject}
+          tasks={allTasks}
+          onClose={() => setShowStatusReport(false)}
+        />
+      )}
 
       {/* Risk Register Modal */}
       {showRiskRegister && currentProject && (

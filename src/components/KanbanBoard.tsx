@@ -1,6 +1,7 @@
 'use client'
 import { useState, useCallback } from 'react'
 import PCRManager from '@/components/PCRManager'
+import RiskRegister from '@/components/RiskRegister'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
@@ -718,6 +719,7 @@ export default function KanbanBoard({
   const [showPCR, setShowPCR] = useState(false)
   const [showPCRWarning, setShowPCRWarning] = useState(false)
   const [showDownloadPlan, setShowDownloadPlan] = useState(false)
+  const [showRiskRegister, setShowRiskRegister] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
 
   async function downloadExcel() {
@@ -890,6 +892,13 @@ export default function KanbanBoard({
                     ? 'text-warn hover:bg-warn/10 hover:text-warn'
                     : 'text-muted hover:text-warn'}`}>
                 🔀 PCR
+              </button>
+              {/* Risk Register */}
+              <button
+                onClick={() => setShowRiskRegister(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-danger hover:bg-danger/10"
+                title="Risk & Issue Register">
+                🛡️ Risks
               </button>
               {/* Download Plan */}
               <button
@@ -1160,6 +1169,15 @@ export default function KanbanBoard({
           </div>
         )
       })()}
+
+      {/* Risk Register Modal */}
+      {showRiskRegister && currentProject && (
+        <RiskRegister
+          projectId={currentProject.id}
+          projectName={currentProject.name}
+          onClose={() => setShowRiskRegister(false)}
+        />
+      )}
 
       {/* PCR Warning Modal — no project dates */}
       {showPCRWarning && (

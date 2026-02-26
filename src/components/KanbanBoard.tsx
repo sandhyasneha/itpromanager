@@ -4,6 +4,7 @@ import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
 import StatusReport from '@/components/StatusReport'
 import NotificationSettings from '@/components/NotificationSettings'
+import TeamManager from '@/components/TeamManager'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
@@ -797,12 +798,13 @@ function ProjectModal({ project, onSave, onClose }: {
 }
 
 export default function KanbanBoard({
-  initialColumns, projects, initialProjectId,
+  initialColumns, projects, initialProjectId, currentUserId = '',
 }: {
   initialColumns: KanbanColumn[]
   projects: Project[]
   initialProjectId: string | null
   allTasks?: Task[]
+  currentUserId?: string
 }) {
   const supabase = createClient()
   const [columns, setColumns] = useState(initialColumns)
@@ -829,6 +831,7 @@ export default function KanbanBoard({
   const [showRiskRegister, setShowRiskRegister] = useState(false)
   const [showStatusReport, setShowStatusReport] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showTeam, setShowTeam] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
 
   async function downloadExcel() {
@@ -856,6 +859,9 @@ export default function KanbanBoard({
   }
 
   const currentProject = localProjects.find(p => p.id === projectId) ?? null
+  const isOwner = !currentProject || (currentProject as any).userRole === 'owner' || (currentProject as any).owner_id === currentUserId
+  const userRole = (currentProject as any)?.userRole || 'owner'
+  const canEdit = isOwner || userRole === 'pm'
   const allTasks = columns.flatMap(c => c.tasks)
 
   async function switchProject(newProjectId: string) {
@@ -1028,9 +1034,20 @@ export default function KanbanBoard({
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           {localProjects.length > 0 ? (
-            <select className="select w-auto" value={projectId ?? ''} onChange={e => switchProject(e.target.value)}>
-              {localProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <div className="flex items-center gap-2">
+              <select className="select w-auto" value={projectId ?? ''} onChange={e => switchProject(e.target.value)}>
+                {localProjects.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {(p as any).userRole && (p as any).userRole !== 'owner' ? `[${((p as any).userRole as string).toUpperCase()}] ` : ''}{p.name}
+                  </option>
+                ))}
+              </select>
+              {currentProject && !isOwner && (
+                <span className="text-[10px] font-mono-code px-2 py-1 rounded-lg bg-accent2/10 text-accent2 border border-accent2/20 uppercase font-semibold">
+                  {userRole}
+                </span>
+              )}
+            </div>
           ) : (
             <span className="text-muted text-sm">No projects yet</span>
           )}
@@ -1099,6 +1116,13 @@ export default function KanbanBoard({
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent3 hover:bg-accent3/10"
                 title="Notification Settings">
                 🔔 Alerts
+              </button>
+              {/* Team */}
+              <button
+                onClick={() => setShowTeam(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent2 hover:bg-accent2/10"
+                title="Team Members">
+                👥 Team
               </button>
               {/* Download Plan */}
               <button
@@ -1474,6 +1498,17 @@ export default function KanbanBoard({
           </div>
         )
       })()}
+
+      {/* Team Manager Modal */}
+      {showTeam && currentProject && (
+        <TeamManager
+          projectId={currentProject.id}
+          projectName={currentProject.name}
+          currentUserId={currentUserId}
+          isOwner={isOwner}
+          onClose={() => setShowTeam(false)}
+        />
+      )}
 
       {/* Notification Settings Modal */}
       {showNotifications && currentProject && (

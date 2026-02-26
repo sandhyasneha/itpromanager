@@ -1,7 +1,4 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(request: Request) {
   try {
@@ -24,13 +21,22 @@ Write a clear, actionable mitigation plan in 3-5 bullet points. Be specific to I
 
 Keep it concise and practical. No intro text, just the bullet points.`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      messages: [{ role: 'user', content: prompt }],
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }],
+      }),
     })
 
-    const mitigation = (message.content[0] as any).text
+    const data = await response.json()
+    const mitigation = data.content[0].text
     return NextResponse.json({ mitigation })
   } catch (err: any) {
     console.error('Mitigation generation error:', err)

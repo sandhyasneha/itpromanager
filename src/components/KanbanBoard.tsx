@@ -710,6 +710,10 @@ export default function KanbanBoard({
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showAddProject, setShowAddProject] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
+  const [newProjectDesc, setNewProjectDesc] = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiPreviewTasks, setAiPreviewTasks] = useState<any[]>([])
+  const [aiStep, setAiStep] = useState<'form' | 'preview'>('form')
   const [newProjectStart, setNewProjectStart] = useState('')
   const [newProjectEnd, setNewProjectEnd] = useState('')
   const [saving, setSaving] = useState(false)
@@ -809,6 +813,74 @@ export default function KanbanBoard({
     await supabase.from('projects').update(updates).eq('id', projectId)
     setLocalProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p))
     setEditingProject(false)
+  }
+
+  async function generateAIProject() {
+    if (!newProjectName.trim() || !newProjectDesc.trim() || !newProjectStart || !newProjectEnd) return
+    setAiGenerating(true)
+    try {
+      const res = await fetch('/api/ai-project-manager', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName: newProjectName,
+          description: newProjectDesc,
+          startDate: newProjectStart,
+          endDate: newProjectEnd,
+        }),
+      })
+      const data = await res.json()
+      if (data.tasks) {
+        setAiPreviewTasks(data.tasks)
+        setAiStep('preview')
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setAiGenerating(false)
+    }
+  }
+
+  async function createAIProject() {
+    if (!newProjectName.trim()) return
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: project } = await supabase.from('projects').insert({
+      name: newProjectName.trim(),
+      owner_id: user!.id,
+      color: '#00d4ff',
+      status: 'active',
+      progress: 0,
+      start_date: newProjectStart || undefined,
+      end_date: newProjectEnd || undefined,
+    }).select().single()
+
+    if (project) {
+      // Insert all AI-generated tasks
+      if (aiPreviewTasks.length > 0) {
+        await supabase.from('tasks').insert(
+          aiPreviewTasks.map(t => ({
+            ...t,
+            project_id: project.id,
+            owner_id: user!.id,
+            status: 'backlog',
+          }))
+        )
+      }
+      setLocalProjects(p => [project as Project, ...p])
+      setProjectId(project.id)
+      setColumns(buildColumns([]))
+      setNewProjectName('')
+      setNewProjectDesc('')
+      setNewProjectStart('')
+      setNewProjectEnd('')
+      setAiPreviewTasks([])
+      setAiStep('form')
+      setShowAddProject(false)
+      // Reload tasks
+      setTimeout(() => window.location.reload(), 500)
+    }
+    setSaving(false)
   }
 
   async function addProject() {
@@ -935,34 +1007,139 @@ export default function KanbanBoard({
 
       {/* Add Project Modal */}
       {showAddProject && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-md p-8">
-            <h3 className="font-syne font-black text-xl mb-5">New Project</h3>
-            <div className="space-y-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => { setShowAddProject(false); setAiStep('form'); setAiPreviewTasks([]) }}>
+          <div className={`card w-full ${aiStep === 'preview' ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] flex flex-col`}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
               <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Project Name</label>
-                <input className="input" placeholder="e.g. Network Migration Q2"
-                  value={newProjectName} onChange={e => setNewProjectName(e.target.value)} autoFocus/>
+                <p className="font-mono-code text-xs text-accent2 uppercase tracking-widest mb-1">
+                  {aiStep === 'form' ? '🤖 AI Project Manager' : '✅ Review AI Generated Tasks'}
+                </p>
+                <h3 className="font-syne font-black text-xl">
+                  {aiStep === 'form' ? 'New Project' : newProjectName}
+                </h3>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => { setShowAddProject(false); setAiStep('form'); setAiPreviewTasks([]) }}
+                className="text-muted hover:text-text text-xl">✕</button>
+            </div>
+
+            {aiStep === 'form' ? (
+              <div className="p-6 space-y-4 overflow-y-auto">
+                {/* Project Name */}
                 <div>
-                  <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Start Date</label>
-                  <input type="date" className="input text-sm" value={newProjectStart}
-                    onChange={e => setNewProjectStart(e.target.value)}/>
+                  <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Project Name <span className="text-danger">*</span></label>
+                  <input className="input" placeholder="e.g. OSPF to BGP Migration — Singapore"
+                    value={newProjectName} onChange={e => setNewProjectName(e.target.value)} autoFocus/>
                 </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Start Date <span className="text-danger">*</span></label>
+                    <input type="date" className="input text-sm" value={newProjectStart}
+                      onChange={e => setNewProjectStart(e.target.value)}/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-1.5">End Date <span className="text-danger">*</span></label>
+                    <input type="date" className="input text-sm" value={newProjectEnd}
+                      min={newProjectStart} onChange={e => setNewProjectEnd(e.target.value)}/>
+                  </div>
+                </div>
+
+                {/* AI Description */}
                 <div>
-                  <label className="block text-xs font-syne font-semibold text-muted mb-1.5">End Date</label>
-                  <input type="date" className="input text-sm" value={newProjectEnd}
-                    min={newProjectStart} onChange={e => setNewProjectEnd(e.target.value)}/>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <label className="text-xs font-syne font-semibold text-muted">Project Description</label>
+                    <span className="text-xs bg-accent2/10 text-accent2 px-2 py-0.5 rounded-lg font-semibold">✨ Powers AI Generation</span>
+                  </div>
+                  <textarea className="input min-h-[120px] resize-none"
+                    placeholder="Describe your IT project in detail...&#10;&#10;e.g. We need to migrate our network infrastructure from OSPF to BGP across 5 locations in Singapore, Hong Kong and India. This involves router configuration, testing, cutover planning and documentation for 20 core routers."
+                    value={newProjectDesc}
+                    onChange={e => setNewProjectDesc(e.target.value)}/>
+                  <p className="text-xs text-muted mt-1.5">💡 The more detail you provide, the better the AI-generated tasks</p>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => { setShowAddProject(false); setAiStep('form'); setAiPreviewTasks([]) }}
+                    className="btn-ghost flex-1 py-2.5">Cancel</button>
+                  <button onClick={addProject} disabled={saving || !newProjectName.trim()}
+                    className="btn-ghost flex-1 py-2.5 border border-border disabled:opacity-40">
+                    {saving ? 'Creating...' : '+ Manual (no AI)'}
+                  </button>
+                  <button
+                    onClick={generateAIProject}
+                    disabled={aiGenerating || !newProjectName.trim() || !newProjectDesc.trim() || !newProjectStart || !newProjectEnd}
+                    className="btn-primary flex-1 py-2.5 disabled:opacity-40">
+                    {aiGenerating ? '🤖 Generating...' : '🤖 Generate with AI'}
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="flex gap-3 justify-end mt-5">
-              <button onClick={() => setShowAddProject(false)} className="btn-ghost">Cancel</button>
-              <button onClick={addProject} className="btn-primary" disabled={saving}>
-                {saving ? 'Creating...' : 'Create Project'}
-              </button>
-            </div>
+            ) : (
+              /* Preview Step */
+              <div className="flex flex-col flex-1 min-h-0">
+                <div className="px-6 py-3 bg-accent2/5 border-b border-border shrink-0">
+                  <p className="text-sm text-accent2 font-semibold">
+                    🤖 AI generated {aiPreviewTasks.length} tasks for your project. Review and edit before creating.
+                  </p>
+                </div>
+
+                <div className="overflow-y-auto flex-1 min-h-0">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-surface2 border-b border-border">
+                      <tr>
+                        {['#','Task','Priority','Start','End','Tags'].map(h => (
+                          <th key={h} className="px-3 py-2.5 text-left text-xs font-syne font-bold text-muted uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiPreviewTasks.map((task, idx) => (
+                        <tr key={idx} className="border-b border-border/40 hover:bg-surface2/30">
+                          <td className="px-3 py-2.5 text-xs text-muted font-mono-code">{String(idx+1).padStart(2,'0')}</td>
+                          <td className="px-3 py-2.5">
+                            <p className="font-semibold text-sm">{task.title}</p>
+                            <p className="text-xs text-muted">{task.description}</p>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className={`text-xs px-2 py-1 rounded-lg font-semibold capitalize
+                              ${task.priority === 'critical' ? 'bg-danger/10 text-danger' :
+                                task.priority === 'high'     ? 'bg-warn/10 text-warn' :
+                                task.priority === 'medium'   ? 'bg-accent/10 text-accent' : 'bg-surface2 text-muted'}`}>
+                              {task.priority}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-xs font-mono-code text-accent">{task.start_date}</td>
+                          <td className="px-3 py-2.5 text-xs font-mono-code text-accent">{task.end_date}</td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex flex-wrap gap-1">
+                              {(task.tags || []).map((tag: string) => (
+                                <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-surface2 text-muted rounded font-mono-code">{tag}</span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex gap-3 p-6 border-t border-border shrink-0">
+                  <button onClick={() => setAiStep('form')} className="btn-ghost flex-1 py-2.5">← Edit Description</button>
+                  <button onClick={generateAIProject} disabled={aiGenerating}
+                    className="btn-ghost flex-1 py-2.5 border border-accent2/30 text-accent2 disabled:opacity-40">
+                    {aiGenerating ? '⏳ Regenerating...' : '🔄 Regenerate'}
+                  </button>
+                  <button onClick={createAIProject} disabled={saving}
+                    className="btn-primary flex-1 py-2.5 disabled:opacity-40">
+                    {saving ? 'Creating...' : `✅ Create Project + ${aiPreviewTasks.length} Tasks`}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

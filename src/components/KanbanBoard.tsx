@@ -635,58 +635,119 @@ function ProjectModal({ project, onSave, onClose }: {
     start_date: project.start_date ?? '',
     end_date: project.end_date ?? '',
     color: project.color ?? '#00d4ff',
+    scope: project.scope ?? '',
   })
-
+  const [activeTab, setActiveTab] = useState<'details' | 'scope' | 'attachment'>('details')
   const duration = form.start_date && form.end_date ? daysBetween(form.start_date, form.end_date) : null
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="card w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
+      <div className="card w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
           <h3 className="font-syne font-black text-lg">Edit Project</h3>
           <button onClick={onClose} className="text-muted hover:text-text">✕</button>
         </div>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Project Name</label>
-            <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}/>
-          </div>
-          <div className="bg-surface2 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-syne font-bold text-accent uppercase tracking-wide">📅 Project Timeline</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Start Date</label>
-                <input type="date" className="input text-sm" value={form.start_date}
-                  onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}/>
-              </div>
-              <div>
-                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">End Date</label>
-                <input type="date" className="input text-sm" value={form.end_date}
-                  min={form.start_date}
-                  onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}/>
-              </div>
-            </div>
-            {duration && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-accent/10 rounded-lg">
-                <span className="text-accent">⏱</span>
-                <span className="text-sm font-semibold text-accent">Total Duration: {duration} days</span>
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-syne font-semibold text-muted mb-2">Project Colour</label>
-            <div className="flex gap-2">
-              {['#00d4ff','#7c3aed','#10b981','#f59e0b','#ef4444','#ec4899'].map(c => (
-                <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${form.color === c ? 'border-white scale-125' : 'border-transparent'}`}
-                  style={{ background: c }}/>
-              ))}
-            </div>
-          </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 bg-surface2 rounded-xl mx-6 mt-4 shrink-0">
+          {(['details','scope','attachment'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize
+                ${activeTab === tab ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
+              {tab === 'details' ? '📋 Details' : tab === 'scope' ? '📝 Scope' : '📎 Attachment'}
+            </button>
+          ))}
         </div>
-        <div className="flex gap-2 justify-end mt-5">
+
+        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+          {activeTab === 'details' && (<>
+            <div>
+              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Project Name</label>
+              <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}/>
+            </div>
+            <div className="bg-surface2 rounded-xl p-4 space-y-3">
+              <p className="text-xs font-syne font-bold text-accent uppercase tracking-wide">📅 Project Timeline</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Start Date</label>
+                  <input type="date" className="input text-sm" value={form.start_date}
+                    onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}/>
+                </div>
+                <div>
+                  <label className="block text-xs font-syne font-semibold text-muted mb-1.5">End Date</label>
+                  <input type="date" className="input text-sm" value={form.end_date}
+                    min={form.start_date}
+                    onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}/>
+                </div>
+              </div>
+              {duration && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-accent/10 rounded-lg">
+                  <span className="text-accent">⏱</span>
+                  <span className="text-sm font-semibold text-accent">Total Duration: {duration} days</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-syne font-semibold text-muted mb-2">Project Colour</label>
+              <div className="flex gap-2">
+                {['#00d4ff','#7c3aed','#10b981','#f59e0b','#ef4444','#ec4899'].map(c => (
+                  <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${form.color === c ? 'border-white scale-125' : 'border-transparent'}`}
+                    style={{ background: c }}/>
+                ))}
+              </div>
+            </div>
+          </>)}
+
+          {activeTab === 'scope' && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-syne font-semibold text-muted">Project Scope</label>
+                {project.scope && <span className="text-xs bg-accent2/10 text-accent2 px-2 py-0.5 rounded-lg font-semibold">✨ AI Generated</span>}
+              </div>
+              {project.scope ? (
+                <div className="bg-surface2 rounded-xl p-4 text-sm text-text/80 whitespace-pre-wrap max-h-[300px] overflow-y-auto font-mono-code text-xs leading-relaxed">
+                  {project.scope}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted">
+                  <p className="text-2xl mb-2">📝</p>
+                  <p className="text-sm">No scope document yet.</p>
+                  <p className="text-xs mt-1">Create a project using 🤖 AI Generate to auto-populate scope.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'attachment' && (
+            <div>
+              <label className="block text-xs font-syne font-semibold text-muted mb-2">Project Document</label>
+              {project.attachment_url ? (
+                <div className="bg-surface2 rounded-xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📎</span>
+                    <div>
+                      <p className="font-semibold text-sm">{project.attachment_name || 'Attachment'}</p>
+                      <p className="text-xs text-muted">Project document</p>
+                    </div>
+                  </div>
+                  <a href={project.attachment_url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-accent hover:underline font-semibold">View ↗</a>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted border-2 border-dashed border-border rounded-xl">
+                  <p className="text-2xl mb-2">📎</p>
+                  <p className="text-sm">No attachment yet.</p>
+                  <p className="text-xs mt-1">Attachment upload coming soon.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 justify-end p-6 pt-0 border-t border-border mt-2">
           <button onClick={onClose} className="btn-ghost text-sm px-4 py-2">Cancel</button>
-          <button onClick={() => onSave(form)} className="btn-primary text-sm px-4 py-2">Save Project</button>
+          <button onClick={() => onSave({ ...form })} className="btn-primary text-sm px-4 py-2">Save Project</button>
         </div>
       </div>
     </div>
@@ -844,41 +905,51 @@ export default function KanbanBoard({
   async function createAIProject() {
     if (!newProjectName.trim()) return
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: project } = await supabase.from('projects').insert({
-      name: newProjectName.trim(),
-      owner_id: user!.id,
-      color: '#00d4ff',
-      status: 'active',
-      progress: 0,
-      start_date: newProjectStart || undefined,
-      end_date: newProjectEnd || undefined,
-    }).select().single()
-
-    if (project) {
-      // Insert all AI-generated tasks
-      if (aiPreviewTasks.length > 0) {
-        await supabase.from('tasks').insert(
-          aiPreviewTasks.map(t => ({
-            ...t,
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: project, error: projError } = await supabase.from('projects').insert({
+        name: newProjectName.trim(),
+        owner_id: user!.id,
+        color: '#00d4ff',
+        status: 'active',
+        progress: 0,
+        start_date: newProjectStart || null,
+        end_date: newProjectEnd || null,
+        scope: newProjectDesc || null,
+      }).select().single()
+      if (projError) { console.error('Project error:', projError); setSaving(false); return }
+      if (project && aiPreviewTasks.length > 0) {
+        for (let i = 0; i < aiPreviewTasks.length; i++) {
+          const t = aiPreviewTasks[i]
+          const { error: te } = await supabase.from('tasks').insert({
             project_id: project.id,
-            owner_id: user!.id,
+            title: String(t.title || '').trim(),
+            description: String(t.description || ''),
             status: 'backlog',
-          }))
-        )
+            priority: ['low','medium','high','critical'].includes(t.priority) ? t.priority : 'medium',
+            start_date: t.start_date || null,
+            end_date: t.end_date || null,
+            due_date: t.due_date || null,
+            assignee_name: t.assignee_name || null,
+            tags: Array.isArray(t.tags) ? t.tags : [],
+            position: i,
+          })
+          if (te) console.error('Task insert error:', te)
+        }
       }
-      setLocalProjects(p => [project as Project, ...p])
-      setProjectId(project.id)
-      setNewProjectName('')
-      setNewProjectDesc('')
-      setNewProjectStart('')
-      setNewProjectEnd('')
-      setAiPreviewTasks([])
-      setAiStep('form')
-      setShowAddProject(false)
-      // Reload page so tasks appear on Kanban board
-      setTimeout(() => window.location.reload(), 800)
-    }
+      if (project) {
+        setLocalProjects(p => [project as Project, ...p])
+        setProjectId(project.id)
+        setNewProjectName('')
+        setNewProjectDesc('')
+        setNewProjectStart('')
+        setNewProjectEnd('')
+        setAiPreviewTasks([])
+        setAiStep('form')
+        setShowAddProject(false)
+        setTimeout(() => window.location.reload(), 500)
+      }
+    } catch(e) { console.error('createAIProject error:', e) }
     setSaving(false)
   }
 

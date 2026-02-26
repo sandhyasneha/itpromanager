@@ -38,6 +38,9 @@ export interface Project {
   owner_id: string
   name: string
   description?: string
+  scope?: string
+  attachment_url?: string
+  attachment_name?: string
   status: 'active' | 'completed' | 'on_hold' | 'cancelled'
   progress: number
   start_date?: string

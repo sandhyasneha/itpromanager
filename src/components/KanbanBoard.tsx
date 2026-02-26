@@ -317,7 +317,7 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
               const taskDuration = daysBetween(t.start_date!, t.end_date!) + 1
               const isCritical = criticalTaskIds.has(t.id)
               const progress = progressByStatus[t.status] ?? 0
-              const barColor = isCritical ? '#ef4444' : barColors[t.status] || '#00d4ff'
+              const barColor = t.status === 'done' ? '#22d3a5' : isCritical ? '#ef4444' : barColors[t.status] || '#00d4ff'
 
               return (
                 <div key={t.id} className={`flex border-b border-border/40 hover:bg-surface2/20 transition-colors group
@@ -367,7 +367,7 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
 
                       {/* Progress fill */}
                       <div className="h-full rounded-sm transition-all"
-                        style={{ width: `${progress}%`, backgroundColor: barColor, opacity: 0.7 }}/>
+                        style={{ width: `${progress}%`, backgroundColor: barColor, opacity: t.status === 'done' ? 1 : 0.85 }}/>
 
                       {/* Label */}
                       <div className="absolute inset-0 flex items-center px-2">
@@ -718,6 +718,31 @@ export default function KanbanBoard({
   const [showPCR, setShowPCR] = useState(false)
   const [showPCRWarning, setShowPCRWarning] = useState(false)
   const [showDownloadPlan, setShowDownloadPlan] = useState(false)
+  const [exportingExcel, setExportingExcel] = useState(false)
+
+  async function downloadExcel() {
+    if (!currentProject) return
+    setExportingExcel(true)
+    try {
+      const res = await fetch('/api/export-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: currentProject, tasks: allTasks }),
+      })
+      if (!res.ok) { alert('Export failed — please try again'); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${currentProject.name.replace(/[^a-zA-Z0-9]/g, '-')}-NexPlan.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('Export failed — please try again')
+    } finally {
+      setExportingExcel(false)
+    }
+  }
 
   const currentProject = localProjects.find(p => p.id === projectId) ?? null
   const allTasks = columns.flatMap(c => c.tasks)
@@ -875,6 +900,18 @@ export default function KanbanBoard({
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent2 hover:bg-accent2/10"
                 title="View & Download Project Plan">
                 📥 Plan
+              </button>
+              {/* Excel Export */}
+              <button
+                type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); downloadExcel() }}
+                disabled={exportingExcel}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent3 hover:bg-accent3/10 disabled:opacity-50 select-none"
+                title="Download Excel — Project Plan + Gantt + Timeline">
+                <span className="pointer-events-none">
+                  {exportingExcel ? '⏳ Generating...' : '📊 Excel'}
+                </span>
               </button>
             </div>
           )}

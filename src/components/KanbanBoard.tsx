@@ -869,7 +869,6 @@ export default function KanbanBoard({
       }
       setLocalProjects(p => [project as Project, ...p])
       setProjectId(project.id)
-      setColumns(buildColumns([]))
       setNewProjectName('')
       setNewProjectDesc('')
       setNewProjectStart('')
@@ -877,8 +876,8 @@ export default function KanbanBoard({
       setAiPreviewTasks([])
       setAiStep('form')
       setShowAddProject(false)
-      // Reload tasks
-      setTimeout(() => window.location.reload(), 500)
+      // Reload page so tasks appear on Kanban board
+      setTimeout(() => window.location.reload(), 800)
     }
     setSaving(false)
   }

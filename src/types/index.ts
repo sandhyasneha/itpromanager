@@ -44,6 +44,7 @@ export interface Project {
   report_frequency?: string
   stakeholder_emails?: string[]
   report_day?: string
+  userRole?: string
   status: 'active' | 'completed' | 'on_hold' | 'cancelled'
   progress: number
   start_date?: string

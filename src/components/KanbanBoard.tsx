@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
 import StatusReport from '@/components/StatusReport'
+import NotificationSettings from '@/components/NotificationSettings'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
@@ -631,6 +632,7 @@ function ProjectModal({ project, onSave, onClose }: {
   onSave: (updates: Partial<Project>) => void
   onClose: () => void
 }) {
+  const supabaseModal = createClient()
   const [form, setForm] = useState({
     name: project.name,
     start_date: project.start_date ?? '',
@@ -639,7 +641,35 @@ function ProjectModal({ project, onSave, onClose }: {
     scope: project.scope ?? '',
   })
   const [activeTab, setActiveTab] = useState<'details' | 'scope' | 'attachment'>('details')
+  const [uploading, setUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<{url: string, name: string} | null>(
+    project.attachment_url ? { url: project.attachment_url, name: project.attachment_name || 'Attachment' } : null
+  )
   const duration = form.start_date && form.end_date ? daysBetween(form.start_date, form.end_date) : null
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const allowed = ['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/msword','text/plain']
+    if (!allowed.includes(file.type)) { alert('Please upload PDF, Word or TXT files only'); return }
+    if (file.size > 10 * 1024 * 1024) { alert('File too large — maximum 10MB'); return }
+    setUploading(true)
+    const { data: { user } } = await supabaseModal.auth.getUser()
+    const fileName = `${user!.id}/${project.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g,'_')}`
+    const { data, error } = await supabaseModal.storage.from('project-attachments').upload(fileName, file, { upsert: true })
+    if (error) { alert('Upload failed: ' + error.message); setUploading(false); return }
+    const { data: urlData } = supabaseModal.storage.from('project-attachments').getPublicUrl(fileName)
+    const publicUrl = urlData.publicUrl
+    await supabaseModal.from('projects').update({ attachment_url: publicUrl, attachment_name: file.name }).eq('id', project.id)
+    setUploadedFile({ url: publicUrl, name: file.name })
+    setUploading(false)
+  }
+
+  async function removeAttachment() {
+    if (!confirm('Remove this attachment?')) return
+    await supabaseModal.from('projects').update({ attachment_url: null, attachment_name: null }).eq('id', project.id)
+    setUploadedFile(null)
+  }
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -721,27 +751,38 @@ function ProjectModal({ project, onSave, onClose }: {
           )}
 
           {activeTab === 'attachment' && (
-            <div>
-              <label className="block text-xs font-syne font-semibold text-muted mb-2">Project Document</label>
-              {project.attachment_url ? (
-                <div className="bg-surface2 rounded-xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">📎</span>
-                    <div>
-                      <p className="font-semibold text-sm">{project.attachment_name || 'Attachment'}</p>
-                      <p className="text-xs text-muted">Project document</p>
+            <div className="space-y-3">
+              <label className="block text-xs font-syne font-semibold text-muted">Project Document</label>
+              {uploadedFile ? (
+                <div className="bg-surface2 rounded-xl p-4 border border-accent3/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">
+                        {uploadedFile.name.endsWith('.pdf') ? '📄' : uploadedFile.name.includes('doc') ? '📝' : '📎'}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-sm">{uploadedFile.name}</p>
+                        <p className="text-xs text-accent3">✅ Uploaded successfully</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href={uploadedFile.url} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-accent hover:underline font-semibold px-3 py-1.5 bg-accent/10 rounded-lg">View ↗</a>
+                      <button onClick={removeAttachment}
+                        className="text-xs text-danger hover:text-danger/80 font-semibold px-3 py-1.5 bg-danger/10 rounded-lg">Remove</button>
                     </div>
                   </div>
-                  <a href={project.attachment_url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-accent hover:underline font-semibold">View ↗</a>
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted border-2 border-dashed border-border rounded-xl">
-                  <p className="text-2xl mb-2">📎</p>
-                  <p className="text-sm">No attachment yet.</p>
-                  <p className="text-xs mt-1">Attachment upload coming soon.</p>
-                </div>
+                <label className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
+                  ${uploading ? 'border-accent/40 bg-accent/5' : 'border-border hover:border-accent/40 hover:bg-accent/5'}`}>
+                  <input type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={handleFileUpload} disabled={uploading}/>
+                  <p className="text-3xl mb-2">{uploading ? '⏳' : '📎'}</p>
+                  <p className="font-semibold text-sm">{uploading ? 'Uploading...' : 'Click to upload project document'}</p>
+                  <p className="text-xs text-muted mt-1">PDF, Word (.docx), or TXT · Max 10MB</p>
+                </label>
               )}
+              <p className="text-xs text-muted">Upload your project charter, SOW, or any reference document.</p>
             </div>
           )}
         </div>
@@ -787,6 +828,7 @@ export default function KanbanBoard({
   const [showDownloadPlan, setShowDownloadPlan] = useState(false)
   const [showRiskRegister, setShowRiskRegister] = useState(false)
   const [showStatusReport, setShowStatusReport] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
 
   async function downloadExcel() {
@@ -1050,6 +1092,13 @@ export default function KanbanBoard({
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent2 hover:bg-accent2/10"
                 title="Generate Status Report">
                 📊 Report
+              </button>
+              {/* Notifications */}
+              <button
+                onClick={() => setShowNotifications(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent3 hover:bg-accent3/10"
+                title="Notification Settings">
+                🔔 Alerts
               </button>
               {/* Download Plan */}
               <button
@@ -1425,6 +1474,15 @@ export default function KanbanBoard({
           </div>
         )
       })()}
+
+      {/* Notification Settings Modal */}
+      {showNotifications && currentProject && (
+        <NotificationSettings
+          projectId={currentProject.id}
+          projectName={currentProject.name}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
 
       {/* Status Report Modal */}
       {showStatusReport && currentProject && (

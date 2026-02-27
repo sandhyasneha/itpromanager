@@ -453,6 +453,8 @@ function TaskModal({ task, project, onSave, onClose, onDelete }: {
   })
   const [sending, setSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [followupSent, setFollowupSent] = useState(false)
+  const [sendingFollowup, setSendingFollowup] = useState(false)
 
   const duration = form.start_date && form.end_date
     ? daysBetween(form.start_date, form.end_date) + 1
@@ -482,6 +484,31 @@ function TaskModal({ task, project, onSave, onClose, onDelete }: {
       if (res.ok) setEmailSent(true)
     } finally {
       setSending(false)
+    }
+  }
+
+  async function sendAIFollowup(projectName: string) {
+    if (!form.assignee_email || !form.due_date) return
+    setSendingFollowup(true)
+    try {
+      const res = await fetch('/api/ai-followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: task.id,
+          projectId: task.project_id,
+          taskTitle: form.title,
+          taskDescription: form.description,
+          assigneeName: form.assignee_name,
+          assigneeEmail: form.assignee_email,
+          projectName,
+          dueDate: form.due_date,
+          priority: form.priority,
+        }),
+      })
+      if (res.ok) setFollowupSent(true)
+    } finally {
+      setSendingFollowup(false)
     }
   }
 
@@ -575,29 +602,50 @@ function TaskModal({ task, project, onSave, onClose, onDelete }: {
               onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}/>
           </div>
 
-          {/* Assignee Email */}
+          {/* Assignee Email + AI Follow-Up */}
           <div className="bg-surface2 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-syne font-bold text-accent2 uppercase tracking-wide">📧 Notify Assignee</p>
+            <p className="text-xs font-syne font-bold text-accent2 uppercase tracking-wide">📧 Assignee Notifications</p>
             <div>
               <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Assignee Email</label>
               <input type="email" className="input" placeholder="john@company.com" value={form.assignee_email}
                 onChange={e => setForm(f => ({ ...f, assignee_email: e.target.value }))}/>
+              <p className="text-[10px] text-muted mt-1">Team member logs in to nexplan.io/my-tasks to update status</p>
             </div>
             {form.assignee_email && (
-              <div className="flex items-center gap-2">
+              <div className="space-y-2">
+                {/* Task assignment email */}
                 {emailSent ? (
-                  <div className="flex items-center gap-2 text-accent3 text-sm font-semibold">
-                    <span>✅</span> Email sent to {form.assignee_email}
+                  <div className="flex items-center gap-2 text-accent3 text-xs font-semibold bg-accent3/10 border border-accent3/20 rounded-xl px-3 py-2">
+                    ✅ Task notification sent to {form.assignee_email}
                   </div>
                 ) : (
                   <button type="button"
                     onClick={() => sendEmail('Project', 'PM')}
                     disabled={sending}
-                    className="flex items-center gap-2 px-4 py-2 bg-accent2/10 border border-accent2/30 text-purple-300 rounded-xl text-xs font-semibold hover:bg-accent2/20 transition-all disabled:opacity-50">
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent2/10 border border-accent2/30 text-purple-300 rounded-xl text-xs font-semibold hover:bg-accent2/20 transition-all disabled:opacity-50">
                     {sending
                       ? <><span className="w-3 h-3 border-2 border-purple-300/30 border-t-purple-300 rounded-full animate-spin"/>Sending...</>
-                      : <><span>📧</span> Send Task Notification</>}
+                      : <><span>📧</span> Send Task Assignment Email</>}
                   </button>
+                )}
+                {/* AI Follow-Up */}
+                {form.due_date ? (
+                  followupSent ? (
+                    <div className="flex items-center gap-2 text-accent3 text-xs font-semibold bg-accent3/10 border border-accent3/20 rounded-xl px-3 py-2">
+                      ✅ AI follow-up sent — due 1 day before {new Date(form.due_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'})}
+                    </div>
+                  ) : (
+                    <button type="button"
+                      onClick={() => sendAIFollowup('Project')}
+                      disabled={sendingFollowup}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent/10 border border-accent/30 text-accent rounded-xl text-xs font-semibold hover:bg-accent/20 transition-all disabled:opacity-50">
+                      {sendingFollowup
+                        ? <><span className="w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin"/>Sending AI Follow-Up...</>
+                        : <><span>🤖</span> Send AI Follow-Up (Due: {new Date(form.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</>}
+                    </button>
+                  )
+                ) : (
+                  <p className="text-[10px] text-muted text-center py-1">Set a due date to enable AI follow-up</p>
                 )}
               </div>
             )}

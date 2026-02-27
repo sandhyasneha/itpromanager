@@ -11,6 +11,7 @@ const NAV = [
   { href: '/project-plan',  label: 'Project Plan',     icon: '📅' },
   { href: '/network',       label: 'Network Diagram',  icon: '🗺️' },
   { href: '/knowledge',     label: 'Knowledge Base',   icon: '📚' },
+  { href: '/my-tasks',      label: 'My Tasks',         icon: '✅' },
   { href: '/help',          label: 'Help Center',      icon: '❓' },
 ]
 

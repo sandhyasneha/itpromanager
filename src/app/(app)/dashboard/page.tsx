@@ -45,7 +45,7 @@ export default async function DashboardPage() {
   const projectStats = projectList.map(p => {
     const tasks = taskList.filter(t => t.project_id === p.id)
     const risks = riskList.filter(r => r.project_id === p.id)
-    const rag = getRAG(tasks, risks)
+    const rag = getRAG(tasks, risks) as 'red' | 'amber' | 'green'
     const progress = getProgress(tasks)
     const overdue = tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) < new Date(new Date().toDateString()))
     const blocked = tasks.filter(t => t.status === 'blocked')

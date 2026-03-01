@@ -152,7 +152,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {projectStats.map(p => {
-                const ragCfg = RAG_CONFIG[p.rag]
+                const ragCfg = RAG_CONFIG[p.rag as 'red' | 'amber' | 'green']
                 return (
                   <Link href="/kanban" key={p.id}
                     className="flex items-center gap-4 p-4 bg-surface2 rounded-xl border border-border hover:border-accent/30 transition-all group">

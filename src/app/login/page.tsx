@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const ROLES = ['IT Project Manager','Network Engineer','Sponsor','Stakeholder','DevOps Engineer','QA Lead','Other']
@@ -10,6 +10,7 @@ type Tab = 'signin' | 'signup' | 'forgot'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [tab, setTab] = useState<Tab>('signin')
   const [loading, setLoading] = useState(false)
@@ -23,6 +24,16 @@ export default function LoginPage() {
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
   const switchTab = (t: Tab) => { setTab(t); setError(''); setSuccess('') }
+
+  useEffect(() => {
+    const message = searchParams.get('message')
+    if (message === 'link_expired') {
+      setTab('signin')
+      setError('⚠️ Your confirmation link has expired. Please sign in or request a new one — links are valid for 24 hours.')
+    } else if (message === 'auth_error') {
+      setError('Authentication failed. Please try again.')
+    }
+  }, [])
 
   async function handleOAuth() {
     setOauthLoading(true); setError('')

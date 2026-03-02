@@ -12,6 +12,7 @@ const NAV = [
   { href: '/network',       label: 'Network Diagram',  icon: '🗺️' },
   { href: '/knowledge',     label: 'Knowledge Base',   icon: '📚' },
   { href: '/my-tasks',      label: 'My Tasks',         icon: '✅' },
+  { href: '/reports',       label: 'Reports',          icon: '📈' },
   { href: '/help',          label: 'Help Center',      icon: '❓' },
 ]
 

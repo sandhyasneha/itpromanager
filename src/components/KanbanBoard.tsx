@@ -1,11 +1,12 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
 import StatusReport from '@/components/StatusReport'
 import NotificationSettings from '@/components/NotificationSettings'
 import TeamManager from '@/components/TeamManager'
+ import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
@@ -895,7 +896,26 @@ export default function KanbanBoard({
   const [showNotifications, setShowNotifications] = useState(false)
   const [showTeam, setShowTeam] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
-  
+
+  const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase
+          .from('profiles')
+          .select('full_name, email')
+          .eq('id', data.user.id)
+          .single()
+          .then(({ data: p }) => {
+            if (p) setCurrentUser({
+              name:  p.full_name || p.email?.split('@')[0] || 'PM',
+              email: p.email || data.user!.email || '',
+            })
+          })
+      }
+    })
+  }, [])
+
 const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -954,7 +974,7 @@ const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
     setLoading(false)
   }
 
-  const onDragEnd = useCallback(async (result: DropResult) => {
+const onDragEnd = useCallback(async (result: DropResult) => {
     const { source, destination, draggableId } = result
     if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) return
     const srcId = source.droppableId as TaskStatus
@@ -969,8 +989,21 @@ const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
       return next
     })
     await supabase.from('tasks').update({ status: dstId, position: destination.index }).eq('id', draggableId)
-  }, [supabase])
-
+    // ── Phase 5: log drag-and-drop status change ──
+    if (srcId !== dstId && projectId) {
+      await supabase.from('task_activity_log').insert({
+        task_id:       draggableId,
+        project_id:    projectId,
+        actor_name:    currentUser.name,
+        actor_email:   currentUser.email,
+        action_type:   'status_change',
+        field_changed: 'status',
+        old_value:     srcId,
+        new_value:     dstId,
+      })
+    }
+  }, [supabase, projectId, currentUser])
+  
   async function addTask(colId: TaskStatus) {
     if (!newTaskTitle.trim() || !projectId) return
     setSaving(true)
@@ -994,9 +1027,52 @@ const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
     setEditingTask(null)
   }
 
-  async function deleteTask(id: string) {
-    await supabase.from('tasks').delete().eq('id', id)
-    setColumns(prev => prev.map(col => ({ ...col, tasks: col.tasks.filter(t => t.id !== id) })))
+  
+async function saveTask(updates: Partial<Task>) {
+    if (!editingTask) return
+    const old = editingTask
+    await supabase.from('tasks').update(updates).eq('id', editingTask.id)
+    // ── Phase 5: log changed fields ──
+    const logBase = {
+      task_id:    old.id,
+      project_id: old.project_id,
+      actor_name:  currentUser.name,
+      actor_email: currentUser.email,
+    }
+    if (updates.status && updates.status !== old.status) {
+      await supabase.from('task_activity_log').insert({
+        ...logBase, action_type: 'status_change',
+        field_changed: 'status', old_value: old.status, new_value: updates.status,
+      })
+    }
+    if (updates.priority && updates.priority !== old.priority) {
+      await supabase.from('task_activity_log').insert({
+        ...logBase, action_type: 'priority_change',
+        field_changed: 'priority', old_value: old.priority, new_value: updates.priority,
+      })
+    }
+    if (updates.assignee_name !== undefined && updates.assignee_name !== old.assignee_name) {
+      await supabase.from('task_activity_log').insert({
+        ...logBase, action_type: 'assignee_change',
+        field_changed: 'assignee', old_value: old.assignee_name ?? null, new_value: updates.assignee_name ?? null,
+      })
+    }
+    if (updates.due_date !== undefined && updates.due_date !== old.due_date) {
+      await supabase.from('task_activity_log').insert({
+        ...logBase, action_type: 'due_date_change',
+        field_changed: 'due_date', old_value: old.due_date ?? null, new_value: updates.due_date ?? null,
+      })
+    }
+    if (updates.title && updates.title !== old.title) {
+      await supabase.from('task_activity_log').insert({
+        ...logBase, action_type: 'title_change',
+        field_changed: 'title', old_value: old.title, new_value: updates.title,
+      })
+    }
+    setColumns(prev => prev.map(col => ({
+      ...col,
+      tasks: col.tasks.map(t => t.id === old.id ? { ...t, ...updates } : t)
+    })))
     setEditingTask(null)
   }
 

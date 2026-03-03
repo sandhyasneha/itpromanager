@@ -1,12 +1,13 @@
 'use client'
 import { useState, useCallback, useEffect } from 'react'
+
 import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
 import StatusReport from '@/components/StatusReport'
+
 import NotificationSettings from '@/components/NotificationSettings'
 import TeamManager from '@/components/TeamManager'
- import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'

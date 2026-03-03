@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback } from 'react'
+import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
 import StatusReport from '@/components/StatusReport'
@@ -433,13 +434,16 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
 }
 
 // Task Edit Modal
-function TaskModal({ task, project, onSave, onClose, onDelete }: {
-  task: Task
-  project: Project | null
-  onSave: (updates: Partial<Task>) => void
-  onClose: () => void
-  onDelete: (id: string) => void
-}) {
+function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, currentUserEmail }: {
+    task: Task
+    project: Project | null
+    onSave: (updates: Partial<Task>) => void
+    onClose: () => void
+    onDelete: (id: string) => void
+    currentUserName: string
+    currentUserEmail: string
+  })
+{
   const [form, setForm] = useState({
     title: task.title,
     description: task.description ?? '',
@@ -668,6 +672,16 @@ function TaskModal({ task, project, onSave, onClose, onDelete }: {
               duration: duration ?? undefined,
               tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
             })} className="btn-primary text-sm px-4 py-2">Save Changes</button>
+
+<div className="px-6 pb-4">
+    <TaskCommentsActivity
+      taskId={task.id}
+      projectId={task.project_id}
+      currentUserName={currentUserName}
+      currentUserEmail={currentUserEmail}
+    />
+  </div>
+
           </div>
         </div>
       </div>
@@ -881,6 +895,25 @@ export default function KanbanBoard({
   const [showNotifications, setShowNotifications] = useState(false)
   const [showTeam, setShowTeam] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
+  
+const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from('profiles')
+          .select('full_name, email')
+          .eq('id', data.user.id)
+          .single()
+          .then(({ data: p }) => {
+            if (p) setCurrentUser({
+              name:  p.full_name || p.email?.split('@')[0] || 'PM',
+              email: p.email || data.user!.email || '',
+            })
+          })
+      }
+    })
+  }, [])
+
 
   async function downloadExcel() {
     if (!currentProject) return
@@ -1635,9 +1668,16 @@ export default function KanbanBoard({
 
       {/* Task Edit Modal */}
       {editingTask && (
-        <TaskModal task={editingTask} project={currentProject} onSave={saveTask} onClose={() => setEditingTask(null)} onDelete={deleteTask}/>
-      )}
-
+    <TaskModal
+      task={editingTask}
+      project={currentProject}
+      onSave={saveTask}
+      onClose={() => setEditingTask(null)}
+      onDelete={deleteTask}
+      currentUserName={currentUser.name}
+      currentUserEmail={currentUser.email}
+    />
+  )}
       {!projectId ? (
         <div className="text-center py-24">
           <h3 className="font-syne font-bold text-xl mb-2">No project selected</h3>

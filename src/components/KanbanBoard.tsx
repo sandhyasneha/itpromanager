@@ -1,13 +1,11 @@
 'use client'
 import { useState, useCallback, useEffect } from 'react'
-
-import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
 import StatusReport from '@/components/StatusReport'
-
 import NotificationSettings from '@/components/NotificationSettings'
 import TeamManager from '@/components/TeamManager'
+import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
@@ -437,15 +435,14 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
 
 // Task Edit Modal
 function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, currentUserEmail }: {
-    task: Task
-    project: Project | null
-    onSave: (updates: Partial<Task>) => void
-    onClose: () => void
-    onDelete: (id: string) => void
-    currentUserName: string
-    currentUserEmail: string
-  })
-{
+  task: Task
+  project: Project | null
+  onSave: (updates: Partial<Task>) => void
+  onClose: () => void
+  onDelete: (id: string) => void
+  currentUserName: string
+  currentUserEmail: string
+}) {
   const [form, setForm] = useState({
     title: task.title,
     description: task.description ?? '',
@@ -658,6 +655,15 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
           </div>
         </div>
 
+
+          {/* Phase 5: Comments & Activity Log */}
+          <TaskCommentsActivity
+            taskId={task.id}
+            projectId={task.project_id}
+            currentUserName={currentUserName}
+            currentUserEmail={currentUserEmail}
+          />
+
         <div className="flex items-center justify-between p-6 pt-4 border-t border-border shrink-0">
           <button onClick={() => onDelete(task.id)} className="text-danger text-sm hover:underline">Delete Task</button>
           <div className="flex gap-2">
@@ -674,16 +680,6 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
               duration: duration ?? undefined,
               tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
             })} className="btn-primary text-sm px-4 py-2">Save Changes</button>
-
-<div className="px-6 pb-4">
-    <TaskCommentsActivity
-      taskId={task.id}
-      projectId={task.project_id}
-      currentUserName={currentUserName}
-      currentUserEmail={currentUserEmail}
-    />
-  </div>
-
           </div>
         </div>
       </div>
@@ -917,8 +913,6 @@ export default function KanbanBoard({
     })
   }, [])
 
-
-
   async function downloadExcel() {
     if (!currentProject) return
     setExportingExcel(true)
@@ -958,7 +952,7 @@ export default function KanbanBoard({
     setLoading(false)
   }
 
-const onDragEnd = useCallback(async (result: DropResult) => {
+  const onDragEnd = useCallback(async (result: DropResult) => {
     const { source, destination, draggableId } = result
     if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) return
     const srcId = source.droppableId as TaskStatus
@@ -973,7 +967,7 @@ const onDragEnd = useCallback(async (result: DropResult) => {
       return next
     })
     await supabase.from('tasks').update({ status: dstId, position: destination.index }).eq('id', draggableId)
-    // ── Phase 5: log drag-and-drop status change ──
+    // Phase 5: log drag status change
     if (srcId !== dstId && projectId) {
       await supabase.from('task_activity_log').insert({
         task_id:       draggableId,
@@ -987,7 +981,7 @@ const onDragEnd = useCallback(async (result: DropResult) => {
       })
     }
   }, [supabase, projectId, currentUser])
-  
+
   async function addTask(colId: TaskStatus) {
     if (!newTaskTitle.trim() || !projectId) return
     setSaving(true)
@@ -1001,53 +995,42 @@ const onDragEnd = useCallback(async (result: DropResult) => {
     setSaving(false)
   }
 
-
-  
-async function saveTask(updates: Partial<Task>) {
+  async function saveTask(updates: Partial<Task>) {
     if (!editingTask) return
     const old = editingTask
-    await supabase.from('tasks').update(updates).eq('id', editingTask.id)
-    // ── Phase 5: log changed fields ──
+    await supabase.from('tasks').update(updates).eq('id', old.id)
+    // Phase 5: log changed fields
     const logBase = {
-      task_id:    old.id,
-      project_id: old.project_id,
+      task_id:     old.id,
+      project_id:  old.project_id,
       actor_name:  currentUser.name,
       actor_email: currentUser.email,
     }
     if (updates.status && updates.status !== old.status) {
-      await supabase.from('task_activity_log').insert({
-        ...logBase, action_type: 'status_change',
-        field_changed: 'status', old_value: old.status, new_value: updates.status,
-      })
+      await supabase.from('task_activity_log').insert({ ...logBase, action_type: 'status_change',   field_changed: 'status',   old_value: old.status,             new_value: updates.status })
     }
     if (updates.priority && updates.priority !== old.priority) {
-      await supabase.from('task_activity_log').insert({
-        ...logBase, action_type: 'priority_change',
-        field_changed: 'priority', old_value: old.priority, new_value: updates.priority,
-      })
+      await supabase.from('task_activity_log').insert({ ...logBase, action_type: 'priority_change', field_changed: 'priority', old_value: old.priority,           new_value: updates.priority })
     }
     if (updates.assignee_name !== undefined && updates.assignee_name !== old.assignee_name) {
-      await supabase.from('task_activity_log').insert({
-        ...logBase, action_type: 'assignee_change',
-        field_changed: 'assignee', old_value: old.assignee_name ?? null, new_value: updates.assignee_name ?? null,
-      })
+      await supabase.from('task_activity_log').insert({ ...logBase, action_type: 'assignee_change', field_changed: 'assignee', old_value: old.assignee_name ?? null, new_value: updates.assignee_name ?? null })
     }
     if (updates.due_date !== undefined && updates.due_date !== old.due_date) {
-      await supabase.from('task_activity_log').insert({
-        ...logBase, action_type: 'due_date_change',
-        field_changed: 'due_date', old_value: old.due_date ?? null, new_value: updates.due_date ?? null,
-      })
+      await supabase.from('task_activity_log').insert({ ...logBase, action_type: 'due_date_change', field_changed: 'due_date', old_value: old.due_date ?? null,    new_value: updates.due_date ?? null })
     }
     if (updates.title && updates.title !== old.title) {
-      await supabase.from('task_activity_log').insert({
-        ...logBase, action_type: 'title_change',
-        field_changed: 'title', old_value: old.title, new_value: updates.title,
-      })
+      await supabase.from('task_activity_log').insert({ ...logBase, action_type: 'title_change',    field_changed: 'title',    old_value: old.title,              new_value: updates.title })
     }
     setColumns(prev => prev.map(col => ({
       ...col,
       tasks: col.tasks.map(t => t.id === old.id ? { ...t, ...updates } : t)
     })))
+    setEditingTask(null)
+  }
+
+  async function deleteTask(id: string) {
+    await supabase.from('tasks').delete().eq('id', id)
+    setColumns(prev => prev.map(col => ({ ...col, tasks: col.tasks.filter(t => t.id !== id) })))
     setEditingTask(null)
   }
 
@@ -1719,16 +1702,17 @@ async function saveTask(updates: Partial<Task>) {
 
       {/* Task Edit Modal */}
       {editingTask && (
-    <TaskModal
-      task={editingTask}
-      project={currentProject}
-      onSave={saveTask}
-      onClose={() => setEditingTask(null)}
-      onDelete={deleteTask}
-      currentUserName={currentUser.name}
-      currentUserEmail={currentUser.email}
-    />
-  )}
+        <TaskModal
+          task={editingTask}
+          project={currentProject}
+          onSave={saveTask}
+          onClose={() => setEditingTask(null)}
+          onDelete={deleteTask}
+          currentUserName={currentUser.name}
+          currentUserEmail={currentUser.email}
+        />
+      )}
+
       {!projectId ? (
         <div className="text-center py-24">
           <h3 className="font-syne font-bold text-xl mb-2">No project selected</h3>

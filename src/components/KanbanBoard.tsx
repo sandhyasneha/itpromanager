@@ -916,23 +916,6 @@ export default function KanbanBoard({
     })
   }, [])
 
-const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        supabase.from('profiles')
-          .select('full_name, email')
-          .eq('id', data.user.id)
-          .single()
-          .then(({ data: p }) => {
-            if (p) setCurrentUser({
-              name:  p.full_name || p.email?.split('@')[0] || 'PM',
-              email: p.email || data.user!.email || '',
-            })
-          })
-      }
-    })
-  }, [])
 
 
   async function downloadExcel() {

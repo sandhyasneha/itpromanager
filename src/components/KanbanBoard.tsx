@@ -1001,15 +1001,6 @@ const onDragEnd = useCallback(async (result: DropResult) => {
     setSaving(false)
   }
 
-  async function saveTask(updates: Partial<Task>) {
-    if (!editingTask) return
-    await supabase.from('tasks').update(updates).eq('id', editingTask.id)
-    setColumns(prev => prev.map(col => ({
-      ...col,
-      tasks: col.tasks.map(t => t.id === editingTask.id ? { ...t, ...updates } : t)
-    })))
-    setEditingTask(null)
-  }
 
   
 async function saveTask(updates: Partial<Task>) {

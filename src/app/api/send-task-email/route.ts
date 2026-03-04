@@ -1,22 +1,62 @@
 import { NextResponse } from 'next/server'
+import { categoriseError } from '@/lib/errorCodes'
 
 export async function POST(request: Request) {
-  const { assigneeEmail, assigneeName, taskTitle, taskDescription, projectName, priority, startDate, endDate, duration, dueDate, assignedBy } = await request.json()
+  const startTime = Date.now()
+  let userEmail = 'unknown'
+  let userName  = 'unknown'
+
+  async function writeAuditLog(
+    status: 'ok' | 'error',
+    promptSummary?: string,
+    errorCode?: string,
+    errorMessage?: string
+  ) {
+    try {
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = createClient()
+      await supabase.from('audit_logs').insert({
+        user_email:      userEmail,
+        user_name:       userName,
+        action_type:     status === 'ok' ? 'ai_call' : 'error',
+        feature:         'task_email',
+        model:           'resend',
+        prompt_summary:  promptSummary ?? null,
+        response_status: status,
+        error_code:      errorCode    ?? null,
+        error_message:   errorMessage ?? null,
+        duration_ms:     Date.now() - startTime,
+      })
+    } catch (e) {
+      console.error('[audit] send-task-email:', e)
+    }
+  }
 
   const RESEND_API_KEY = process.env.RESEND_API_KEY
   if (!RESEND_API_KEY) {
     return NextResponse.json({ error: 'Email service not configured' }, { status: 500 })
   }
 
-  const priorityColors: Record<string, string> = {
-    critical: '#ef4444',
-    high: '#f59e0b',
-    medium: '#00d4ff',
-    low: '#6b7280',
-  }
-  const priorityColor = priorityColors[priority] ?? '#00d4ff'
+  try {
+    const body = await request.json()
+    const {
+      assigneeEmail, assigneeName, taskTitle, taskDescription,
+      projectName, priority, startDate, endDate, duration, dueDate, assignedBy,
+    } = body
 
-  const html = `
+    // Phase 6 — capture user context if passed from frontend
+    userEmail = body.userEmail ?? 'unknown'
+    userName  = body.userName  ?? 'unknown'
+
+    const priorityColors: Record<string, string> = {
+      critical: '#ef4444',
+      high:     '#f59e0b',
+      medium:   '#00d4ff',
+      low:      '#6b7280',
+    }
+    const priorityColor = priorityColors[priority] ?? '#00d4ff'
+
+    const html = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"/></head>
@@ -114,7 +154,6 @@ export async function POST(request: Request) {
 </body>
 </html>`
 
-  try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -131,9 +170,29 @@ export async function POST(request: Request) {
 
     const data = await res.json()
     console.log('Resend response:', res.status, JSON.stringify(data))
-    if (!res.ok) return NextResponse.json({ error: data.message ?? data.name ?? 'Send failed', details: data }, { status: 500 })
+
+    if (!res.ok) {
+      // Phase 6 — log email send failure
+      const errorCode = categoriseError('task_email', new Error(data.message ?? 'Send failed'))
+      await writeAuditLog('error', undefined, errorCode, data.message ?? 'Resend rejected the request')
+      return NextResponse.json({ error: data.message ?? data.name ?? 'Send failed', details: data }, { status: 500 })
+    }
+
+    // Phase 6 — log successful email
+    await writeAuditLog('ok', `Task assignment email → ${assigneeEmail} for: ${taskTitle}`)
+
     return NextResponse.json({ success: true, id: data.id })
-  } catch (err) {
-    return NextResponse.json({ error: 'Email service error' }, { status: 500 })
+
+  } catch (err: any) {
+    console.error('send-task-email error:', err)
+
+    // Phase 6 — log error
+    const errorCode = categoriseError('task_email', err)
+    await writeAuditLog('error', undefined, errorCode, err.message)
+
+    return NextResponse.json(
+      { error: 'Email service error', errorCode },
+      { status: 500 }
+    )
   }
 }

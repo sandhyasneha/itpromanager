@@ -1,51 +1,8 @@
 import { NextResponse } from 'next/server'
-import { categoriseError } from '@/lib/errorCodes'
 
 export async function POST(request: Request) {
-  const startTime = Date.now()
-  let userEmail = 'unknown'
-  let userName  = 'unknown'
-
-  async function writeAuditLog(
-    status: 'ok' | 'error',
-    promptSummary?: string,
-    errorCode?: string,
-    errorMessage?: string,
-    projectId?: string,
-    projectName?: string
-  ) {
-    try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = createClient()
-      await supabase.from('audit_logs').insert({
-        user_email:      userEmail,
-        user_name:       userName,
-        action_type:     status === 'ok' ? 'ai_call' : 'error',
-        feature:         'ai_followup',
-        model:           'claude-haiku-4-5-20251001',
-        prompt_summary:  promptSummary ?? null,
-        response_status: status,
-        error_code:      errorCode    ?? null,
-        error_message:   errorMessage ?? null,
-        duration_ms:     Date.now() - startTime,
-        project_id:      projectId    ?? null,
-        project_name:    projectName  ?? null,
-      })
-    } catch (e) {
-      console.error('[audit] ai-followup:', e)
-    }
-  }
-
   try {
-    const body = await request.json()
-    const {
-      taskTitle, taskDescription, assigneeName, assigneeEmail,
-      projectName, dueDate, priority, taskId, projectId,
-    } = body
-
-    // Phase 6 — capture user context if passed from frontend
-    userEmail = body.userEmail ?? 'unknown'
-    userName  = body.userName  ?? 'unknown'
+    const { taskTitle, taskDescription, assigneeName, assigneeEmail, projectName, dueDate, priority, taskId, projectId } = await request.json()
 
     // Generate personalised AI follow-up message
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -146,38 +103,19 @@ Write 2-3 sentences only. Be direct and professional. Mention the task name and 
 
     const emailData = await emailRes.json()
 
-    // Existing log (keep intact)
+    // Log it
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = createClient()
     await supabase.from('ai_followup_log').insert({
-      task_id:    taskId,
+      task_id: taskId,
       project_id: projectId,
-      sent_to:    assigneeEmail,
-      due_date:   dueDate,
+      sent_to: assigneeEmail,
+      due_date: dueDate,
     })
 
-    // Phase 6 — log successful AI + email call
-    await writeAuditLog(
-      'ok',
-      `AI follow-up for task: ${taskTitle} → ${assigneeEmail}`,
-      undefined,
-      undefined,
-      projectId,
-      projectName
-    )
-
     return NextResponse.json({ success: true, emailId: emailData.id })
-
   } catch (err: any) {
     console.error('AI follow-up error:', err)
-
-    // Phase 6 — log error
-    const errorCode = categoriseError('ai_followup', err)
-    await writeAuditLog('error', undefined, errorCode, err.message)
-
-    return NextResponse.json(
-      { error: err.message, errorCode },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

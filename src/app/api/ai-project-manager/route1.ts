@@ -1,50 +1,8 @@
 import { NextResponse } from 'next/server'
-import { categoriseError } from '@/lib/errorCodes'
 
 export async function POST(request: Request) {
-  const startTime = Date.now()
-  let userEmail = 'unknown'
-  let userName  = 'unknown'
-  let projectId: string | null = null
-  let projectNameVal: string | null = null
-
-  async function writeAuditLog(
-    status: 'ok' | 'error',
-    promptSummary?: string,
-    errorCode?: string,
-    errorMessage?: string
-  ) {
-    try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = createClient()
-      await supabase.from('audit_logs').insert({
-        user_email:      userEmail,
-        user_name:       userName,
-        action_type:     status === 'ok' ? 'ai_call' : 'error',
-        feature:         'project_plan',
-        model:           'claude-haiku-4-5-20251001',
-        prompt_summary:  promptSummary ?? null,
-        response_status: status,
-        error_code:      errorCode    ?? null,
-        error_message:   errorMessage ?? null,
-        duration_ms:     Date.now() - startTime,
-        project_id:      projectId    ?? null,
-        project_name:    projectNameVal ?? null,
-      })
-    } catch (e) {
-      console.error('[audit] ai-project-manager:', e)
-    }
-  }
-
   try {
-    const body = await request.json()
-    const { projectName, description, startDate, endDate } = body
-
-    // Phase 6 — capture user context if passed from frontend
-    userEmail      = body.userEmail      ?? 'unknown'
-    userName       = body.userName       ?? 'unknown'
-    projectId      = body.projectId      ?? null
-    projectNameVal = projectName         ?? null
+    const { projectName, description, startDate, endDate } = await request.json()
 
     const prompt = `You are an expert IT Project Manager. Based on the project description below, generate a detailed task breakdown with realistic dates.
 
@@ -101,21 +59,9 @@ Rules:
     if (!jsonMatch) throw new Error('No JSON array found in response')
     const tasks = JSON.parse(jsonMatch[0])
 
-    // Phase 6 — log successful AI call
-    await writeAuditLog('ok', `Generate project plan for: ${projectName}`)
-
     return NextResponse.json({ tasks })
-
   } catch (err: any) {
     console.error('AI Project Manager error:', err)
-
-    // Phase 6 — log error with error code
-    const errorCode = categoriseError('project_plan', err)
-    await writeAuditLog('error', undefined, errorCode, err.message)
-
-    return NextResponse.json(
-      { error: err.message, errorCode },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import AdminAuditLog from '@/components/AdminAuditLog'
 import { createClient } from '@/lib/supabase/client'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -17,7 +18,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   critical: 'text-danger',
 }
 
-const TABS = ['Overview', 'Feedback', 'Users']
+const TABS = ['Overview', 'Feedback', 'Users', 'Audit Log']
 
 export default function AdminClient({ profiles, projects, tasks, articles, feedback }: {
   profiles: any[], projects: any[], tasks: any[], articles: any[], feedback: any[]
@@ -294,6 +295,11 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
             </table>
           </div>
         </div>
+      )}
+
+      {/* AUDIT LOG TAB */}
+      {tab === 'Audit Log' && (
+        <AdminAuditLog />
       )}
 
       {/* Feedback Detail Modal */}

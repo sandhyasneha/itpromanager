@@ -1,13 +1,14 @@
+
+
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import UserSupportPanel from '@/components/UserSupportPanel'
 import type { Profile } from '@/types'
 
 const ROLES = ['IT Project Manager','Network Engineer','Sponsor','Stakeholder','Other']
 const COUNTRIES = ['United States','United Kingdom','India','Australia','Canada','Singapore','Germany','South Africa','UAE','New Zealand','Other']
-
-export default function SettingsPage() {
+// ✅ NEW (fixed)
+  export default function SettingsPage() {
   const supabase = createClient()
   const [profile, setProfile] = useState<Partial<Profile>>({})
   const [saving, setSaving] = useState(false)
@@ -26,32 +27,20 @@ export default function SettingsPage() {
     e.preventDefault()
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('profiles').update({
-      full_name: profile.full_name,
-      role:      profile.role,
-      country:   profile.country,
-    }).eq('id', user!.id)
-    setSaving(false)
-    setSaved(true)
+    await supabase.from('profiles').update({ full_name: profile.full_name, role: profile.role, country: profile.country }).eq('id', user!.id)
+    setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
 
   return (
-    <div className="max-w-lg space-y-8">
-      <h2 className="font-syne font-black text-2xl">Account Settings</h2>
-
-      {/* Profile */}
+    <div className="max-w-lg">
+      <h2 className="font-syne font-black text-2xl mb-6">Account Settings</h2>
       <div className="card p-8">
-        {saved && (
-          <div className="mb-4 px-4 py-3 bg-accent3/10 border border-accent3/30 rounded-xl text-accent3 text-sm">
-            ✅ Profile updated!
-          </div>
-        )}
+        {saved && <div className="mb-4 px-4 py-3 bg-accent3/10 border border-accent3/30 rounded-xl text-accent3 text-sm">✅ Profile updated!</div>}
         <form onSubmit={save} className="space-y-5">
           <div>
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Full Name</label>
-            <input className="input" value={profile.full_name ?? ''}
-              onChange={e => setProfile(p => ({ ...p, full_name: e.target.value }))}/>
+            <input className="input" value={profile.full_name ?? ''} onChange={e => setProfile(p => ({...p, full_name: e.target.value}))}/>
           </div>
           <div>
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Email</label>
@@ -60,26 +49,19 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Role</label>
-            <select className="select" value={profile.role ?? ''}
-              onChange={e => setProfile(p => ({ ...p, role: e.target.value as any }))}>
+            <select className="select" value={profile.role ?? ''} onChange={e => setProfile(p => ({...p, role: e.target.value as any}))}>
               {ROLES.map(r => <option key={r}>{r}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Country</label>
-            <select className="select" value={profile.country ?? ''}
-              onChange={e => setProfile(p => ({ ...p, country: e.target.value }))}>
+            <select className="select" value={profile.country ?? ''} onChange={e => setProfile(p => ({...p, country: e.target.value}))}>
               {COUNTRIES.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
+          <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
         </form>
       </div>
-
-      {/* Help & Support */}
-      <UserSupportPanel />
     </div>
   )
 }

@@ -3,10 +3,10 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import AdminClient from '@/components/AdminClient'
 
-const ADMIN_EMAIL = 'info@nexplan.io'
+const ADMIN_EMAIL = 'admin@nexplan.io'
 
 export default async function AdminPage() {
-  const supabase = await createClient()
+  const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user?.email !== ADMIN_EMAIL) redirect('/dashboard')
 

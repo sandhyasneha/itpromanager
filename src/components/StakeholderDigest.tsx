@@ -150,20 +150,34 @@ export default function StakeholderDigest({ projects, tasks, userId }: Props) {
     setError('')
     try {
       const emailList = recipients.split(',').map(e => e.trim()).filter(Boolean)
-      await fetch('/api/send-task-email', {
+      const res = await fetch('/api/send-digest-email', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
           to:      emailList,
           subject: subject,
-          html:    body.replace(/\n/g, '<br/>'),
-          text:    body,
+          html:    `<html><body style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#334155;max-width:640px;margin:0 auto;padding:32px 16px;">
+            <h1 style="font-size:22px;font-weight:900;color:#0f172a;">Nex<span style="color:#06b6d4;">Plan</span></h1>
+            <p style="color:#64748b;font-size:12px;margin:2px 0 24px;">IT Project Intelligence</p>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:24px;">
+              ${body.replace(/\n/g, '<br/>')}
+            </div>
+            <p style="color:#94a3b8;font-size:11px;margin-top:24px;text-align:center;">
+              Sent via NexPlan Stakeholder Digest · <a href="https://www.nexplan.io" style="color:#06b6d4;">nexplan.io</a>
+            </p>
+          </body></html>`,
+          text: body,
         }),
       })
-      setSent(true)
-      setTimeout(() => setSent(false), 4000)
-    } catch {
-      setError('Failed to send. Check recipient emails and try again.')
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? data.message ?? 'Failed to send. Please try again.')
+      } else {
+        setSent(true)
+        setTimeout(() => setSent(false), 4000)
+      }
+    } catch (err: any) {
+      setError('Network error — please check your connection and try again.')
     } finally {
       setSending(false)
     }

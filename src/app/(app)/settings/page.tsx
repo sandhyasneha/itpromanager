@@ -2,20 +2,26 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import UserSupportPanel from '@/components/UserSupportPanel'
+import ChangeFreezeCalendar from '@/components/ChangeFreezeCalendar'
 import type { Profile } from '@/types'
 
+const ADMIN_EMAIL = 'info@nexplan.io'
 const ROLES = ['IT Project Manager','Network Engineer','Sponsor','Stakeholder','Other']
 const COUNTRIES = ['United States','United Kingdom','India','Australia','Canada','Singapore','Germany','South Africa','UAE','New Zealand','Other']
 
 export default function SettingsPage() {
   const supabase = createClient()
   const [profile, setProfile] = useState<Partial<Profile>>({})
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [userId,  setUserId]  = useState<string>('')
+  const [saving,  setSaving]  = useState(false)
+  const [saved,   setSaved]   = useState(false)
+
+  const isAdmin = profile?.email === ADMIN_EMAIL
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
+        setUserId(user.id)
         supabase.from('profiles').select('*').eq('id', user.id).single()
           .then(({ data }) => { if (data) setProfile(data) })
       }
@@ -37,7 +43,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-lg space-y-8">
+    <div className="max-w-2xl space-y-8">
       <h2 className="font-syne font-black text-2xl">Account Settings</h2>
 
       {/* Profile */}
@@ -80,6 +86,13 @@ export default function SettingsPage() {
 
       {/* Help & Support */}
       <UserSupportPanel />
+
+      {/* Change Freeze Calendar */}
+      {userId && (
+        <div className="card">
+          <ChangeFreezeCalendar isAdmin={isAdmin} userId={userId} />
+        </div>
+      )}
     </div>
   )
 }

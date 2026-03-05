@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import StakeholderDigest from '@/components/StakeholderDigest'
 
 interface Project { id: string; name: string; color: string; end_date?: string }
 interface Task {
@@ -32,7 +33,7 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
   projects: Project[]; tasks: Task[]; resources: Resource[]; userId: string
 }) {
   const supabase = createClient()
-  const [tab, setTab]               = useState<'upcoming'|'resource'>('upcoming')
+  const [tab, setTab] = useState<'upcoming'|'resource'|'digest'>('upcoming')
   const [bucket, setBucket]         = useState<'overdue'|'15'|'30'|'45'|'60'|'all'>('30')
   const [projectFilter, setProjectFilter] = useState('all')
   const [localResources, setLocalResources] = useState<Resource[]>(resources)
@@ -164,7 +165,7 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-surface2 rounded-xl w-fit">
-        {([['upcoming','📅 Upcoming & Overdue'],['resource','👥 Resource Utilization']] as const).map(([t,label]) => (
+        {([['upcoming','📅 Upcoming & Overdue'],['resource','👥 Resource Utilization'],['digest','📧 Stakeholder Digest']] as const).map(([t,label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${tab===t ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
             {label}
@@ -420,6 +421,9 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
             </div>
           )}
         </div>
+      )}
+      {tab === 'digest' && (
+        <StakeholderDigest projects={projects} tasks={localTasks} userId={userId} />
       )}
     </div>
   )

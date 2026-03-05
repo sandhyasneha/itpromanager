@@ -118,13 +118,18 @@ export default function StakeholderDigest({ projects, tasks, userId }: Props) {
     setError('')
     try {
       const prompt = buildDigestPrompt(project, tasks, pmName)
-      const res  = await fetch('/api/ai-project-manager', {
+      const res = await fetch('/api/ai-text', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+        body:    JSON.stringify({ prompt }),
       })
       const data = await res.json()
-      const text: string = data.content?.[0]?.text ?? data.reply ?? data.message ?? ''
+      if (!res.ok) {
+        setError(data.error ?? 'AI request failed. Please try again.')
+        return
+      }
+      const text: string = data.text ?? ''
+      if (!text.trim()) { setError('AI returned empty response. Please try again.'); return }
 
       // Extract subject line
       const subjectMatch = text.match(/Subject:\s*(.+)/i)

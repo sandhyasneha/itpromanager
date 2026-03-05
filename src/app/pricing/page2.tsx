@@ -1,7 +1,6 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
-import NexPlanLogo from '@/components/NexPlanLogo'
 
 export default function PricingPage() {
   const [billing, setBilling]     = useState<'monthly' | 'yearly'>('monthly')
@@ -77,7 +76,7 @@ export default function PricingPage() {
 
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 py-5 backdrop-blur-xl bg-bg/70 border-b border-border">
-        <Link href="/"><NexPlanLogo size="sm" /></Link>
+        <Link href="/" className="font-syne font-black text-xl">Nex<span className="text-accent">Plan</span></Link>
         <div className="hidden md:flex gap-8">
           <Link href="/#features" className="text-muted text-sm hover:text-text transition-colors">Features</Link>
           <Link href="/kb"        className="text-muted text-sm hover:text-text transition-colors">Knowledge Base</Link>

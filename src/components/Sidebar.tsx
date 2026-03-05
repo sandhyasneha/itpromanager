@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import type { Profile } from '@/types'
+import NexPlanLogo from '@/components/NexPlanLogo'
 
 const NAV = [
   { href: '/dashboard',    label: 'Dashboard',      icon: '📊' },
@@ -61,11 +62,11 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     <aside className="flex flex-col h-full bg-white border-r border-slate-200 w-[240px]">
 
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-        <div className="font-syne font-black text-lg text-slate-900">
-          Nex<span className="text-cyan-500">Plan</span>
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <NexPlanLogo size="md" />
           {isAdmin && (
-            <span className="ml-2 text-[9px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-mono-code align-middle border border-red-200">
+            <span className="text-[9px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-mono-code border border-red-200">
               ADMIN
             </span>
           )}

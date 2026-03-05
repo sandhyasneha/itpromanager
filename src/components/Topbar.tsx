@@ -3,6 +3,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Profile } from '@/types'
+import NexPlanLogo from '@/components/NexPlanLogo'
 
 const TITLES: Record<string, { label: string; icon: string }> = {
   '/dashboard':    { label: 'Dashboard',      icon: '📊' },
@@ -41,8 +42,14 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
 
       {/* Left — title (with space for mobile hamburger) */}
       <div className="flex items-center gap-3 ml-12 md:ml-0">
-        <span className="text-xl hidden md:block">{icon}</span>
-        <h1 className="font-syne font-black text-lg text-slate-900">{title}</h1>
+        {/* Mobile: show logo. Desktop: show page title */}
+        <div className="md:hidden">
+          <NexPlanLogo size="sm" />
+        </div>
+        <div className="hidden md:flex items-center gap-3">
+          <span className="text-xl">{icon}</span>
+          <h1 className="font-syne font-black text-lg text-slate-900">{title}</h1>
+        </div>
       </div>
 
       {/* Right */}

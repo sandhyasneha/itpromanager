@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import NexPlanLogo from '@/components/NexPlanLogo'
 
 export default function LandingPage() {
   return (
@@ -13,7 +12,7 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 py-5 backdrop-blur-xl bg-bg/70 border-b border-border">
-        <NexPlanLogo size="sm" dark />
+        <div className="font-syne font-black text-xl">Nex<span className="text-accent">Plan</span></div>
         <div className="hidden md:flex gap-8">
           <Link href="#features" className="text-muted text-sm hover:text-text transition-colors">Features</Link>
           <Link href="/pricing" className="text-muted text-sm hover:text-text transition-colors">Pricing</Link>
@@ -88,7 +87,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
-              <NexPlanLogo size="sm" dark showTagline />
+              <div className="font-syne font-black text-lg mb-2">Nex<span className="text-accent">Plan</span></div>
               <p className="text-muted text-sm leading-relaxed">Free AI-powered project management tool built for IT professionals worldwide.</p>
             </div>
             <div>

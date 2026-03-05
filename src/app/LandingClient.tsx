@@ -1,4 +1,5 @@
 'use client'
+import NexPlanLogo from '@/components/NexPlanLogo'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
@@ -89,7 +90,7 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-8 md:px-12 py-5 backdrop-blur-xl bg-bg/70 border-b border-border">
-        <div className="font-syne font-black text-xl">Nex<span className="text-accent">Plan</span></div>
+        <NexPlanLogo size="sm" dark />
         <div className="hidden md:flex gap-8">
           {[['#features','Features'],['#how-it-works','How It Works'],['/kb','Knowledge Base'],['/pricing','Pricing'],['/about','About']].map(([h,l]) =>
             h.startsWith('#')
@@ -325,7 +326,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <div className="font-syne font-black text-lg mb-2">Nex<span className="text-accent">Plan</span></div>
+              <NexPlanLogo size="sm" dark showTagline />
               <p className="text-muted text-sm leading-relaxed">Free AI-powered IT project management. Built for network engineers, IT PMs and infrastructure teams worldwide.</p>
             </div>
             <div>

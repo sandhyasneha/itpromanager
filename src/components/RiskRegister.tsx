@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import RiskLibrary from '@/components/RiskLibrary'
 
 interface Risk {
   id: string
@@ -63,7 +64,7 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
   const supabase = createClient()
   const [risks, setRisks] = useState<Risk[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'risk' | 'issue'>('risk')
+  const [activeTab, setActiveTab] = useState<'risk' | 'issue' | 'library'>('risk')
   const [showForm, setShowForm] = useState(false)
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -195,14 +196,16 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
 
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-surface2 rounded-xl mx-6 mb-4 shrink-0">
-          {(['risk', 'issue'] as const).map(tab => (
+          {(['risk', 'issue', 'library'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all capitalize
                 ${activeTab === tab ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
-              {tab === 'risk' ? '🛡️ Risk Register' : '⚠️ Issue Register'}
-              <span className="ml-2 text-xs font-mono-code opacity-60">
-                ({risks.filter(r => r.type === tab).length})
-              </span>
+              {tab === 'risk' ? '🛡️ Risk Register' : tab === 'issue' ? '⚠️ Issue Register' : '📚 Risk Library'}
+              {tab !== 'library' && (
+                <span className="ml-2 text-xs font-mono-code opacity-60">
+                  ({risks.filter(r => r.type === tab).length})
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -492,6 +495,17 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
               <button onClick={() => setViewingRisk(null)} className="btn-primary flex-1 py-2">Close</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Risk Library Tab ─────────────────────── */}
+      {activeTab === 'library' && (
+        <div className="px-6 pb-6 overflow-y-auto flex-1">
+          <RiskLibrary
+            projectId={projectId}
+            projectName={projectName}
+            onAddRisk={(risk) => setRisks(r => [risk, ...r])}
+          />
         </div>
       )}
     </div>

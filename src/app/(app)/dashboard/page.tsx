@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import ProjectHealthScore from '@/components/ProjectHealthScore'
 
 function getRAG(tasks: any[], risks: any[]): 'red' | 'amber' | 'green' {
   const blocked = tasks.filter(t => t.status === 'blocked').length
@@ -27,7 +28,7 @@ const RAG_CONFIG = {
 }
 
 export default async function DashboardPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const [{ data: projects }, { data: allTasks }, { data: allRisks }, { data: profile }] = await Promise.all([
@@ -80,6 +81,18 @@ export default async function DashboardPage() {
         </div>
         <Link href="/kanban" className="btn-primary px-5 py-2.5 text-sm">Open Kanban Board →</Link>
       </div>
+
+      {/* ── AI PROJECT HEALTH SCORE ──────────────────────── */}
+      <ProjectHealthScore
+        projects={projectStats}
+        totalTasks={totalTasks}
+        totalDone={totalDone}
+        totalOverdue={totalOverdue.length}
+        totalBlocked={totalBlocked.length}
+        totalRedRisks={totalRedRisks.length}
+        ragCounts={ragCounts}
+        portfolioPct={portfolioPct}
+      />
 
       {/* Top stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

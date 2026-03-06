@@ -193,7 +193,7 @@ export default function RiskLibrary({ projectId, projectName, onAddRisk }: Props
   }
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-4 pb-4 overflow-y-auto">
 
       {/* Header */}
       <div>

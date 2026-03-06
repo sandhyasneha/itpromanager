@@ -162,7 +162,7 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}>
-      <div className="card w-full max-w-5xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="card w-full max-w-5xl h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
@@ -502,7 +502,7 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
 
       {/* ── Risk Library Tab ─────────────────────── */}
       {activeTab === 'library' && (
-        <div className="px-6 pb-6 overflow-y-auto flex-1 min-h-0 h-0">
+        <div className="px-6 pb-6 overflow-y-auto flex-1 min-h-0">
           <RiskLibrary
             projectId={projectId}
             projectName={projectName}

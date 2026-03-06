@@ -212,7 +212,8 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
           ))}
         </div>
 
-        {/* Table */}
+        {/* Table — hidden when library tab active */}
+        {activeTab !== 'library' && (
         <div className="overflow-y-auto flex-1 min-h-0 px-6">
           {loading ? (
             <div className="text-center py-10 text-muted">Loading...</div>
@@ -277,6 +278,18 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
             </table>
           )}
         </div>
+        )} {/* end activeTab !== library */}
+
+        {/* Library tab */}
+        {activeTab === 'library' && (
+          <div className="overflow-y-auto flex-1 min-h-0 px-6 pb-6">
+            <RiskLibrary
+              projectId={projectId}
+              projectName={projectName}
+              onAddRisk={(risk) => setRisks(r => [risk, ...r])}
+            />
+          </div>
+        )}
 
         <div className="px-6 py-3 border-t border-border shrink-0">
           <p className="text-xs text-muted font-mono-code">
@@ -501,15 +514,7 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
       )}
 
       {/* ── Risk Library Tab ─────────────────────── */}
-      {activeTab === 'library' && (
-        <div className="px-6 pb-6 overflow-y-auto flex-1 min-h-0">
-          <RiskLibrary
-            projectId={projectId}
-            projectName={projectName}
-            onAddRisk={(risk) => setRisks(r => [risk, ...r])}
-          />
-        </div>
-      )}
+
     </div>
   )
 }

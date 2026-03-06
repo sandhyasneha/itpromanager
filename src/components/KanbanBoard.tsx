@@ -10,6 +10,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
 import PostMortemGenerator from '@/components/PostMortemGenerator'
+import BudgetTracker from '@/components/BudgetTracker'
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
   low:      'bg-muted/10 text-muted',
@@ -702,8 +703,11 @@ function ProjectModal({ project, onSave, onClose }: {
     color: project.color ?? '#00d4ff',
     scope: project.scope ?? '',
     status: project.status ?? 'active',
+    budget_total: project.budget_total ?? '',
+    budget_currency: project.budget_currency ?? 'USD',
+    budget_contingency: project.budget_contingency ?? 15,
   })
-  const [activeTab, setActiveTab] = useState<'details' | 'scope' | 'attachment'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'scope' | 'attachment' | 'budget'>('details')
   const [uploading, setUploading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<{url: string, name: string} | null>(
     project.attachment_url ? { url: project.attachment_url, name: project.attachment_name || 'Attachment' } : null
@@ -744,11 +748,11 @@ function ProjectModal({ project, onSave, onClose }: {
 
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-surface2 rounded-xl mx-6 mt-4 shrink-0">
-          {(['details','scope','attachment'] as const).map(tab => (
+          {(['details','scope','attachment','budget'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize
                 ${activeTab === tab ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
-              {tab === 'details' ? '📋 Details' : tab === 'scope' ? '📝 Scope' : '📎 Attachment'}
+              {tab === 'details' ? '📋 Details' : tab === 'scope' ? '📝 Scope' : tab === 'attachment' ? '📎 Attach' : '💰 Budget'}
             </button>
           ))}
         </div>
@@ -867,6 +871,89 @@ function ProjectModal({ project, onSave, onClose }: {
           )}
         </div>
 
+          {activeTab === 'budget' && (
+            <div className="space-y-4">
+              <div className="bg-accent/5 border border-accent/20 rounded-xl p-3">
+                <p className="text-xs font-syne font-bold text-accent mb-1">💰 Optional Budget Tracking</p>
+                <p className="text-[11px] text-muted leading-relaxed">Set a total budget to unlock the Budget Tracker — track planned vs at-risk spend and get schedule overrun cost estimates.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Currency</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { code: 'USD', symbol: '$', label: 'USD' },
+                    { code: 'GBP', symbol: '£', label: 'GBP' },
+                    { code: 'EUR', symbol: '€', label: 'EUR' },
+                    { code: 'INR', symbol: '₹', label: 'INR' },
+                    { code: 'AED', symbol: 'د.إ', label: 'AED' },
+                    { code: 'SGD', symbol: 'S$', label: 'SGD' },
+                  ] as const).map(c => (
+                    <button key={c.code} type="button"
+                      onClick={() => setForm(f => ({ ...f, budget_currency: c.code }))}
+                      className={`py-2 rounded-xl text-xs font-bold border-2 transition-all
+                        ${form.budget_currency === c.code
+                          ? 'bg-accent/10 border-accent text-accent'
+                          : 'bg-surface2 border-border text-muted hover:border-accent/30'}`}>
+                      {c.symbol} {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">
+                  Total Project Budget
+                  <span className="ml-1 text-muted font-normal">(optional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-bold">
+                    {form.budget_currency === 'GBP' ? '£' : form.budget_currency === 'EUR' ? '€' : form.budget_currency === 'INR' ? '₹' : form.budget_currency === 'AED' ? 'د.إ' : form.budget_currency === 'SGD' ? 'S$' : '$'}
+                  </span>
+                  <input type="number" min="0" className="input pl-8 text-sm"
+                    placeholder="e.g. 150000"
+                    value={form.budget_total}
+                    onChange={e => setForm(f => ({ ...f, budget_total: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-syne font-semibold text-muted mb-1.5">
+                  Contingency Buffer
+                  <span className="ml-1 text-muted font-normal">(%)</span>
+                </label>
+                <div className="flex gap-2">
+                  {[5, 10, 15, 20, 25].map(pct => (
+                    <button key={pct} type="button"
+                      onClick={() => setForm(f => ({ ...f, budget_contingency: pct }))}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all
+                        ${form.budget_contingency === pct
+                          ? 'bg-warn/10 border-warn text-warn'
+                          : 'bg-surface2 border-border text-muted hover:border-warn/30'}`}>
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+                {form.budget_total && (
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="bg-surface2 rounded-lg p-2 text-center">
+                      <p className="text-muted">Contingency Reserve</p>
+                      <p className="font-bold text-warn">{(Number(form.budget_total) * Number(form.budget_contingency) / 100).toLocaleString()} {form.budget_currency}</p>
+                    </div>
+                    <div className="bg-surface2 rounded-lg p-2 text-center">
+                      <p className="text-muted">Effective Budget</p>
+                      <p className="font-bold text-accent">{(Number(form.budget_total) * (1 - Number(form.budget_contingency) / 100)).toLocaleString()} {form.budget_currency}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {form.budget_total && (
+                <div className="bg-accent3/5 border border-accent3/20 rounded-xl p-3 flex items-center gap-2">
+                  <span className="text-accent3">✅</span>
+                  <p className="text-[11px] text-accent3 font-semibold">Budget set — 💰 Budget Tracker will appear in the Kanban toolbar after saving.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-2 justify-end p-6 pt-0 border-t border-border mt-2">
           <button onClick={onClose} className="btn-ghost text-sm px-4 py-2">Cancel</button>
           <button onClick={() => onSave({ ...form })} className="btn-primary text-sm px-4 py-2">Save Project</button>
@@ -912,6 +999,7 @@ export default function KanbanBoard({
   const [showNotifications, setShowNotifications] = useState(false)
   const [showTeam, setShowTeam] = useState(false)
   const [showPostMortem, setShowPostMortem] = useState(false)
+  const [showBudget, setShowBudget] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
 
   const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
@@ -1259,6 +1347,15 @@ export default function KanbanBoard({
                 title="Team Members">
                 👥 Team
               </button>
+              {/* Budget Tracker — only if budget is set */}
+              {currentProject.budget_total && (
+                <button
+                  onClick={() => setShowBudget(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-emerald-600 hover:bg-emerald-500/10 border border-emerald-500/30"
+                  title="Budget Tracker">
+                  💰 Budget
+                </button>
+              )}
               {/* Post-Mortem — only for completed projects */}
               {currentProject.status === 'completed' && (
                 <button
@@ -1687,6 +1784,15 @@ export default function KanbanBoard({
           project={currentProject}
           tasks={allTasks.filter((t: Task) => t.project_id === currentProject.id)}
           onClose={() => setShowPostMortem(false)}
+        />
+      )}
+
+      {/* Budget Tracker */}
+      {showBudget && currentProject && (
+        <BudgetTracker
+          project={currentProject}
+          tasks={allTasks.filter((t: Task) => t.project_id === currentProject.id)}
+          onClose={() => setShowBudget(false)}
         />
       )}
 

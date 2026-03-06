@@ -502,7 +502,7 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
 
       {/* ── Risk Library Tab ─────────────────────── */}
       {activeTab === 'library' && (
-        <div className="px-6 pb-6 overflow-y-auto flex-1">
+        <div className="px-6 pb-6 overflow-y-auto flex-1 min-h-0 h-0">
           <RiskLibrary
             projectId={projectId}
             projectName={projectName}

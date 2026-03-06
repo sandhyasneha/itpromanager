@@ -1685,7 +1685,7 @@ export default function KanbanBoard({
       {showPostMortem && currentProject && (
         <PostMortemGenerator
           project={currentProject}
-          tasks={localTasks.filter((t: Task) => t.project_id === currentProject.id)}
+          tasks={allTasks.filter((t: Task) => t.project_id === currentProject.id)}
           onClose={() => setShowPostMortem(false)}
         />
       )}

@@ -6,7 +6,7 @@ import ChangeFreezeCalendar from '@/components/ChangeFreezeCalendar'
 import type { Profile } from '@/types'
 
 const ADMIN_EMAIL = 'info@nexplan.io'
-const ROLES = ['IT Project Manager','Network Engineer','Sponsor','Stakeholder','Other']
+const ROLES = ['IT Project Manager','Network Engineer','Portfolio Manager','Sponsor','Stakeholder','Other']
 const COUNTRIES = ['United States','United Kingdom','India','Australia','Canada','Singapore','Germany','South Africa','UAE','New Zealand','Other']
 
 export default function SettingsPage() {
@@ -17,6 +17,9 @@ export default function SettingsPage() {
   const [saved,   setSaved]   = useState(false)
 
   const isAdmin = profile?.email === ADMIN_EMAIL
+  const availableRoles = isAdmin
+    ? ['IT Project Manager','Network Engineer','Portfolio Manager','Sponsor','Stakeholder','Other','Admin']
+    : ROLES
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -68,7 +71,7 @@ export default function SettingsPage() {
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Role</label>
             <select className="select" value={profile.role ?? ''}
               onChange={e => setProfile(p => ({ ...p, role: e.target.value as any }))}>
-              {ROLES.map(r => <option key={r}>{r}</option>)}
+              {availableRoles.map(r => <option key={r}>{r}</option>)}
             </select>
           </div>
           <div>

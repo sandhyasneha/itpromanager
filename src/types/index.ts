@@ -1,4 +1,4 @@
-export type UserRole = 'IT Project Manager' | 'Network Engineer' | 'Portfolio Manager' | 'Sponsor' | 'Stakeholder' | 'Other'
+export type UserRole = 'IT Project Manager' | 'Network Engineer' | 'Portfolio Manager' | 'Sponsor' | 'Stakeholder' | 'Other' | 'Admin'
 
 export interface Profile {
   id: string

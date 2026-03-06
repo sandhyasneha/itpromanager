@@ -136,6 +136,88 @@ const RAG_STYLE = {
 
 const PROB_COLOR = { low: 'text-emerald-600', medium: 'text-amber-600', high: 'text-red-600' }
 
+
+// ── RiskCard sub-component ────────────────────────────────
+function RiskCard({ risk, expanded, setExpanded, adding, added, onAdd }: {
+  risk: LibraryRisk
+  expanded: number | null
+  setExpanded: (id: number | null) => void
+  adding: number | null
+  added: Set<number>
+  onAdd: (risk: LibraryRisk) => void
+}) {
+  const rs        = RAG_STYLE[risk.rag_status]
+  const isAdded   = added.has(risk.id)
+  const isAdding  = adding === risk.id
+  const isExpanded = expanded === risk.id
+  const cat = CATEGORIES.find(c => c.id === risk.category)
+
+  return (
+    <div className={`rounded-xl border transition-all ${isAdded ? 'opacity-50' : ''} ${rs.border} bg-white`}>
+      <div className="flex items-center gap-3 p-3">
+        {/* RAG dot */}
+        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${rs.dot}`} />
+
+        {/* Title + badges */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-syne font-bold text-sm text-slate-900 leading-snug">{risk.title}</span>
+            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border shrink-0 ${rs.badge}`}>
+              {risk.rag_status.toUpperCase()}
+            </span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0
+              ${risk.probability === 'high' ? 'bg-red-50 text-red-600 border-red-100' :
+                risk.probability === 'medium' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+              P:{risk.probability} I:{risk.impact}
+            </span>
+          </div>
+          {/* Short description always visible */}
+          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{risk.description}</p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button onClick={() => setExpanded(isExpanded ? null : risk.id)}
+            title="View details"
+            className="p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-50 transition-colors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </button>
+          <button onClick={() => !isAdded && !isAdding && onAdd(risk)}
+            disabled={isAdded || isAdding}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap
+              ${isAdded
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 cursor-default'
+                : 'bg-slate-800 text-white border-slate-800 hover:bg-slate-700 active:scale-95'}`}>
+            {isAdding ? '…' : isAdded ? '✓ Added' : '+ Add'}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded details */}
+      {isExpanded && (
+        <div className={`mx-3 mb-3 p-3 rounded-xl border ${rs.border} ${rs.bg} space-y-2`}>
+          <p className="text-xs text-slate-600 leading-relaxed">{risk.description}</p>
+          <div className="border-t border-slate-200/60 pt-2">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">🛡️ Mitigation Plan</p>
+            <p className="text-xs text-slate-700 leading-relaxed">{risk.mitigation_plan}</p>
+          </div>
+          <div className="flex gap-1.5 flex-wrap pt-1">
+            {risk.tags.map(t => (
+              <span key={t} className="text-[10px] bg-white border border-slate-200 text-slate-500 px-1.5 py-0.5 rounded-full">
+                #{t}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function RiskLibrary({ projectId, projectName, onAddRisk }: Props) {
   const supabase = createClient()
   const [category,  setCategory]  = useState('all')
@@ -251,93 +333,40 @@ export default function RiskLibrary({ projectId, projectName, onAddRisk }: Props
         {added.size > 0 ? ` · ${added.size} added to register` : ''}
       </p>
 
-      {/* Risk cards */}
+      {/* Risk cards — grouped by category when All selected */}
       {filtered.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-3xl mb-3">🔍</p>
           <p className="font-syne font-bold text-slate-700">No risks found</p>
           <p className="text-sm text-slate-400 mt-1">Try a different search or category</p>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map(risk => {
-            const rs        = RAG_STYLE[risk.rag_status]
-            const isAdded   = added.has(risk.id)
-            const isAdding  = adding === risk.id
-            const isExpanded = expanded === risk.id
-            const cat = CATEGORIES.find(c => c.id === risk.category)
-
+      ) : category === 'all' && !search ? (
+        // ── Grouped view ────────────────────────────
+        <div className="space-y-6">
+          {CATEGORIES.filter(c => c.id !== 'all').map(cat => {
+            const catRisks = filtered.filter(r => r.category === cat.id)
+            if (catRisks.length === 0) return null
             return (
-              <div key={risk.id}
-                className={`border rounded-xl transition-all ${rs.border} ${isAdded ? 'opacity-60' : 'bg-white'}`}>
-
-                {/* Main row */}
-                <div className="flex items-start gap-3 p-3">
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${rs.dot}`} />
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2 flex-wrap">
-                      <span className="font-syne font-bold text-sm text-slate-900 leading-snug">{risk.title}</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${rs.badge}`}>
-                        {risk.rag_status.toUpperCase()}
-                      </span>
-                      <span className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-full shrink-0">
-                        {cat?.emoji} {cat?.label}
-                      </span>
-                    </div>
-
-                    <p className={`text-xs text-slate-500 mt-1 leading-relaxed ${!isExpanded ? 'line-clamp-2' : ''}`}>
-                      {risk.description}
-                    </p>
-
-                    {/* Expanded: mitigation + tags */}
-                    {isExpanded && (
-                      <div className="mt-3 space-y-2">
-                        <div className={`p-3 rounded-xl border ${rs.border} ${rs.bg}`}>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">🛡️ Mitigation Plan</p>
-                          <p className="text-xs text-slate-700 leading-relaxed">{risk.mitigation_plan}</p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] font-bold ${PROB_COLOR[risk.probability]}`}>
-                            Prob: {risk.probability}
-                          </span>
-                          <span className={`text-[10px] font-bold ${PROB_COLOR[risk.impact]}`}>
-                            Impact: {risk.impact}
-                          </span>
-                          {risk.tags.map(t => (
-                            <span key={t} className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
-                              #{t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button onClick={() => setExpanded(isExpanded ? null : risk.id)}
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-50 transition-colors">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                        className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                        <path d="m6 9 6 6 6-6"/>
-                      </svg>
-                    </button>
-                    <button onClick={() => !isAdded && addToRegister(risk)}
-                      disabled={isAdded || isAdding}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
-                        ${isAdded
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-200 cursor-default'
-                          : 'bg-slate-800 text-white border-slate-800 hover:bg-slate-700'}`}>
-                      {isAdding ? '…' : isAdded ? '✓ Added' : '+ Add'}
-                    </button>
-                  </div>
+              <div key={cat.id}>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                  <span className="text-lg">{cat.emoji}</span>
+                  <h4 className="font-syne font-black text-sm text-slate-800">{cat.label}</h4>
+                  <span className="ml-auto text-xs font-mono-code text-slate-400">{catRisks.length} risks</span>
+                </div>
+                <div className="grid gap-2">
+                  {catRisks.map(risk => <RiskCard key={risk.id} risk={risk} expanded={expanded} setExpanded={setExpanded} adding={adding} added={added} onAdd={addToRegister} />)}
                 </div>
               </div>
             )
           })}
         </div>
+      ) : (
+        // ── Flat filtered view ───────────────────────
+        <div className="grid gap-2">
+          {filtered.map(risk => <RiskCard key={risk.id} risk={risk} expanded={expanded} setExpanded={setExpanded} adding={adding} added={added} onAdd={addToRegister} />)}
+        </div>
       )}
+
     </div>
   )
 }

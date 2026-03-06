@@ -9,6 +9,7 @@ import TaskCommentsActivity from '@/components/TaskCommentsActivity'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
+import PostMortemGenerator from '@/components/PostMortemGenerator'
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
   low:      'bg-muted/10 text-muted',
@@ -700,6 +701,7 @@ function ProjectModal({ project, onSave, onClose }: {
     end_date: project.end_date ?? '',
     color: project.color ?? '#00d4ff',
     scope: project.scope ?? '',
+    status: project.status ?? 'active',
   })
   const [activeTab, setActiveTab] = useState<'details' | 'scope' | 'attachment'>('details')
   const [uploading, setUploading] = useState(false)
@@ -778,6 +780,23 @@ function ProjectModal({ project, onSave, onClose }: {
                   <span className="text-sm font-semibold text-accent">Total Duration: {duration} days</span>
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Project Status</label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'active',    label: '🟢 Active',    bg: 'bg-emerald-50 border-emerald-300 text-emerald-700' },
+                  { value: 'on_hold',   label: '🟡 On Hold',   bg: 'bg-amber-50 border-amber-300 text-amber-700' },
+                  { value: 'completed', label: '✅ Completed', bg: 'bg-blue-50 border-blue-300 text-blue-700' },
+                  { value: 'cancelled', label: '❌ Cancelled', bg: 'bg-red-50 border-red-300 text-red-700' },
+                ] as const).map(s => (
+                  <button key={s.value} type="button" onClick={() => setForm(f => ({ ...f, status: s.value }))}
+                    className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold border-2 transition-all
+                      ${form.status === s.value ? s.bg : 'bg-surface2 border-border text-muted hover:border-accent/30'}`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-syne font-semibold text-muted mb-2">Project Colour</label>
@@ -892,6 +911,7 @@ export default function KanbanBoard({
   const [showStatusReport, setShowStatusReport] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showTeam, setShowTeam] = useState(false)
+  const [showPostMortem, setShowPostMortem] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
 
   const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
@@ -1239,6 +1259,15 @@ export default function KanbanBoard({
                 title="Team Members">
                 👥 Team
               </button>
+              {/* Post-Mortem — only for completed projects */}
+              {currentProject.status === 'completed' && (
+                <button
+                  onClick={() => setShowPostMortem(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-purple-500 hover:bg-purple-500/10 border border-purple-500/30"
+                  title="Generate Post-Mortem / Lessons Learned Report">
+                  🧠 Post-Mortem
+                </button>
+              )}
               {/* Download Plan */}
               <button
                 onClick={() => {
@@ -1649,6 +1678,15 @@ export default function KanbanBoard({
           projectId={currentProject.id}
           projectName={currentProject.name}
           onClose={() => setShowRiskRegister(false)}
+        />
+      )}
+
+      {/* Post-Mortem Generator */}
+      {showPostMortem && currentProject && (
+        <PostMortemGenerator
+          project={currentProject}
+          tasks={localTasks.filter((t: Task) => t.project_id === currentProject.id)}
+          onClose={() => setShowPostMortem(false)}
         />
       )}
 

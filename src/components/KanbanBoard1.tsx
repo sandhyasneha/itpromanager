@@ -703,9 +703,9 @@ function ProjectModal({ project, onSave, onClose }: {
     color: project.color ?? '#00d4ff',
     scope: project.scope ?? '',
     status: project.status ?? 'active',
-    budget_total: project.budget_total ?? '',
-    budget_currency: project.budget_currency ?? 'USD',
-    budget_contingency: project.budget_contingency ?? 15,
+    budget_total: (project as any).budget_total ?? '',
+    budget_currency: (project as any).budget_currency ?? 'USD',
+    budget_contingency: (project as any).budget_contingency ?? 15,
   })
   const [activeTab, setActiveTab] = useState<'details' | 'scope' | 'attachment' | 'budget'>('details')
   const [uploading, setUploading] = useState(false)
@@ -869,7 +869,6 @@ function ProjectModal({ project, onSave, onClose }: {
               <p className="text-xs text-muted">Upload your project charter, SOW, or any reference document.</p>
             </div>
           )}
-        </div>
 
           {activeTab === 'budget' && (
             <div className="space-y-4">
@@ -881,13 +880,13 @@ function ProjectModal({ project, onSave, onClose }: {
                 <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Currency</label>
                 <div className="grid grid-cols-3 gap-2">
                   {([
-                    { code: 'USD', symbol: '$', label: 'USD' },
-                    { code: 'GBP', symbol: '£', label: 'GBP' },
-                    { code: 'EUR', symbol: '€', label: 'EUR' },
-                    { code: 'INR', symbol: '₹', label: 'INR' },
-                    { code: 'AED', symbol: 'د.إ', label: 'AED' },
-                    { code: 'SGD', symbol: 'S$', label: 'SGD' },
-                  ] as const).map(c => (
+                    { code: 'USD', symbol: '$',    label: 'USD' },
+                    { code: 'GBP', symbol: '£',    label: 'GBP' },
+                    { code: 'EUR', symbol: '€',    label: 'EUR' },
+                    { code: 'INR', symbol: '₹',    label: 'INR' },
+                    { code: 'AED', symbol: 'AED',  label: 'AED' },
+                    { code: 'SGD', symbol: 'S$',   label: 'SGD' },
+                  ]).map(c => (
                     <button key={c.code} type="button"
                       onClick={() => setForm(f => ({ ...f, budget_currency: c.code }))}
                       className={`py-2 rounded-xl text-xs font-bold border-2 transition-all
@@ -1348,7 +1347,7 @@ export default function KanbanBoard({
                 👥 Team
               </button>
               {/* Budget Tracker — only if budget is set */}
-              {currentProject.budget_total && (
+              {(currentProject as any).budget_total && (
                 <button
                   onClick={() => setShowBudget(true)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-emerald-600 hover:bg-emerald-500/10 border border-emerald-500/30"
@@ -1790,7 +1789,7 @@ export default function KanbanBoard({
       {/* Budget Tracker */}
       {showBudget && currentProject && (
         <BudgetTracker
-          project={currentProject}
+          project={currentProject as any}
           tasks={allTasks.filter((t: Task) => t.project_id === currentProject.id)}
           onClose={() => setShowBudget(false)}
         />

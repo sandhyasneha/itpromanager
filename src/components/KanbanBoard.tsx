@@ -955,7 +955,7 @@ function ProjectModal({ project, onSave, onClose }: {
 
         <div className="flex gap-2 justify-end p-6 pt-0 border-t border-border mt-2">
           <button onClick={onClose} className="btn-ghost text-sm px-4 py-2">Cancel</button>
-          <button onClick={() => onSave({ ...form })} className="btn-primary text-sm px-4 py-2">Save Project</button>
+          <button onClick={() => onSave({ ...form, budget_total: form.budget_total !== '' ? Number(form.budget_total) : null })} className="btn-primary text-sm px-4 py-2">Save Project</button>
         </div>
       </div>
     </div>

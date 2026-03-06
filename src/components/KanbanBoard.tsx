@@ -703,9 +703,9 @@ function ProjectModal({ project, onSave, onClose }: {
     color: project.color ?? '#00d4ff',
     scope: project.scope ?? '',
     status: project.status ?? 'active',
-    budget_total: project.budget_total ?? '',
-    budget_currency: project.budget_currency ?? 'USD',
-    budget_contingency: project.budget_contingency ?? 15,
+    budget_total: (project as any).budget_total ?? '',
+    budget_currency: (project as any).budget_currency ?? 'USD',
+    budget_contingency: (project as any).budget_contingency ?? 15,
   })
   const [activeTab, setActiveTab] = useState<'details' | 'scope' | 'attachment' | 'budget'>('details')
   const [uploading, setUploading] = useState(false)
@@ -1347,7 +1347,7 @@ export default function KanbanBoard({
                 👥 Team
               </button>
               {/* Budget Tracker — only if budget is set */}
-              {currentProject.budget_total && (
+              {(currentProject as any).budget_total && (
                 <button
                   onClick={() => setShowBudget(true)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-emerald-600 hover:bg-emerald-500/10 border border-emerald-500/30"
@@ -1789,7 +1789,7 @@ export default function KanbanBoard({
       {/* Budget Tracker */}
       {showBudget && currentProject && (
         <BudgetTracker
-          project={currentProject}
+          project={currentProject as any}
           tasks={allTasks.filter((t: Task) => t.project_id === currentProject.id)}
           onClose={() => setShowBudget(false)}
         />

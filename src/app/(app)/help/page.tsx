@@ -208,6 +208,93 @@ const GUIDES: Guide[] = [
     ],
   },
 
+
+  // Phase 8 Features
+  {
+    id: 'dashboard-overview', icon: '📊', title: 'Understanding the Dashboard',
+    subtitle: 'Portfolio health, RAG status and project overview',
+    category: 'Phase 8 Features', color: '#00d4ff', estimated: '3 min',
+    steps: [
+      { step: 'Click "Dashboard" in the left sidebar', detail: 'The Dashboard is your home screen — it shows the health of your entire IT project portfolio at a glance.' },
+      { step: 'Read the Project Health Score at the top', detail: 'The AI health score (0-100) grades your portfolio A-F. Green = Healthy, Amber = Caution, Red = At Risk. It factors in completion rate, overdue tasks, blockers and red risks.' },
+      { step: 'Check the 4 top stat cards', detail: 'Total Projects, Total Tasks, Completion % and Overdue Tasks. These update in real time as your team moves tasks.' },
+      { step: 'Review the RAG Portfolio Summary', detail: 'Each project is shown with a RAG (Red / Amber / Green) status. Red = at risk, Amber = caution, Green = on track. Click any project to go directly to its Kanban board.' },
+      { step: 'Check Upcoming Deadlines', detail: 'Tasks due in the next 7 days are listed here so you can proactively manage deadline risk.' },
+      { step: 'Review Recently Completed Tasks', detail: 'Confirms what your team has achieved recently — useful for quick stand-up meetings.' },
+    ],
+    tips: [
+      'Health Score below 60 = At Risk — review overdue tasks and blockers immediately',
+      'A score of 80+ with grade A or B means your portfolio is well managed',
+      'The health score recalculates on every page load based on live data',
+      'Use the Dashboard as your daily morning check before reviewing individual projects',
+    ],
+  },
+  {
+    id: 'reports-overview', icon: '📈', title: 'Reports — Upcoming, Overdue & Resource',
+    subtitle: 'Analyse deadlines, overdue tasks and team utilisation',
+    category: 'Phase 8 Features', color: '#7c3aed', estimated: '4 min',
+    steps: [
+      { step: 'Click "Reports" in the left sidebar', detail: 'The Reports page has 3 tabs: Upcoming & Overdue, Resource Utilisation, and Stakeholder Digest.' },
+      { step: 'Upcoming & Overdue tab — view tasks due soon', detail: 'All tasks due in the next 14 days are listed here, sorted by due date. Red = overdue, Amber = due within 3 days, Green = due within 14 days.' },
+      { step: 'Filter by project or priority', detail: 'Use the filter dropdowns at the top to narrow down by specific project or priority level (Critical / High / Medium / Low).' },
+      { step: 'Resource Utilisation tab — see who is overloaded', detail: 'Switch to the Resource Utilisation tab to see a breakdown of tasks assigned per team member. Spot team members with too many tasks or none at all.' },
+      { step: 'Stakeholder Digest tab — generate and send weekly updates', detail: 'Select a project, enter PM name and recipient emails, then click Generate. AI drafts a full stakeholder email. Review, edit and click Send or Copy.' },
+      { step: 'Use reports before weekly project meetings', detail: 'Run the Upcoming & Overdue report each Monday to prepare your weekly status update.' },
+    ],
+    tips: [
+      'Overdue tasks shown in red need immediate attention — assign or escalate',
+      'Resource Utilisation helps prevent team burnout before it happens',
+      'Stakeholder Digest saves 30-45 minutes of email writing per project per week',
+      'The digest email is fully editable before sending — always review the AI draft',
+    ],
+  },
+  {
+    id: 'change-freeze', icon: '🗓️', title: 'Setting Up a Change Freeze',
+    subtitle: 'Block changes during critical periods like year-end or audits',
+    category: 'Phase 8 Features', color: '#f59e0b', estimated: '3 min',
+    steps: [
+      { step: 'Click "Settings" in the left sidebar', detail: 'Settings is at the bottom of the left navigation menu.' },
+      { step: 'Scroll down to the Change Freeze Calendar section', detail: 'It appears below your profile settings. Admins see a Global freeze option; PMs see project-level freeze.' },
+      { step: 'Click "+ Add Change Freeze"', detail: 'The Add Freeze form appears.' },
+      { step: 'Enter a Freeze Name', detail: 'Give it a clear name — e.g. "Christmas Freeze 2025" or "Q4 Financial Year-End".' },
+      { step: 'Set the Start Date and End Date', detail: 'These define the protected window. No changes should be deployed during this period.' },
+      { step: 'Select a Reason', detail: 'Choose from 9 preset reasons: Christmas/New Year, Quarter-End, Financial Year-End, Major Release, Audit Period, Regulatory Compliance, Data Centre Migration, DR Test, or Custom.' },
+      { step: 'Choose Scope — Global or Project-specific', detail: 'Global applies to all projects (Admin only). Project applies to a specific project you own.' },
+      { step: 'Click "Add Freeze" to save', detail: 'The freeze period appears in the calendar list. Active freezes show a red pulsing banner at the top.' },
+      { step: 'View warnings on the Gantt Timeline', detail: 'Tasks that fall within a freeze window will show a warning on the Gantt chart, alerting the PM to reschedule if needed.' },
+    ],
+    tips: [
+      'Set Christmas freeze every year — it is the most commonly forgotten change window',
+      'Active freezes show a red banner — visible to all team members on the Settings page',
+      'Freeze periods are visible in the Gantt Timeline as warning indicators on affected tasks',
+      'Admins can delete any freeze; PMs can only delete their own',
+    ],
+  },
+  {
+    id: 'post-mortem', icon: '🧠', title: 'Generating a Post-Mortem Report',
+    subtitle: 'AI lessons learned report for completed projects',
+    category: 'Phase 8 Features', color: '#7c3aed', estimated: '5 min',
+    steps: [
+      { step: 'Open the Kanban board for the project you want to post-mortem', detail: 'Click the project name in the left sidebar to open its Kanban board.' },
+      { step: 'Click the Edit Project (pencil) button in the toolbar', detail: 'The Edit Project modal opens.' },
+      { step: 'In the Details tab, change Project Status to Completed', detail: 'You will see 4 status options: Active, On Hold, Completed, Cancelled. Select Completed.' },
+      { step: 'Click "Save Project"', detail: 'The project status is updated. Close the modal.' },
+      { step: 'A Post-Mortem button now appears in the toolbar', detail: 'It appears in the toolbar highlighted in purple. It is only visible when the project is marked Completed.' },
+      { step: 'Click "Post-Mortem"', detail: 'The Post-Mortem modal opens showing project stats — tasks done, overdue at closure, blocked tasks and planned duration.' },
+      { step: 'Click "Generate Post-Mortem Report"', detail: 'AI analyses all tasks, overdue items, blockers and the project timeline. This takes 15-20 seconds.' },
+      { step: 'Navigate the 7 sections in the left sidebar', detail: 'Sections: Executive Summary, What Went Well, What Went Wrong, Root Cause Analysis, Lessons Learned, Recommendations for Next Project, Timeline vs Actual, Risk & Issues Summary.' },
+      { step: 'Copy a section or the full report', detail: 'Click "Copy Section" for a single section or "Copy Full Report" to copy everything. Paste into Word, email or your documentation system.' },
+      { step: 'Click Regenerate if you want a fresh analysis', detail: 'The Regenerate button re-runs the AI analysis. Each generation may give slightly different insights.' },
+    ],
+    tips: [
+      'Run the post-mortem within 1 week of project closure for most accurate insights',
+      'Share the report with your steering committee as part of project closure documentation',
+      'The Recommendations section is particularly useful for planning your next similar project',
+      'Copy the full report into Confluence, SharePoint or your ITSM tool for permanent record',
+      'The AI bases all observations on actual task data — the more tasks you tracked, the better the report',
+    ],
+  },
+
   // ── SUPPORT GUIDES (Phase 6) ──────────────────────────────
   {
     id: 'raise-ticket', icon: '🎫', title: 'Raising a Support Ticket',
@@ -280,7 +367,7 @@ const GUIDES: Guide[] = [
   },
 ]
 
-const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Support']
+const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Support']
 
 const CAT_COLORS: Record<string, string> = {
   'Getting Started':    '#00d4ff',
@@ -288,6 +375,7 @@ const CAT_COLORS: Record<string, string> = {
   'PCR & Risk Register':'#f59e0b',
   'AI Features':        '#7c3aed',
   'Support':            '#ef4444',
+  'Phase 8 Features':   '#06b6d4',
 }
 
 const CAT_ICONS: Record<string, string> = {
@@ -297,6 +385,7 @@ const CAT_ICONS: Record<string, string> = {
   'PCR & Risk Register':'🛡️',
   'AI Features':        '🤖',
   'Support':            '🎫',
+  'Phase 8 Features':   '✨',
 }
 
 // ── Support Ticket Form (inline, no import needed) ──────────

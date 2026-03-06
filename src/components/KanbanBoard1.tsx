@@ -869,6 +869,7 @@ function ProjectModal({ project, onSave, onClose }: {
               <p className="text-xs text-muted">Upload your project charter, SOW, or any reference document.</p>
             </div>
           )}
+        </div>
 
           {activeTab === 'budget' && (
             <div className="space-y-4">
@@ -880,13 +881,13 @@ function ProjectModal({ project, onSave, onClose }: {
                 <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Currency</label>
                 <div className="grid grid-cols-3 gap-2">
                   {([
-                    { code: 'USD', symbol: '$',    label: 'USD' },
-                    { code: 'GBP', symbol: '£',    label: 'GBP' },
-                    { code: 'EUR', symbol: '€',    label: 'EUR' },
-                    { code: 'INR', symbol: '₹',    label: 'INR' },
-                    { code: 'AED', symbol: 'AED',  label: 'AED' },
-                    { code: 'SGD', symbol: 'S$',   label: 'SGD' },
-                  ]).map(c => (
+                    { code: 'USD', symbol: '$', label: 'USD' },
+                    { code: 'GBP', symbol: '£', label: 'GBP' },
+                    { code: 'EUR', symbol: '€', label: 'EUR' },
+                    { code: 'INR', symbol: '₹', label: 'INR' },
+                    { code: 'AED', symbol: 'د.إ', label: 'AED' },
+                    { code: 'SGD', symbol: 'S$', label: 'SGD' },
+                  ] as const).map(c => (
                     <button key={c.code} type="button"
                       onClick={() => setForm(f => ({ ...f, budget_currency: c.code }))}
                       className={`py-2 rounded-xl text-xs font-bold border-2 transition-all

@@ -51,6 +51,9 @@ export interface Project {
   end_date?: string
   color: string
   created_at: string
+  budget_total?: number | null
+  budget_currency?: string
+  budget_contingency?: number | null
 }
 
 export interface KanbanColumn {

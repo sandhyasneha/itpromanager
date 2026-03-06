@@ -172,7 +172,7 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
           </div>
           <div className="flex items-center gap-3">
             {activeTab !== 'library' && (
-              <button onClick={() => { setEditingRisk(null); setForm({ ...emptyForm, type: activeTab === 'library' ? 'risk' : activeTab }); setShowForm(true) }}
+              <button onClick={() => { setEditingRisk(null); setForm({ ...emptyForm, type: activeTab as 'risk' | 'issue' }); setShowForm(true) }}
                 className="btn-primary text-sm px-4 py-2">
                 + Add {activeTab === 'risk' ? 'Risk' : 'Issue'}
               </button>
@@ -220,7 +220,7 @@ export default function RiskRegister({ projectId, projectName, onClose }: Props)
             <div className="text-center py-16">
               <p className="text-4xl mb-3">{activeTab === 'risk' ? '🛡️' : '⚠️'}</p>
               <p className="text-muted">No {activeTab}s added yet.</p>
-              <button onClick={() => { setEditingRisk(null); setForm({ ...emptyForm, type: activeTab === 'library' ? 'risk' : activeTab }); setShowForm(true) }}
+              <button onClick={() => { setEditingRisk(null); setForm({ ...emptyForm, type: activeTab as 'risk' | 'issue' }); setShowForm(true) }}
                 className="btn-primary mt-4 px-6 py-2 text-sm">
                 + Add First {activeTab === 'risk' ? 'Risk' : 'Issue'}
               </button>

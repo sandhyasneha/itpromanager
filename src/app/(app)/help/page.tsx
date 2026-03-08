@@ -295,6 +295,70 @@ const GUIDES: Guide[] = [
     ],
   },
 
+  // ── Phase 9 Features ──────────────────────────────────────
+  {
+    id: 'stakeholder-analysis', icon: '🤝', title: 'Stakeholder Analysis',
+    subtitle: 'Map influence, interest and communication preferences',
+    category: 'Phase 9 Features', color: '#f59e0b', estimated: '4 min',
+    steps: [
+      { step: 'Open your project and click "🤝 Stakeholders" in the toolbar', detail: 'The Stakeholder Analysis modal opens, showing your current stakeholder map.' },
+      { step: 'Click "+ Add Stakeholder" to register a new stakeholder', detail: 'Fill in Name, Role and Organisation.' },
+      { step: 'Set Influence level — High, Medium or Low', detail: 'Influence = how much power this person has over your project outcome (budget, approval, veto). Be honest — overrating influence is safer than underrating it.' },
+      { step: 'Set Interest level — High, Medium or Low', detail: 'Interest = how much they care about your project day to day. A CEO may have high influence but low interest. A Network Lead may have high interest but medium influence.' },
+      { step: 'Set their Engagement Status', detail: 'Engaged = actively involved. Informed = receives updates. Consult = provides input. Monitor = watch only.' },
+      { step: 'Add Communication Preference and preferred frequency', detail: 'E.g. "Email — Weekly" or "Teams call — Fortnightly". This drives your communication plan.' },
+      { step: 'Use AI Suggest to get recommended actions', detail: 'Click "✨ AI Suggest" next to a stakeholder to get tailored engagement recommendations based on their influence/interest matrix position.' },
+      { step: 'Review the Influence/Interest matrix view', detail: 'Toggle to Matrix view to see all stakeholders plotted on a grid — Manage Closely (High/High), Keep Satisfied (High/Low), Keep Informed (Low/High), Monitor (Low/Low).' },
+    ],
+    tips: [
+      'High Influence + High Interest stakeholders need weekly direct communication — do not neglect them',
+      'Update engagement status after every meeting or significant interaction',
+      'AI suggestions are based on PRINCE2 and PMI stakeholder engagement best practices',
+      'Export the stakeholder register as CSV for inclusion in your project charter',
+    ],
+  },
+  {
+    id: 'change-freeze-p9', icon: '🧊', title: 'Change Freeze',
+    subtitle: 'Lock critical periods and block unapproved changes',
+    category: 'Phase 9 Features', color: '#ef4444', estimated: '3 min',
+    steps: [
+      { step: 'Click "🧊 Freeze" in the project toolbar', detail: 'The Change Freeze panel opens showing any active or scheduled freeze windows for this project.' },
+      { step: 'Click "+ New Freeze Window" to create a freeze period', detail: 'The freeze creation form appears.' },
+      { step: 'Enter a Freeze Name', detail: 'Use a clear label — e.g. "Go-Live Freeze", "Year-End Freeze" or "UAT Lock".' },
+      { step: 'Set Start Date and End Date for the freeze window', detail: 'These define the protected period. All task changes and PCRs are blocked during this window.' },
+      { step: 'Add a Reason', detail: 'E.g. "Production cutover — no changes permitted" or "Regulatory audit period".' },
+      { step: 'Click "Activate Freeze"', detail: 'The freeze is saved. A red 🔴 banner appears at the top of the project for all team members.' },
+      { step: 'Any change attempt during the freeze triggers a block alert', detail: 'Team members attempting to move tasks, raise PCRs or edit project dates will see a freeze warning and the action will be blocked.' },
+      { step: 'Deactivate or delete the freeze after the window ends', detail: 'Click the trash icon next to the freeze to remove it. The red banner disappears automatically.' },
+    ],
+    tips: [
+      'Always set a go-live freeze for at least 48 hours before and after production cutover',
+      'All team members see the active freeze banner — no one can claim they did not know',
+      'Freeze history is logged for audit trail and post-mortem reports',
+      'Combine Change Freeze with a PCR to formally document why a freeze was needed',
+    ],
+  },
+  {
+    id: 'budget-tracker', icon: '💰', title: 'Budget Tracker',
+    subtitle: 'Track project spend, burn rate and budget vs actual',
+    category: 'Phase 9 Features', color: '#22d3a5', estimated: '4 min',
+    steps: [
+      { step: 'Click "💰 Budget" in the project toolbar', detail: 'The Budget Tracker modal opens showing your current budget summary.' },
+      { step: 'Set the Total Project Budget', detail: 'Click "Edit Budget" and enter the approved total budget amount. Save to confirm.' },
+      { step: 'Log costs against tasks', detail: 'Open any task → click the "💰 Cost" tab → enter cost description and amount. Examples: hardware purchase, contractor day rate, software licence fee.' },
+      { step: 'Review the Budget vs Actual dashboard', detail: 'The summary panel shows Total Budget, Total Spent, Remaining, and Burn Rate %. A progress bar shows how much of the budget has been consumed.' },
+      { step: 'Check the Burn Rate warning', detail: 'If burn rate exceeds 80% before the project is 80% complete, an amber warning appears. If it exceeds budget, a red alert fires.' },
+      { step: 'View the cost breakdown by category', detail: 'Costs are grouped by category: Hardware, Labour, Software, Contingency. This helps identify where spend is concentrated.' },
+      { step: 'Download the budget report', detail: 'Click "⬇ Export" to download a CSV of all cost entries for finance reporting or project closure.' },
+    ],
+    tips: [
+      'Log costs as they are committed, not just when invoices arrive — this gives a more accurate burn rate',
+      'Set budget at project kick-off — retrofitting it later makes burn rate less meaningful',
+      'Use the Contingency category for unplanned spend — it keeps your planned categories clean',
+      'Budget data feeds into the Post-Mortem report for cost variance analysis at project closure',
+    ],
+  },
+
   // ── SUPPORT GUIDES (Phase 6) ──────────────────────────────
   {
     id: 'raise-ticket', icon: '🎫', title: 'Raising a Support Ticket',
@@ -367,7 +431,7 @@ const GUIDES: Guide[] = [
   },
 ]
 
-const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Support']
+const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Phase 9 Features', 'Support']
 
 const CAT_COLORS: Record<string, string> = {
   'Getting Started':    '#00d4ff',
@@ -376,6 +440,7 @@ const CAT_COLORS: Record<string, string> = {
   'AI Features':        '#7c3aed',
   'Support':            '#ef4444',
   'Phase 8 Features':   '#06b6d4',
+  'Phase 9 Features':   '#22d3a5',
 }
 
 const CAT_ICONS: Record<string, string> = {
@@ -386,6 +451,7 @@ const CAT_ICONS: Record<string, string> = {
   'AI Features':        '🤖',
   'Support':            '🎫',
   'Phase 8 Features':   '✨',
+  'Phase 9 Features':   '🚀',
 }
 
 // ── Support Ticket Form (inline, no import needed) ──────────

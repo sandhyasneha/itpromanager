@@ -52,6 +52,24 @@ const FEATURES = [
     desc: '42 professional IT guides covering Cisco, Azure, AWS, VMware and more. Searchable, categorised and free for all users.',
     bullets: ['42 expert IT guides','Cisco, Azure, AWS, VMware','Network & Security runbooks','Free for all users'],
   },
+  {
+    id: 'stakeholder', icon: '🤝', title: 'Stakeholder Analysis', subtitle: 'Know Your Audience',
+    color: '#f59e0b',
+    desc: 'Map and manage every stakeholder in your project. Capture influence, interest and communication preferences so no one falls through the cracks.',
+    bullets: ['Influence & interest mapping','Communication plan per stakeholder','Engagement status tracking','AI-suggested actions'],
+  },
+  {
+    id: 'change_freeze', icon: '🧊', title: 'Change Freeze', subtitle: 'Lock Down Critical Periods',
+    color: '#ef4444',
+    desc: 'Define change freeze windows to protect critical go-live and BAU periods. Block unapproved changes and alert the team automatically.',
+    bullets: ['Set freeze start & end dates','Block task & PCR changes','Auto-alert on freeze breach','Full freeze history log'],
+  },
+  {
+    id: 'budget', icon: '💰', title: 'Budget Tracker', subtitle: 'Stay On Top of Project Spend',
+    color: '#22d3a5',
+    desc: 'Track project budget vs actual spend in real time. Log costs against tasks, monitor burn rate and get early warnings when you are heading over budget.',
+    bullets: ['Budget vs actual dashboard','Cost logging per task','Burn rate tracking','Over-budget early warnings'],
+  },
 ]
 
 const STEPS = [
@@ -60,6 +78,9 @@ const STEPS = [
   { num: '03', icon: '📋', title: 'Manage Board', desc: 'Drag tasks through Kanban columns as work progresses.' },
   { num: '04', icon: '🛡️', title: 'Track Risks', desc: 'Log risks and issues with RAG status and AI mitigations.' },
   { num: '05', icon: '📊', title: 'Report & Alert', desc: 'One click generates and emails a professional status report.' },
+  { num: '06', icon: '🤝', title: 'Stakeholder Analysis', desc: 'Map influence and interest for every stakeholder. Never miss a key decision-maker.' },
+  { num: '07', icon: '🧊', title: 'Change Freeze', desc: 'Lock critical periods to block unapproved changes and protect go-lives.' },
+  { num: '08', icon: '💰', title: 'Budget Tracker', desc: 'Log costs per task, track burn rate and get early over-budget warnings.' },
 ]
 
 export default function LandingPage() {
@@ -134,7 +155,7 @@ export default function LandingPage() {
       {/* STATS */}
       <div className="relative z-10 border-y border-border bg-surface/50 backdrop-blur-sm py-6 mb-20">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {[['8+','Core Features'],['42','IT Knowledge Guides'],['100%','Free Forever'],['AI','Powered Intelligence']].map(([v,l]) => (
+          {[['11+','Core Features'],['42','IT Knowledge Guides'],['100%','Free Forever'],['AI','Powered Intelligence']].map(([v,l]) => (
             <div key={l}>
               <p className="font-syne font-black text-3xl text-accent">{v}</p>
               <p className="text-muted text-sm mt-1">{l}</p>
@@ -220,7 +241,7 @@ export default function LandingPage() {
             <p className="font-mono-code text-accent text-xs tracking-widest uppercase mb-3">// How It Works</p>
             <h2 className="font-syne font-black text-4xl tracking-tight mb-4">From zero to running project<br/>in under 5 minutes</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {STEPS.map((step, i) => (
               <div key={step.num} className="relative">
                 <div className="card p-5 h-full hover:-translate-y-1 transition-transform duration-300 text-center">

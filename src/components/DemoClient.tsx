@@ -12,6 +12,9 @@ const STEPS = [
   { id:'mytasks', title:'Team Member My Tasks', subtitle:'✅ Team members see only their work', description:'Team members log in and see only tasks assigned to them. They update status — PM sees it instantly.', duration:4000, screen:'mytasks' },
   { id:'notify', title:'Smart Notifications', subtitle:'🔔 AI-written follow-up emails', description:'AI writes personalised follow-up emails for team members the day before tasks are due.', duration:4000, screen:'notify' },
   { id:'resource', title:'Resource Utilization', subtitle:'👥 Stop burnout before it happens', description:'Track team workload using 80/85% threshold model. See who is overallocated and rebalance instantly.', duration:4500, screen:'resource' },
+  { id:'stakeholder', title:'Stakeholder Analysis', subtitle:'🤝 Know your audience', description:'Map every stakeholder by influence and interest. Capture communication preferences and track engagement so no one falls through the cracks.', duration:4500, screen:'stakeholder' },
+  { id:'change_freeze', title:'Change Freeze', subtitle:'🧊 Lock critical periods', description:'Define freeze windows to protect go-lives and BAU periods. Block unapproved changes and auto-alert the team on any breach.', duration:4000, screen:'change_freeze' },
+  { id:'budget', title:'Budget Tracker', subtitle:'💰 Stay on top of project spend', description:'Log costs against tasks, monitor budget vs actual in real time and get early warnings before you go over budget.', duration:4500, screen:'budget' },
   { id:'cta', title:'Ready to get started?', subtitle:'100% Free · No credit card · Sign in with Google', description:'Join IT PMs and Network Engineers already using NexPlan.', duration:5000, screen:'cta' },
 ]
 
@@ -189,11 +192,85 @@ function Screen({ id }: { id: string }) {
       <div className='font-syne font-black text-3xl'>Nex<span className='text-accent'>Plan</span></div>
       <p className='text-muted text-sm max-w-xs leading-relaxed'>Join IT PMs and Network Engineers managing projects with NexPlan.</p>
       <div className='flex flex-col gap-2 w-full max-w-xs'>
-        {['🤖 AI Project Generator','📋 Kanban Board','📅 Gantt Timeline','📊 AI Status Reports','📝 PCR Workflow','👥 Resource Utilization','✅ Team My Tasks','🔔 Smart Notifications'].map(f => (
+        {['🤖 AI Project Generator','📋 Kanban Board','📅 Gantt Timeline','📊 AI Status Reports','📝 PCR Workflow','👥 Resource Utilization','✅ Team My Tasks','🔔 Smart Notifications','🤝 Stakeholder Analysis','🧊 Change Freeze','💰 Budget Tracker'].map(f => (
           <div key={f} className='flex items-center gap-2 text-xs text-left'><span className='text-accent3'>✓</span><span className='text-muted'>{f}</span></div>
         ))}
       </div>
       <div className='text-accent3 text-sm font-bold'>All free. Forever. 🎉</div>
+    </div>
+  )
+  if (id === 'stakeholder') return (
+    <div className='h-full flex flex-col gap-3 p-4'>
+      <p className='text-xs font-syne font-bold text-warn uppercase tracking-widest'>🤝 Stakeholder Analysis</p>
+      <div className='space-y-2 flex-1 overflow-hidden'>
+        {[
+          { name:'Sarah Chen', role:'Project Sponsor', influence:'High', interest:'High', status:'Engaged', color:'bg-accent3/20 text-accent3' },
+          { name:'Mark Davies', role:'Network Lead', influence:'High', interest:'Medium', status:'Informed', color:'bg-accent/20 text-accent' },
+          { name:'Ops Team', role:'End Users', influence:'Low', interest:'High', status:'Monitor', color:'bg-warn/20 text-warn' },
+          { name:'IT Security', role:'Reviewer', influence:'Medium', interest:'Low', status:'Consult', color:'bg-accent2/20 text-accent2' },
+        ].map((s,i) => (
+          <div key={i} className='flex items-center gap-2 p-2.5 bg-surface2 border border-border rounded-xl text-[10px]'>
+            <div className='w-6 h-6 rounded-full bg-surface flex items-center justify-center font-bold text-[9px] border border-border shrink-0'>{s.name[0]}</div>
+            <div className='flex-1 min-w-0'>
+              <p className='font-semibold truncate'>{s.name}</p>
+              <p className='text-muted truncate'>{s.role}</p>
+            </div>
+            <span className='text-muted shrink-0'>⬆ {s.influence}</span>
+            <span className={`shrink-0 px-1.5 py-0.5 rounded font-semibold ${s.color}`}>{s.status}</span>
+          </div>
+        ))}
+      </div>
+      <div className='p-2 bg-warn/5 border border-warn/20 rounded-xl text-[10px] text-muted'>✨ AI suggests: Schedule weekly update with Sarah Chen</div>
+    </div>
+  )
+  if (id === 'change_freeze') return (
+    <div className='h-full flex flex-col gap-3 p-4'>
+      <p className='text-xs font-syne font-bold text-danger uppercase tracking-widest'>🧊 Change Freeze</p>
+      <div className='p-3 bg-danger/10 border border-danger/30 rounded-xl text-[10px]'>
+        <p className='font-bold text-danger mb-1'>🔴 Active Freeze Window</p>
+        <p className='text-muted'>Go-Live Freeze: Mar 10 – Mar 17, 2025</p>
+        <p className='text-muted mt-0.5'>Reason: Production cutover — no changes permitted</p>
+      </div>
+      <div className='space-y-1.5 flex-1 overflow-hidden'>
+        {[
+          { task:'Update BGP config', user:'Mark D.', status:'Blocked', c:'bg-danger/20 text-danger' },
+          { task:'Patch firewall rules', user:'Priya S.', status:'Blocked', c:'bg-danger/20 text-danger' },
+          { task:'New VLAN request', user:'Tom K.', status:'Pending Approval', c:'bg-warn/20 text-warn' },
+        ].map((r,i) => (
+          <div key={i} className='flex items-center gap-2 p-2 bg-surface2 border border-border rounded-lg text-[10px]'>
+            <span className='flex-1 font-medium truncate'>{r.task}</span>
+            <span className='text-muted shrink-0'>{r.user}</span>
+            <span className={`shrink-0 px-1.5 py-0.5 rounded font-semibold ${r.c}`}>{r.status}</span>
+          </div>
+        ))}
+      </div>
+      <div className='p-2 bg-surface2 border border-border rounded-xl text-[10px] text-muted'>🔔 3 team members notified of freeze breach attempt</div>
+    </div>
+  )
+  if (id === 'budget') return (
+    <div className='h-full flex flex-col gap-3 p-4'>
+      <p className='text-xs font-syne font-bold text-accent3 uppercase tracking-widest'>💰 Budget Tracker</p>
+      <div className='grid grid-cols-3 gap-2 text-center'>
+        {[['Total Budget','$48,000','text-text'],['Spent','$31,200','text-warn'],['Remaining','$16,800','text-accent3']].map(([l,v,c]) => (
+          <div key={l} className='bg-surface2 border border-border rounded-xl p-2'>
+            <p className={`font-syne font-black text-sm ${c}`}>{v}</p>
+            <p className='text-[9px] text-muted mt-0.5'>{l}</p>
+          </div>
+        ))}
+      </div>
+      <div className='bg-surface2 border border-border rounded-xl p-2.5'>
+        <div className='flex justify-between text-[10px] mb-1'><span className='text-muted'>Burn rate</span><span className='text-warn font-bold'>65% used · Week 6 of 12</span></div>
+        <div className='w-full h-2 bg-surface rounded-full overflow-hidden'><div className='h-full rounded-full bg-warn' style={{width:'65%'}}/></div>
+      </div>
+      <div className='space-y-1.5 flex-1 overflow-hidden'>
+        {[['Hardware procurement','$18,000','$17,400'],['Engineer labour','$22,000','$11,200'],['Software licences','$5,000','$2,600'],['Contingency','$3,000','$0']].map(([cat,bud,spent],i) => (
+          <div key={i} className='flex items-center gap-2 p-2 bg-surface2 border border-border rounded-lg text-[10px]'>
+            <span className='flex-1 truncate text-muted'>{cat}</span>
+            <span className='text-muted shrink-0'>Budget: {bud}</span>
+            <span className='font-bold shrink-0 text-accent3'>Spent: {spent}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
   return null

@@ -297,6 +297,31 @@ const GUIDES: Guide[] = [
 
   // ── Phase 9 Features ──────────────────────────────────────
   {
+    id: 'network-diagram', icon: '🗺️', title: 'AI Network Diagram Generator',
+    subtitle: 'Describe your network change — AI draws it instantly',
+    category: 'Phase 9 Features', color: '#00d4ff', estimated: '5 min',
+    steps: [
+      { step: 'Click "Network Diagram" in the left sidebar', detail: 'The AI Network Diagram Generator opens with a prompt form on the left and tips on the right.' },
+      { step: 'Describe your network change in the free-text box', detail: 'Type a plain-English description of what you want to add or change. Example: "I want to install a new Cisco Catalyst 9300 switch on Floor 3 of Singapore HQ. The existing core router is at 10.0.0.1 and I need to connect the new switch via a 10G fiber uplink on VLAN 100." The more detail you provide, the more accurate the diagram.' },
+      { step: 'Fill in the structured fields for best results', detail: 'Use the 8 prompt fields to provide specific details: Change Type (e.g. Add new switch), Location / Site (e.g. Singapore HQ Floor 3), New Device (e.g. Cisco Catalyst 9300), New IP / Subnet, Existing Devices with their IPs, Connection type, VLAN details, and any Additional Notes.' },
+      { step: 'Click "🤖 Generate Network Diagram"', detail: 'AI analyses your description and generates a complete network diagram with nodes, connections and IP addresses. This takes 5–10 seconds.' },
+      { step: 'Review the generated diagram on the canvas', detail: 'Your diagram appears with all devices positioned logically — Internet/Cloud at top, core devices in the middle, access devices at the bottom. New devices are highlighted with a green NEW badge.' },
+      { step: 'Drag devices to reposition them', detail: 'Click and drag any device node to move it anywhere on the canvas. The connection lines update automatically.' },
+      { step: 'Click a device to view and edit its details', detail: 'Select any device to see its type, IP address and location in the right panel. Click ✏️ Edit to update the label, type, IP or location. Click 🗑️ Delete to remove it from the diagram.' },
+      { step: 'Add new devices manually with "+ Add Device"', detail: 'Click the "+ Add Device" button in the top toolbar to add any device manually. Select type, enter a label, IP and location. The new device is added to the canvas with a NEW badge.' },
+      { step: 'Use zoom controls to navigate large diagrams', detail: 'Use the − and + buttons in the toolbar to zoom out or in. The zoom percentage is shown between the buttons.' },
+      { step: 'Click "← Edit Prompt" to regenerate with changes', detail: 'Go back to the prompt form at any time to refine your description and regenerate a fresh diagram.' },
+    ],
+    tips: [
+      'Always mention the vendor and model (e.g. "Cisco Catalyst 9300" not just "switch") for IT-specific diagrams',
+      'Include existing IP ranges so AI places new devices in the correct subnet',
+      'Use the example scenario buttons on the right for quick starting points',
+      'New devices are automatically marked with a green NEW badge — useful for presenting changes to your team or CAB',
+      'Link types: solid blue = Ethernet, solid green = Fiber, dashed orange = Wireless, dashed red = WAN',
+      'Use the free-text box for complex scenarios and the structured fields for specific technical details — combine both for best results',
+    ],
+  },
+  {
     id: 'stakeholder-analysis', icon: '🤝', title: 'Stakeholder Analysis',
     subtitle: 'Map influence, interest and communication preferences',
     category: 'Phase 9 Features', color: '#f59e0b', estimated: '4 min',

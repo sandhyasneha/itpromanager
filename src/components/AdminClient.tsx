@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AdminAuditLog from '@/components/AdminAuditLog'
 import AdminSubscriptions from '@/components/AdminSubscriptions'
+import { PLAN_DISPLAY, type Plan } from '@/lib/planConfig'
 
 const STATUS_COLORS: Record<string, string> = {
   new:         'bg-accent/10 text-accent border-accent/30',
@@ -252,7 +253,7 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  {['User','Email','Role','Country','Projects','Joined'].map(h => (
+                  {['User','Email','Plan','Role','Country','Projects','Joined'].map(h => (
                     <th key={h} className="text-left text-xs font-syne font-bold text-muted uppercase tracking-wide py-3 px-5">{h}</th>
                   ))}
                 </tr>
@@ -271,6 +272,17 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
                         </div>
                       </td>
                       <td className="px-5 py-3.5 font-mono-code text-xs text-muted">{u.email}</td>
+                      <td className="px-5 py-3.5">
+                        {(() => {
+                          const plan = (u.plan ?? 'free') as Plan
+                          const d = PLAN_DISPLAY[plan]
+                          return (
+                            <span className={`text-[11px] px-2 py-1 rounded-lg font-semibold border ${d.bgColor} ${d.color} ${d.borderColor}`}>
+                              {d.badge}
+                            </span>
+                          )
+                        })()}
+                      </td>
                       <td className="px-5 py-3.5"><span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-lg">{u.role ?? '—'}</span></td>
                       <td className="px-5 py-3.5 text-sm text-muted">{u.country ?? '—'}</td>
                       <td className="px-5 py-3.5 font-mono-code text-xs text-accent">{userProjects}</td>

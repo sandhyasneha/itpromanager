@@ -192,6 +192,172 @@ export default function NetworkDiagramPage() {
     return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 15 }
   }
 
+  // ── Download as PNG ──────────────────────────────────────────
+  function downloadPNG() {
+    if (!diagram || !canvasRef.current) return
+    const canvas = document.createElement('canvas')
+    const scale  = 2 // retina quality
+    canvas.width  = 800 * scale
+    canvas.height = 580 * scale
+    const ctx = canvas.getContext('2d')!
+    ctx.scale(scale, scale)
+
+    // Background
+    ctx.fillStyle = '#0d1117'
+    ctx.fillRect(0, 0, 800, 580)
+
+    // Grid dots
+    ctx.fillStyle = '#ffffff08'
+    for (let x = 0; x < 800; x += 30) {
+      for (let y = 0; y < 580; y += 30) {
+        ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill()
+      }
+    }
+
+    // Title
+    ctx.fillStyle = '#00d4ff'
+    ctx.font = 'bold 14px monospace'
+    ctx.fillText(diagram.title, 16, 24)
+    ctx.fillStyle = '#6b7280'
+    ctx.font = '11px Arial'
+    ctx.fillText(diagram.description, 16, 40)
+
+    // Draw links
+    diagram.links.forEach(link => {
+      const from = diagram.nodes.find(n => n.id === link.from)
+      const to   = diagram.nodes.find(n => n.id === link.to)
+      if (!from || !to) return
+      const colors: Record<string, string> = { ethernet: '#00d4ff80', fiber: '#22d3a580', wireless: '#f59e0b80', wan: '#ef444480' }
+      ctx.strokeStyle = colors[link.type] || '#ffffff40'
+      ctx.lineWidth = 2
+      if (link.type === 'wireless') { ctx.setLineDash([6, 4]) }
+      else if (link.type === 'wan') { ctx.setLineDash([10, 5]) }
+      else { ctx.setLineDash([]) }
+      ctx.beginPath()
+      ctx.moveTo(from.x, from.y)
+      const mx = (from.x + to.x) / 2
+      const my = (from.y + to.y) / 2 - 20
+      ctx.quadraticCurveTo(mx, my, to.x, to.y)
+      ctx.stroke()
+      ctx.setLineDash([])
+      // Link label
+      if (link.label) {
+        ctx.fillStyle = '#6b7280'
+        ctx.font = '9px monospace'
+        ctx.fillText(link.label, (from.x + to.x) / 2 - 10, (from.y + to.y) / 2 - 18)
+      }
+    })
+
+    // Draw nodes
+    diagram.nodes.forEach(node => {
+      const colors: Record<string, { bg: string; border: string; text: string }> = {
+        router:        { bg: '#00d4ff15', border: '#00d4ff60', text: '#00d4ff' },
+        switch:        { bg: '#7c3aed15', border: '#7c3aed60', text: '#a78bfa' },
+        firewall:      { bg: '#ef444415', border: '#ef444460', text: '#f87171' },
+        server:        { bg: '#22d3a515', border: '#22d3a560', text: '#22d3a5' },
+        cloud:         { bg: '#06b6d415', border: '#06b6d460', text: '#22d3ee' },
+        pc:            { bg: '#f59e0b15', border: '#f59e0b60', text: '#fbbf24' },
+        ap:            { bg: '#10b98115', border: '#10b98160', text: '#34d399' },
+        load_balancer: { bg: '#8b5cf615', border: '#8b5cf660', text: '#a78bfa' },
+        internet:      { bg: '#6b728015', border: '#6b728060', text: '#9ca3af' },
+      }
+      const c = colors[node.type] || colors.internet
+      const x = node.x - 48, y = node.y - 40, w = 96, h = 70
+
+      // Card background
+      ctx.fillStyle = '#161b22'
+      ctx.strokeStyle = node.isNew ? '#22d3a5' : c.border
+      ctx.lineWidth   = node.isNew ? 2 : 1.5
+      roundRect(ctx, x, y, w, h, 10)
+      ctx.fill(); ctx.stroke()
+
+      // NEW badge
+      if (node.isNew) {
+        ctx.fillStyle = '#22d3a5'
+        ctx.font = 'bold 8px Arial'
+        ctx.fillText('NEW', node.x + 22, node.y - 36)
+      }
+
+      // Icon
+      const icons: Record<string, string> = {
+        router:'⇄', switch:'▦', firewall:'⊛', server:'⊡', cloud:'☁',
+        pc:'⊟', ap:'◎', load_balancer:'⊜', internet:'⊕'
+      }
+      ctx.fillStyle = c.text
+      ctx.font = 'bold 18px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText(icons[node.type] || '●', node.x, node.y - 10)
+
+      // Label
+      ctx.fillStyle = c.text
+      ctx.font = 'bold 9px Arial'
+      ctx.textAlign = 'center'
+      const label = node.label.length > 14 ? node.label.substring(0, 13) + '…' : node.label
+      ctx.fillText(label, node.x, node.y + 6)
+
+      // IP
+      if (node.ip) {
+        ctx.fillStyle = '#6b7280'
+        ctx.font = '8px monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText(node.ip, node.x, node.y + 18)
+      }
+
+      ctx.textAlign = 'left'
+    })
+
+    // Footer
+    ctx.fillStyle = '#374151'
+    ctx.font = '10px monospace'
+    ctx.fillText('nexplan.io', 700, 570)
+
+    // Download
+    const link = document.createElement('a')
+    link.download = `${diagram.title.replace(/\s+/g, '_')}_network_diagram.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }
+
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath()
+    ctx.moveTo(x + r, y)
+    ctx.lineTo(x + w - r, y)
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+    ctx.lineTo(x + w, y + h - r)
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+    ctx.lineTo(x + r, y + h)
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+    ctx.lineTo(x, y + r)
+    ctx.quadraticCurveTo(x, y, x + r, y)
+    ctx.closePath()
+  }
+
+  // ── Save as JSON ─────────────────────────────────────────────
+  function saveJSON() {
+    if (!diagram) return
+    const blob = new Blob([JSON.stringify(diagram, null, 2)], { type: 'application/json' })
+    const link = document.createElement('a')
+    link.download = `${diagram.title.replace(/\s+/g, '_')}_network_diagram.json`
+    link.href = URL.createObjectURL(blob)
+    link.click()
+  }
+
+  // ── Load from JSON ───────────────────────────────────────────
+  function loadJSON(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string) as Diagram
+        setDiagram(data)
+        setMode('diagram')
+        setSelectedNode(null)
+      } catch { alert('Invalid diagram file') }
+    }
+    reader.readAsText(file)
+  }
+
   // ── Render ───────────────────────────────────────────────────
   return (
     <div className="min-h-screen p-6 max-w-7xl mx-auto">
@@ -203,11 +369,17 @@ export default function NetworkDiagramPage() {
           <p className="text-muted text-sm mt-1">Describe your network change — AI generates an editable diagram instantly.</p>
         </div>
         {mode === 'diagram' && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="btn-ghost text-sm px-3 py-2">−</button>
             <span className="text-xs text-muted self-center font-mono-code">{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="btn-ghost text-sm px-3 py-2">+</button>
             <button onClick={() => { setMode('prompt'); setSelectedNode(null) }} className="btn-ghost text-sm px-4 py-2">← Edit Prompt</button>
+            <button onClick={saveJSON} className="btn-ghost text-sm px-4 py-2" title="Save diagram as JSON to reload later">💾 Save</button>
+            <button onClick={downloadPNG} className="btn-ghost text-sm px-4 py-2" title="Download diagram as PNG image">⬇️ PNG</button>
+            <label className="btn-ghost text-sm px-4 py-2 cursor-pointer" title="Load a previously saved diagram">
+              📂 Load
+              <input type="file" accept=".json" className="hidden" onChange={loadJSON} />
+            </label>
             <button onClick={() => setAddingNode(true)} className="btn-primary text-sm px-4 py-2">+ Add Device</button>
           </div>
         )}

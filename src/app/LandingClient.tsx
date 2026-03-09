@@ -78,9 +78,9 @@ const STEPS = [
   { num: '03', icon: '📋', title: 'Manage Board', desc: 'Drag tasks through Kanban columns as work progresses.' },
   { num: '04', icon: '🛡️', title: 'Track Risks', desc: 'Log risks and issues with RAG status and AI mitigations.' },
   { num: '05', icon: '📊', title: 'Report & Alert', desc: 'One click generates and emails a professional status report.' },
-  { num: '06', icon: '🤝', title: 'Stakeholder Analysis', desc: 'Map influence and interest for every stakeholder. Never miss a key decision-maker.' },
-  { num: '07', icon: '🧊', title: 'Change Freeze', desc: 'Lock critical periods to block unapproved changes and protect go-lives.' },
-  { num: '08', icon: '💰', title: 'Budget Tracker', desc: 'Log costs per task, track burn rate and get early over-budget warnings.' },
+  { num: '06', icon: '🤝', title: 'Stakeholder Analysis', desc: 'Go to Reports in the left menu → Stakeholder Digest tab. View influence map, send digests and manage engagement — Portfolio Manager role required.' },
+  { num: '07', icon: '🧊', title: 'Change Freeze', desc: 'Go to Settings in the left pane → Change Freeze Calendar. Define freeze windows — tasks in these periods are flagged on the Gantt. Portfolio Manager role required.' },
+  { num: '08', icon: '💰', title: 'Budget Tracker', desc: 'Open project → ✏️ Edit Project → Budget tab. Set currency, total budget and contingency %. Save — the 💰 Budget button appears in the toolbar. Portfolio Manager role required.' },
 ]
 
 export default function LandingPage() {

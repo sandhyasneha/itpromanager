@@ -47,7 +47,21 @@ function LoginForm() {
     e.preventDefault()
     if (!form.full_name.trim()) { setError('Please enter your full name'); return }
     setLoading(true); setError('')
-    const { error } = await supabase.auth.signUp({
+
+    // Check if email is already registered before attempting sign up
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', form.email.toLowerCase().trim())
+      .maybeSingle()
+
+    if (existingUser) {
+      setError('⚠️ An account with this email already exists. Please sign in instead, or use "Forgot Password" if you need to reset your password.')
+      setLoading(false)
+      return
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
@@ -55,8 +69,19 @@ function LoginForm() {
         emailRedirectTo: `${window.location.origin}/auth/callback`
       }
     })
+
     if (error) {
-      setError(error.message)
+      // Catch any Supabase-level duplicate errors as a safety net
+      if (error.message.toLowerCase().includes('already registered') ||
+          error.message.toLowerCase().includes('user already exists') ||
+          error.message.toLowerCase().includes('email already')) {
+        setError('⚠️ An account with this email already exists. Please sign in instead, or use "Forgot Password" if you need to reset your password.')
+      } else {
+        setError(error.message)
+      }
+    } else if (data?.user?.identities?.length === 0) {
+      // Supabase silently returns a user with empty identities when email already exists
+      setError('⚠️ An account with this email already exists. Please sign in instead, or use "Forgot Password" if you need to reset your password.')
     } else {
       try {
         await fetch('/api/send-welcome', {

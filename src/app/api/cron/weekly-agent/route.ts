@@ -1,6 +1,6 @@
 // src/app/api/cron/weekly-agent/route.ts
 // Vercel Cron — runs every Monday 08:00 UTC
-// Scans all users → sends Pro Welcome or AI-personalised Free nudge email
+// Personal plain-text style emails — designed to land in Primary tab
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -17,8 +17,10 @@ function sevenDaysAgo() {
   return d.toISOString()
 }
 
-// ── Send via Resend (same pattern as send-welcome/route.ts) ──────
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+// ── Send via Resend — includes plain text for Primary tab ────────
+async function sendEmail(
+  to: string, subject: string, html: string, text: string
+): Promise<boolean> {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -26,10 +28,11 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: 'NexPlan <info@nexplan.io>',
+      from: 'Ram from NexPlan <info@nexplan.io>',
       to,
       subject,
       html,
+      text, // plain text version — key for Primary tab
     }),
   })
   const data = await res.json()
@@ -37,29 +40,41 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   return res.ok
 }
 
-// ── Claude AI: personalised nudge body ───────────────────────────
-async function generateNudgeBody(user: {
+// ── Claude AI: generate personal plain-text style nudge ──────────
+async function generateNudgeContent(user: {
   name: string; role: string; country: string
   projectCount: number; taskCount: number; daysSinceJoin: number
-}): Promise<string> {
+}): Promise<{ html: string; text: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return fallbackNudgeBody(user)
+  if (!apiKey) return fallbackNudgeContent(user)
 
-  const prompt = `You are NexPlan's AI marketing agent. Write a punchy, personalised upgrade email body for a free user.
+  const prompt = `You are Ram, the founder of NexPlan (nexplan.io) — an AI-powered IT project management tool.
+Write a short, genuine, founder-to-user personal email. NOT a marketing email. Like a real person checking in.
 
 User:
 - Name: ${user.name}
 - Role: ${user.role}
 - Country: ${user.country}
 - Projects created: ${user.projectCount}
-- Tasks created: ${user.taskCount}
 - Days since joining: ${user.daysSinceJoin}
 
-Return ONLY inner HTML content (no <html>/<body> tags — just inner div elements).
-Use inline styles. Dark theme: bg #0d1117, accent #00d4ff, text #e6edf3, muted #6b7280.
-Tone: Friendly, direct, creates FOMO. Reference their actual usage to feel personal.
-Mention 3 Pro features relevant to their role. Under 300 words. No fluff.
-Pro plan: $5/month or $50/year.`
+Guidelines:
+- Write like a real person, not a marketer
+- Short — 4 to 6 sentences max
+- No bullet points, no headers, no bold text, no emojis in the body
+- Reference their actual usage naturally (projects, days)
+- Mention ONE specific Pro feature most relevant to their role as an IT PM
+- End with a genuine question to encourage a reply (replies = Primary tab!)
+- Sign off as "Ram, Founder @ NexPlan"
+- Subtle CTA: just mention they can upgrade at nexplan.io/pricing — no big button language
+
+Return a JSON object with two fields:
+{
+  "text": "plain text version of the email (no HTML)",
+  "html": "simple HTML version — NO gradients, NO heavy styling, just a clean white email with simple black text, max-width 600px, font-family Arial, font-size 14px, line-height 1.7, color #333. Just <p> tags and one simple link at the end."
+}
+
+Return ONLY the JSON, no explanation.`
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -76,118 +91,109 @@ Pro plan: $5/month or $50/year.`
       }),
     })
     const data = await res.json()
-    return data.content?.[0]?.text || fallbackNudgeBody(user)
+    const raw  = data.content?.[0]?.text ?? ''
+    const clean = raw.replace(/```json|```/g, '').trim()
+    const parsed = JSON.parse(clean)
+    if (parsed.text && parsed.html) return parsed
+    return fallbackNudgeContent(user)
   } catch (e) {
-    console.error('Claude error:', e)
-    return fallbackNudgeBody(user)
+    console.error('Claude nudge error:', e)
+    return fallbackNudgeContent(user)
   }
 }
 
-// ── Fallback nudge if Claude fails ───────────────────────────────
-function fallbackNudgeBody(user: { name: string; role: string; projectCount: number; daysSinceJoin: number }) {
-  return `
-  <div style="background:linear-gradient(135deg,#00d4ff15,#7c3aed15);border:1px solid #00d4ff30;border-radius:20px;padding:32px;margin-bottom:20px;text-align:center;">
-    <p style="font-size:48px;margin:0 0 12px;">⚡</p>
-    <h2 style="color:#ffffff;font-size:24px;margin:0 0 8px;font-weight:900;">Hey ${user.name}, you're leaving AI on the table</h2>
-    <p style="color:#9ca3af;font-size:14px;margin:0;line-height:1.6;">
-      You've been on NexPlan for ${user.daysSinceJoin} days with ${user.projectCount} project${user.projectCount !== 1 ? 's' : ''}.
-      As a <strong style="color:#e6edf3;">${user.role}</strong>, here's what Pro unlocks for you.
-    </p>
-  </div>
-  <div style="background:#161b22;border-radius:16px;padding:24px;margin-bottom:16px;border:1px solid #30363d;">
-    <p style="color:#00d4ff;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">⚡ Pro Features You're Missing</p>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;">
-      <span style="font-size:20px;">🤖</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">AI Project Plan Generator</p><p style="color:#6b7280;font-size:12px;margin:0;">Describe your project → AI builds the full task breakdown in 10 seconds</p></div>
-    </div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;">
-      <span style="font-size:20px;">📊</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">AI Status Reports</p><p style="color:#6b7280;font-size:12px;margin:0;">One-click professional reports emailed to stakeholders instantly</p></div>
-    </div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;">
-      <span style="font-size:20px;">🔀</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">PCR Document Generator</p><p style="color:#6b7280;font-size:12px;margin:0;">AI writes PRINCE2 change request documents automatically</p></div>
-    </div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;">
-      <span style="font-size:20px;">✉️</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">AI Follow-Up Emails</p><p style="color:#6b7280;font-size:12px;margin:0;">Automatically chase overdue tasks with personalised AI emails</p></div>
-    </div>
-  </div>
-  <div style="background:#0d1f2d;border:1px solid #00d4ff30;border-radius:12px;padding:20px;margin-bottom:20px;text-align:center;">
-    <p style="color:#00d4ff;font-size:28px;font-weight:900;margin:0;">$5<span style="font-size:15px;font-weight:400;color:#9ca3af;">/month</span></p>
-    <p style="color:#6b7280;font-size:12px;margin:6px 0 0;">or <strong style="color:#e6edf3;">$50/year</strong> — save $10 · Cancel anytime</p>
-  </div>`
-}
+// ── Fallback nudge — plain personal style ────────────────────────
+function fallbackNudgeContent(user: {
+  name: string; role: string; projectCount: number; daysSinceJoin: number
+}): { html: string; text: string } {
+  const text = `Hi ${user.name},
 
-// ── Pro Welcome Email ─────────────────────────────────────────────
-function proWelcomeHtml(firstName: string, email: string, billing: string) {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#0d1117;font-family:Arial,sans-serif;">
-<div style="max-width:600px;margin:0 auto;padding:24px;">
-  <div style="text-align:center;padding:32px 0 24px;">
-    <h1 style="color:#00d4ff;font-size:32px;margin:0;font-weight:900;letter-spacing:-1px;">NexPlan</h1>
-    <p style="color:#6b7280;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">AI-Powered IT Project Management</p>
-  </div>
-  <div style="background:linear-gradient(135deg,#7c3aed20,#00d4ff15);border:1px solid #7c3aed50;border-radius:20px;padding:32px;margin-bottom:20px;text-align:center;">
-    <p style="font-size:48px;margin:0 0 12px;">⚡</p>
-    <div style="display:inline-block;background:#7c3aed;color:#fff;padding:4px 16px;border-radius:999px;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Pro Member</div>
-    <h2 style="color:#ffffff;font-size:26px;margin:8px 0;font-weight:900;">Welcome to NexPlan Pro, ${firstName}!</h2>
-    <p style="color:#9ca3af;font-size:14px;margin:0;line-height:1.6;">You've unlocked the full power of AI-driven IT project management.<br/>Billed <strong style="color:#e6edf3;">${billing === 'yearly' ? '$50/year' : '$5/month'}</strong> — thank you for supporting NexPlan 🙏</p>
-  </div>
-  <div style="background:#161b22;border-radius:16px;padding:24px;margin-bottom:16px;border:1px solid #7c3aed40;">
-    <p style="color:#a78bfa;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">⚡ Your Pro Features Are Now Active</p>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;"><span style="font-size:20px;">🤖</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">AI Project Plan Generator</p><p style="color:#6b7280;font-size:12px;margin:0;">Describe your IT project → AI generates a complete task plan in 10 seconds</p></div></div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;"><span style="font-size:20px;">📊</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">AI Status Reports</p><p style="color:#6b7280;font-size:12px;margin:0;">One-click professional stakeholder reports with RAG status — emailed instantly</p></div></div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;"><span style="font-size:20px;">🔀</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">PCR Document Generator</p><p style="color:#6b7280;font-size:12px;margin:0;">AI writes PRINCE2-format change request documents automatically</p></div></div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;"><span style="font-size:20px;">✉️</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">AI Follow-Up Emails</p><p style="color:#6b7280;font-size:12px;margin:0;">Personalised AI-written follow-ups for overdue tasks sent automatically</p></div></div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #21262d;"><span style="font-size:20px;">💬</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">Comments & Activity Log</p><p style="color:#6b7280;font-size:12px;margin:0;">Full task comment threads and complete project activity history</p></div></div>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;"><span style="font-size:20px;">🎫</span><div><p style="color:#e6edf3;font-size:13px;font-weight:bold;margin:0 0 2px;">Priority Support</p><p style="color:#6b7280;font-size:12px;margin:0;">Your support tickets jump to the front of the queue</p></div></div>
-  </div>
-  <div style="background:#161b22;border-radius:16px;padding:20px;margin-bottom:20px;border:1px solid #30363d;">
-    <p style="color:#22d3a5;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px;">Your Pro Account</p>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #21262d;"><span style="color:#6b7280;font-size:12px;">Email</span><span style="color:#e6edf3;font-size:12px;font-weight:bold;">${email}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #21262d;"><span style="color:#6b7280;font-size:12px;">Plan</span><span style="color:#a78bfa;font-size:12px;font-weight:bold;">⚡ Pro</span></div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:#6b7280;font-size:12px;">Billing</span><span style="color:#e6edf3;font-size:12px;font-weight:bold;">${billing === 'yearly' ? '$50/year' : '$5/month'}</span></div>
-  </div>
-  <div style="text-align:center;margin-bottom:20px;">
-    <a href="https://nexplan.io/kanban" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#00d4ff);color:#fff;padding:16px 40px;border-radius:12px;text-decoration:none;font-weight:900;font-size:15px;">Go to My Dashboard →</a>
-    <p style="color:#6b7280;font-size:12px;margin:12px 0 0;">Start with <strong style="color:#e6edf3;">AI Project Generator</strong> — describe your project and AI builds it instantly</p>
-  </div>
-  <div style="background:#0d2818;border:1px solid #22d3a530;border-radius:12px;padding:16px;margin-bottom:20px;">
-    <p style="color:#22d3a5;font-size:12px;font-weight:bold;margin:0 0 6px;">💡 Pro Tip — Get Started in 60 Seconds</p>
-    <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.6;">Go to <strong style="color:#e6edf3;">Kanban Board → + Project</strong>, write your project description and click <strong style="color:#e6edf3;">"🤖 Generate with AI"</strong>. Your full task plan will be ready instantly.</p>
-  </div>
-  <div style="text-align:center;border-top:1px solid #21262d;padding-top:20px;">
-    <p style="color:#6b7280;font-size:11px;margin:0 0 4px;">NexPlan · nexplan.io</p>
-    <p style="color:#6b7280;font-size:11px;margin:0;">Questions? <a href="mailto:info@nexplan.io" style="color:#00d4ff;text-decoration:none;">info@nexplan.io</a></p>
-    <p style="color:#4b5563;font-size:10px;margin:12px 0 0;">© 2026 NexPlan · Thank you for supporting free IT project management worldwide</p>
-  </div>
+I noticed you joined NexPlan ${user.daysSinceJoin} days ago and have created ${user.projectCount} project${user.projectCount !== 1 ? 's' : ''} — that's great to see.
+
+I wanted to personally check in and ask — are you finding it useful for your IT project management work? Is there anything that isn't working the way you'd expect?
+
+One thing I'd love for you to try is the AI Project Plan Generator on the Pro plan. As a ${user.role}, it can save you hours — just describe your project in plain English and it builds the full task breakdown instantly.
+
+If you're curious, you can unlock it at nexplan.io/pricing for $5/month. But more importantly, I'd genuinely love to hear how things are going for you.
+
+What's one thing you wish NexPlan did better?
+
+Ram
+Founder @ NexPlan
+nexplan.io`
+
+  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 24px;color:#333333;font-size:14px;line-height:1.7;">
+  <p style="margin:0 0 16px;">Hi ${user.name},</p>
+  <p style="margin:0 0 16px;">I noticed you joined NexPlan ${user.daysSinceJoin} days ago and have created ${user.projectCount} project${user.projectCount !== 1 ? 's' : ''} — that's great to see.</p>
+  <p style="margin:0 0 16px;">I wanted to personally check in and ask — are you finding it useful for your IT project management work? Is there anything that isn't working the way you'd expect?</p>
+  <p style="margin:0 0 16px;">One thing I'd love for you to try is the AI Project Plan Generator on the Pro plan. As a ${user.role}, it can save you hours — just describe your project in plain English and it builds the full task breakdown instantly.</p>
+  <p style="margin:0 0 16px;">If you're curious, you can unlock it at <a href="https://nexplan.io/pricing" style="color:#0066cc;text-decoration:none;">nexplan.io/pricing</a> for $5/month. But more importantly, I'd genuinely love to hear how things are going for you.</p>
+  <p style="margin:0 0 24px;">What's one thing you wish NexPlan did better?</p>
+  <p style="margin:0 0 4px;">Ram</p>
+  <p style="margin:0 0 4px;color:#666;">Founder @ NexPlan</p>
+  <p style="margin:0;"><a href="https://nexplan.io" style="color:#0066cc;text-decoration:none;">nexplan.io</a></p>
+  <hr style="border:none;border-top:1px solid #eeeeee;margin:32px 0 16px;" />
+  <p style="font-size:11px;color:#999999;margin:0;">You're receiving this because you signed up at nexplan.io. <a href="https://nexplan.io/unsubscribe?email=${'{email}'}" style="color:#999999;">Unsubscribe</a></p>
 </div></body></html>`
+
+  return { text, html }
 }
 
-// ── Free Nudge Email wrapper ──────────────────────────────────────
-function nudgeEmailHtml(email: string, aiBody: string) {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#0d1117;font-family:Arial,sans-serif;">
-<div style="max-width:600px;margin:0 auto;padding:24px;">
-  <div style="text-align:center;padding:32px 0 24px;">
-    <h1 style="color:#00d4ff;font-size:32px;margin:0;font-weight:900;letter-spacing:-1px;">NexPlan</h1>
-    <p style="color:#6b7280;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">AI-Powered IT Project Management</p>
+// ── Pro Welcome — personal plain style ───────────────────────────
+function proWelcomeContent(firstName: string, email: string, billing: string): { html: string; text: string } {
+  const price = billing === 'yearly' ? '$50/year' : '$5/month'
+
+  const text = `Hi ${firstName},
+
+This is Ram, founder of NexPlan. I just wanted to say a genuine thank you for upgrading to Pro — it really means a lot, especially at this stage of building NexPlan.
+
+Your Pro features are now fully active. The ones I'd start with:
+
+- AI Project Plan Generator: go to Kanban → + Project, describe your IT project and click "Generate with AI". Your full task plan will be ready in 10 seconds.
+- AI Status Reports: one click and a professional RAG status report goes to all your stakeholders.
+- PCR Document Generator: describe your change request and AI writes the full PRINCE2 document.
+
+If you run into anything or have a feature request, just reply to this email — I read every reply personally.
+
+Thanks again for the support.
+
+Ram
+Founder @ NexPlan
+nexplan.io`
+
+  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 24px;color:#333333;font-size:14px;line-height:1.7;">
+  <p style="margin:0 0 16px;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;">This is Ram, founder of NexPlan. I just wanted to say a genuine thank you for upgrading to Pro — it really means a lot, especially at this stage of building NexPlan.</p>
+  <p style="margin:0 0 16px;">Your Pro features are now fully active. The ones I'd start with:</p>
+  <p style="margin:0 0 8px;padding-left:16px;border-left:3px solid #0066cc;"><strong>AI Project Plan Generator</strong> — go to Kanban → + Project, describe your IT project and click "Generate with AI". Your full task plan will be ready in 10 seconds.</p>
+  <p style="margin:8px 0 8px;padding-left:16px;border-left:3px solid #0066cc;"><strong>AI Status Reports</strong> — one click and a professional RAG status report goes to all your stakeholders.</p>
+  <p style="margin:8px 0 16px;padding-left:16px;border-left:3px solid #0066cc;"><strong>PCR Document Generator</strong> — describe your change request and AI writes the full PRINCE2 document.</p>
+  <p style="margin:0 0 16px;">If you run into anything or have a feature request, just reply to this email — I read every reply personally.</p>
+  <p style="margin:0 0 24px;">Thanks again for the support.</p>
+  <p style="margin:0 0 4px;">Ram</p>
+  <p style="margin:0 0 4px;color:#666;">Founder @ NexPlan</p>
+  <p style="margin:0 0 24px;"><a href="https://nexplan.io" style="color:#0066cc;text-decoration:none;">nexplan.io</a></p>
+  <div style="background:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:24px;">
+    <p style="margin:0 0 4px;font-size:12px;color:#666;">Your account</p>
+    <p style="margin:0 0 4px;font-size:13px;"><strong>${email}</strong> · Pro · ${price}</p>
+    <p style="margin:0;font-size:12px;color:#666;"><a href="https://nexplan.io/kanban" style="color:#0066cc;text-decoration:none;">Go to your dashboard →</a></p>
   </div>
-  ${aiBody}
-  <div style="text-align:center;margin:24px 0;">
-    <a href="https://nexplan.io/pricing" style="display:inline-block;background:#00d4ff;color:#000;padding:16px 40px;border-radius:12px;text-decoration:none;font-weight:900;font-size:15px;">Unlock Pro for $5/month →</a>
-    <p style="color:#6b7280;font-size:11px;margin:10px 0 0;">or $50/year · Cancel anytime · No lock-in</p>
-  </div>
-  <div style="text-align:center;border-top:1px solid #21262d;padding-top:20px;">
-    <p style="color:#6b7280;font-size:11px;margin:0 0 4px;">NexPlan · nexplan.io</p>
-    <p style="color:#6b7280;font-size:11px;margin:0;">Questions? <a href="mailto:info@nexplan.io" style="color:#00d4ff;text-decoration:none;">info@nexplan.io</a></p>
-    <p style="color:#4b5563;font-size:10px;margin:12px 0 0;">© 2026 NexPlan · <a href="https://nexplan.io/unsubscribe?email=${encodeURIComponent(email)}" style="color:#4b5563;text-decoration:none;">Unsubscribe</a></p>
-  </div>
+  <hr style="border:none;border-top:1px solid #eeeeee;margin:0 0 16px;" />
+  <p style="font-size:11px;color:#999999;margin:0;">NexPlan · nexplan.io · <a href="mailto:info@nexplan.io" style="color:#999999;">info@nexplan.io</a></p>
 </div></body></html>`
+
+  return { text, html }
 }
 
-// ── Rotating nudge subjects ───────────────────────────────────────
+// ── Personal nudge subject lines — conversational not promotional ─
 const NUDGE_SUBJECTS = [
-  (n: string) => `${n}, your IT projects deserve better than this 👀`,
-  (n: string) => `⚡ ${n} — unlock AI for your IT projects ($5/month)`,
-  (_n: string) => `Still managing IT projects manually? NexPlan Pro fixes that`,
-  (n: string) => `${n}, you're 1 click away from AI project management`,
-  (_n: string) => `🤖 Let AI write your next IT project plan — NexPlan Pro`,
+  (n: string) => `${n}, quick question about your IT projects`,
+  (n: string) => `Checking in — how is NexPlan working for you, ${n}?`,
+  (_n: string) => `A personal note from the NexPlan founder`,
+  (n: string) => `${n}, had a thought about your projects`,
+  (_n: string) => `How are your IT projects going?`,
 ]
 
 // ── Main handler ─────────────────────────────────────────────────
@@ -213,8 +219,8 @@ export async function GET(request: Request) {
     errors:         [] as string[],
   }
 
-  const cutoff = sevenDaysAgo()
-  const now    = new Date()
+  const cutoff  = sevenDaysAgo()
+  const now     = new Date()
   const weekNum = Math.floor(now.getTime() / (7 * 24 * 60 * 60 * 1000))
 
   try {
@@ -234,13 +240,14 @@ export async function GET(request: Request) {
           (now.getTime() - new Date(user.created_at).getTime()) / 86400000
         )
 
-        // ── New Pro this week → send Pro Welcome ─────────────
+        // ── New Pro this week → Pro Welcome ──────────────────
         if (plan === 'pro' && user.plan_updated_at && user.plan_updated_at >= cutoff) {
-          const html = proWelcomeHtml(name, user.email, user.plan_billing ?? 'monthly')
-          const ok   = await sendEmail(
+          const { html, text } = proWelcomeContent(name, user.email, user.plan_billing ?? 'monthly')
+          const ok = await sendEmail(
             user.email,
-            `⚡ Welcome to NexPlan Pro, ${name}! Your AI features are now active`,
-            html
+            `Thank you for upgrading to NexPlan Pro, ${name}`,
+            html,
+            text
           )
           if (ok) {
             results.proWelcomeSent.push(user.email)
@@ -255,7 +262,7 @@ export async function GET(request: Request) {
           continue
         }
 
-        // ── Free users (≥3 days) → upgrade nudge ────────────
+        // ── Free users (≥3 days) → personal nudge ────────────
         if (plan === 'free' && daysSinceJoin >= 3) {
           const { data: recentLog } = await supabase
             .from('agent_logs')
@@ -272,14 +279,16 @@ export async function GET(request: Request) {
           const { count: taskCount } = await supabase
             .from('tasks').select('*', { count: 'exact', head: true }).eq('assigned_to', user.email)
 
-          const aiBody  = await generateNudgeBody({
+          const { html, text } = await generateNudgeContent({
             name, role: user.role ?? 'IT Project Manager',
             country: user.country ?? 'Unknown',
-            projectCount: projectCount ?? 0, taskCount: taskCount ?? 0, daysSinceJoin,
+            projectCount: projectCount ?? 0,
+            taskCount: taskCount ?? 0,
+            daysSinceJoin,
           })
-          const html    = nudgeEmailHtml(user.email, aiBody)
+
           const subject = NUDGE_SUBJECTS[weekNum % NUDGE_SUBJECTS.length](name)
-          const ok      = await sendEmail(user.email, subject, html)
+          const ok      = await sendEmail(user.email, subject, html, text)
 
           if (ok) {
             results.nudgesSent.push(user.email)

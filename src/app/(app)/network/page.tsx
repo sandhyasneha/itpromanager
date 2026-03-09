@@ -95,61 +95,15 @@ export default function NetworkDiagramPage() {
   async function generateDiagram() {
     setGenerating(true); setError('')
 
-    const fieldSummary = PROMPT_FIELDS
-      .filter(f => promptFields[f.key])
-      .map(f => `${f.label}: ${promptFields[f.key]}`)
-      .join('\n')
-
-    const prompt = `You are a network architecture AI. Generate a network diagram as JSON.
-
-User request:
-${freeText ? `Description: ${freeText}` : ''}
-${fieldSummary}
-
-Return ONLY valid JSON in this exact format, no explanation:
-{
-  "title": "diagram title",
-  "description": "brief description",
-  "nodes": [
-    { "id": "n1", "type": "internet", "label": "Internet", "x": 400, "y": 50 },
-    { "id": "n2", "type": "firewall", "label": "Firewall", "ip": "10.0.0.254", "location": "Singapore HQ", "x": 400, "y": 160 },
-    { "id": "n3", "type": "router", "label": "Core Router", "ip": "10.0.0.1", "x": 400, "y": 270 },
-    { "id": "n4", "type": "switch", "label": "Distribution Switch", "ip": "10.0.1.1", "x": 250, "y": 380, "isNew": false },
-    { "id": "n5", "type": "switch", "label": "New Access Switch", "ip": "192.168.10.1", "location": "Floor 3", "x": 550, "y": 380, "isNew": true }
-  ],
-  "links": [
-    { "id": "l1", "from": "n1", "to": "n2", "type": "wan", "label": "WAN" },
-    { "id": "l2", "from": "n2", "to": "n3", "type": "fiber", "label": "10G Fiber" },
-    { "id": "l3", "from": "n3", "to": "n4", "type": "ethernet", "label": "1G" },
-    { "id": "l4", "from": "n3", "to": "n5", "type": "fiber", "label": "10G Uplink" }
-  ]
-}
-
-Rules:
-- Place nodes at logical positions: internet/cloud at top, core devices middle, access devices bottom
-- x range: 100-700, y range: 50-500
-- Mark newly added devices with "isNew": true
-- Use realistic IPs based on the user's input
-- Include 5-10 nodes for a meaningful diagram
-- Node types must be one of: router, switch, firewall, server, cloud, pc, ap, load_balancer, internet
-- Link types must be one of: ethernet, fiber, wireless, wan`
-
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/generate-network-diagram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
+        body: JSON.stringify({ freeText, promptFields }),
       })
       const data = await res.json()
-      const text = data.content?.[0]?.text ?? ''
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON in response')
-      const parsed = JSON.parse(jsonMatch[0]) as Diagram
-      setDiagram(parsed)
+      if (data.error) throw new Error(data.error)
+      setDiagram(data.diagram)
       setMode('diagram')
     } catch (e: any) {
       setError('Failed to generate diagram. Please try again.')

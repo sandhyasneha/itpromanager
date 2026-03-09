@@ -27,27 +27,28 @@ export const FEATURE_DEFS: {
   label: string
   icon: string
   category: 'Core' | 'AI' | 'Collaboration' | 'Enterprise'
+  description: string
 }[] = [
   // Core
-  { key: 'kanban',            label: 'Kanban Board',              icon: '📋', category: 'Core' },
-  { key: 'gantt',             label: 'Gantt Timeline',            icon: '📅', category: 'Core' },
-  { key: 'risk_mitigation',   label: 'Risk & Issue Register',     icon: '🛡️', category: 'Core' },
-  { key: 'task_email',        label: 'Task Assignment Emails',    icon: '📬', category: 'Core' },
-  { key: 'knowledge_base',    label: 'IT Knowledge Base',         icon: '📚', category: 'Core' },
-  { key: 'progress_tracking', label: 'Progress Tracking',         icon: '📊', category: 'Core' },
+  { key: 'kanban',            label: 'Kanban Board',              icon: '📋', category: 'Core',          description: 'Visual task management with drag & drop columns.' },
+  { key: 'gantt',             label: 'Gantt Timeline',            icon: '📅', category: 'Core',          description: 'Interactive Gantt chart with critical path analysis.' },
+  { key: 'risk_mitigation',   label: 'Risk & Issue Register',     icon: '🛡️', category: 'Core',          description: 'RAG status risk register with AI mitigation suggestions.' },
+  { key: 'task_email',        label: 'Task Assignment Emails',    icon: '📬', category: 'Core',          description: 'Automated email alerts for task assignments and due dates.' },
+  { key: 'knowledge_base',    label: 'IT Knowledge Base',         icon: '📚', category: 'Core',          description: '42 professional IT guides covering Cisco, Azure, VMware and more.' },
+  { key: 'progress_tracking', label: 'Progress Tracking',         icon: '📊', category: 'Core',          description: 'Real-time task completion and project health tracking.' },
   // AI
-  { key: 'ai_project_plan',   label: 'AI Project Plan Generator', icon: '🤖', category: 'AI' },
-  { key: 'ai_status_report',  label: 'AI Status Reports',         icon: '📈', category: 'AI' },
-  { key: 'pcr_document',      label: 'PCR Document Generator',    icon: '🔀', category: 'AI' },
-  { key: 'ai_followup',       label: 'AI Follow-Up Emails',       icon: '✉️', category: 'AI' },
+  { key: 'ai_project_plan',   label: 'AI Project Plan Generator', icon: '🤖', category: 'AI',            description: 'Describe your project and AI generates a complete task plan instantly.' },
+  { key: 'ai_status_report',  label: 'AI Status Reports',         icon: '📈', category: 'AI',            description: 'One-click AI-written status reports emailed to all stakeholders.' },
+  { key: 'pcr_document',      label: 'PCR Document Generator',    icon: '🔀', category: 'AI',            description: 'AI generates PRINCE2-format change request documents automatically.' },
+  { key: 'ai_followup',       label: 'AI Follow-Up Emails',       icon: '✉️', category: 'AI',            description: 'AI writes personalised follow-up emails for overdue tasks.' },
   // Collaboration
-  { key: 'comments_activity', label: 'Comments & Activity Log',   icon: '💬', category: 'Collaboration' },
-  { key: 'support_tickets',   label: 'Priority Support Tickets',  icon: '🎫', category: 'Collaboration' },
+  { key: 'comments_activity', label: 'Comments & Activity Log',   icon: '💬', category: 'Collaboration', description: 'Task comments, mentions and full activity history.' },
+  { key: 'support_tickets',   label: 'Priority Support Tickets',  icon: '🎫', category: 'Collaboration', description: 'Raise priority support tickets with guaranteed response times.' },
   // Enterprise
-  { key: 'multi_team',        label: 'Multi-Team Workspace',      icon: '👥', category: 'Enterprise' },
-  { key: 'sso',               label: 'SSO / Active Directory',    icon: '🔐', category: 'Enterprise' },
-  { key: 'advanced_admin',    label: 'Advanced Admin Controls',   icon: '⚙️', category: 'Enterprise' },
-  { key: 'custom_integrations', label: 'Custom Integrations',     icon: '🔗', category: 'Enterprise' },
+  { key: 'multi_team',        label: 'Multi-Team Workspace',      icon: '👥', category: 'Enterprise',    description: 'Manage multiple teams with separate workspaces under one account.' },
+  { key: 'sso',               label: 'SSO / Active Directory',    icon: '🔐', category: 'Enterprise',    description: 'Single sign-on via Active Directory or SAML provider.' },
+  { key: 'advanced_admin',    label: 'Advanced Admin Controls',   icon: '⚙️', category: 'Enterprise',    description: 'Granular user permissions, audit logs and admin dashboard.' },
+  { key: 'custom_integrations', label: 'Custom Integrations',     icon: '🔗', category: 'Enterprise',    description: 'Connect with ServiceNow, Jira, and other enterprise tools.' },
 ]
 
 // ── Default plan features (mirrors plan_config table) ──────────

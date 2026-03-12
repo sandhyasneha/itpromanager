@@ -1,90 +1,18 @@
 'use client'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import NexPlanLogo from '@/components/NexPlanLogo'
 
 export default function PricingPage() {
-  const router = useRouter()
-  const [billing, setBilling]       = useState<'monthly' | 'yearly'>('monthly')
-  const [showModal, setShowModal]   = useState<'enterprise' | null>(null)
-  const [form, setForm]             = useState({ name: '', email: '', company: '', size: '', message: '' })
-  const [submitted, setSubmitted]   = useState(false)
-  const [sending, setSending]       = useState(false)
-  const [checkingOut, setCheckingOut] = useState(false)
-  const [checkoutError, setCheckoutError] = useState('')
-  const [userEmail, setUserEmail]   = useState<string | null>(null)
-  const [userName, setUserName]     = useState<string | null>(null)
-  const [userPlan, setUserPlan]     = useState<string>('free')
+  const [billing, setBilling]     = useState<'monthly' | 'yearly'>('monthly')
+  const [showModal, setShowModal] = useState<'enterprise' | null>(null)
+  const [form, setForm]           = useState({ name: '', email: '', company: '', size: '', message: '' })
+  const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending]     = useState(false)
 
-  const proPrice  = billing === 'monthly' ? 5  : 49
+  const proPrice  = billing === 'monthly' ? 5  : 50
   const proPeriod = billing === 'monthly' ? '/month' : '/year'
-  const proCycle  = billing === 'monthly' ? 'billed monthly' : 'billed annually — save $11'
-
-  // ── Get current user ────────────────────────────────────────
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserEmail(data.user.email || null)
-        // Get profile
-        supabase.from('profiles').select('full_name, plan')
-          .eq('id', data.user.id).single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUserName(profile.full_name)
-              setUserPlan(profile.plan || 'free')
-            }
-          })
-      }
-    })
-  }, [])
-
-  // ── Checkout handler ────────────────────────────────────────
-  async function handleUpgrade() {
-    setCheckoutError('')
-
-    // If not logged in → send to login first
-    if (!userEmail) {
-      router.push('/login?redirect=/pricing')
-      return
-    }
-
-    // Already on Pro
-    if (userPlan === 'pro') {
-      setCheckoutError('You are already on the Pro plan!')
-      return
-    }
-
-    setCheckingOut(true)
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          billing,
-          userEmail,
-          userName: userName || userEmail.split('@')[0],
-        }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || 'Failed to create checkout session')
-      }
-
-      // Redirect to Dodo checkout
-      window.location.href = data.url
-
-    } catch (err: any) {
-      console.error('Checkout error:', err)
-      setCheckoutError(err.message || 'Something went wrong. Please try again.')
-    } finally {
-      setCheckingOut(false)
-    }
-  }
+  const proCycle  = billing === 'monthly' ? 'billed monthly' : 'billed annually — save $10'
 
   async function handleSubmit() {
     if (!form.name || !form.email) return
@@ -94,13 +22,13 @@ export default function PricingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          assigneeEmail:   'info@nexplan.io',
-          assigneeName:    'NexPlan Team',
-          taskTitle:       `Enterprise Interest`,
+          assigneeEmail: 'info@nexplan.io',
+          assigneeName:  'NexPlan Team',
+          taskTitle:     `Enterprise Interest`,
           taskDescription: `Name: ${form.name}\nCompany: ${form.company}\nSize: ${form.size}\nMessage: ${form.message}`,
-          projectName:     'Enterprise Leads',
-          priority:        'high',
-          assignedBy:      `${form.name} <${form.email}>`,
+          projectName:   'Enterprise Leads',
+          priority:      'high',
+          assignedBy:    `${form.name} <${form.email}>`,
         }),
       })
       setSubmitted(true)
@@ -121,7 +49,7 @@ export default function PricingPage() {
   ]
 
   const proFeatures = [
-    { icon: '✓',  label: 'Everything in Community (Free)' },
+    { icon: '✓', label: 'Everything in Community (Free)' },
     { icon: '🤖', label: 'AI Project Plan generator' },
     { icon: '📊', label: 'AI Status Reports — one click' },
     { icon: '🔀', label: 'PCR Document generator (PRINCE2)' },
@@ -189,7 +117,7 @@ export default function PricingPage() {
                 {b}
                 {b === 'yearly' && (
                   <span className="ml-2 text-[10px] bg-accent3/20 text-accent3 px-1.5 py-0.5 rounded-full font-mono-code">
-                    Save $11
+                    Save 17%
                   </span>
                 )}
               </button>
@@ -197,21 +125,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Error message */}
-        {checkoutError && (
-          <div className="max-w-md mx-auto mb-6 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm text-center">
-            {checkoutError}
-          </div>
-        )}
-
-        {/* Already Pro banner */}
-        {userPlan === 'pro' && (
-          <div className="max-w-md mx-auto mb-6 bg-accent2/10 border border-accent2/30 rounded-xl px-4 py-3 text-accent2 text-sm text-center">
-            ⚡ You are already on the Pro plan! <Link href="/kanban" className="underline ml-1">Go to dashboard →</Link>
-          </div>
-        )}
-
-        {/* Pricing cards */}
+        {/* Pricing cards — 3 columns */}
         <div className="grid md:grid-cols-3 gap-6 mb-16">
 
           {/* Free */}
@@ -241,7 +155,7 @@ export default function PricingPage() {
             <p className="text-xs text-muted text-center mt-3">No credit card · No expiry</p>
           </div>
 
-          {/* Pro */}
+          {/* Pro — highlighted */}
           <div className="card border-accent2/60 relative overflow-hidden shadow-2xl shadow-accent2/10 scale-[1.02]">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent2 to-accent"/>
             <div className="absolute top-4 right-4">
@@ -252,14 +166,14 @@ export default function PricingPage() {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <p className="font-mono-code text-xs text-accent2 uppercase tracking-widest mb-2">Pro</p>
-                <h2 className="font-syne font-black text-4xl text-accent2">${proPrice}</h2>
+                <h2 className="font-syne font-black text-4xl text-accent2">
+                  ${proPrice}
+                </h2>
                 <p className="text-muted text-sm mt-1">{proCycle}</p>
               </div>
               <span className="text-3xl">⚡</span>
             </div>
-            <p className="font-syne font-black text-2xl mb-1 text-accent2">
-              ${proPrice}<span className="text-lg text-muted font-normal">{proPeriod}</span>
-            </p>
+            <p className="font-syne font-black text-2xl mb-1 text-accent2">${proPrice}<span className="text-lg text-muted font-normal">{proPeriod}</span></p>
             <p className="text-xs text-muted mb-6">{proCycle}</p>
             <div className="space-y-2.5 mb-8">
               {proFeatures.map(f => (
@@ -271,25 +185,11 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-
-            {/* Upgrade button */}
-            {userPlan === 'pro' ? (
-              <div className="w-full py-3 text-sm font-bold text-center rounded-xl bg-accent2/10 text-accent2 border border-accent2/30">
-                ✓ Current Plan
-              </div>
-            ) : (
-              <button
-                onClick={handleUpgrade}
-                disabled={checkingOut}
-                className="w-full py-3 text-sm font-bold block text-center rounded-xl transition-all text-black disabled:opacity-70 disabled:cursor-not-allowed"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #00d4ff)' }}>
-                {checkingOut
-                  ? '⏳ Redirecting to checkout…'
-                  : userEmail
-                    ? `Upgrade to Pro →`
-                    : 'Sign in to Upgrade →'}
-              </button>
-            )}
+            <Link href="/login"
+              className="w-full py-3 text-sm font-bold block text-center rounded-xl transition-all text-black"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #00d4ff)' }}>
+              Upgrade to Pro →
+            </Link>
             <p className="text-xs text-muted text-center mt-3">Cancel anytime · Instant access</p>
           </div>
 
@@ -325,13 +225,6 @@ export default function PricingPage() {
             </button>
             <p className="text-xs text-muted text-center mt-3">We will notify you on launch</p>
           </div>
-        </div>
-
-        {/* Trust badges */}
-        <div className="flex flex-wrap justify-center gap-6 mb-16 text-xs text-muted">
-          {['🔒 Secure payments via Dodo Payments', '↩️ Cancel anytime', '⚡ Instant Pro access', '🌍 150+ countries supported', '💳 All major cards accepted'].map(b => (
-            <span key={b} className="flex items-center gap-1">{b}</span>
-          ))}
         </div>
 
         {/* Feature comparison table */}
@@ -398,12 +291,12 @@ export default function PricingPage() {
           <h3 className="font-syne font-black text-xl mb-6">Frequently Asked Questions</h3>
           <div className="grid md:grid-cols-2 gap-6">
             {[
-              { q: 'Can I upgrade or downgrade anytime?',    a: 'Yes — upgrade to Pro instantly and downgrade back to Free at any time. No lock-in.' },
-              { q: 'Will my data be safe if I downgrade?',   a: 'Yes. All your projects, tasks and history are kept even if you downgrade. You just lose access to Pro features.' },
-              { q: 'Is the free plan really free forever?',  a: 'Yes. The Community plan is our gift to the IT PM community — no expiry, no credit card, no bait-and-switch.' },
-              { q: 'What payment methods are accepted?',     a: 'Payments are handled securely by Dodo Payments. We accept all major credit and debit cards across 150+ countries.' },
-              { q: 'Do I need a credit card for the free plan?', a: 'No. Sign up with Google or email — no payment details required for the Community plan.' },
-              { q: 'How does Enterprise pricing work?',      a: 'Enterprise is custom-quoted based on team size and requirements. Contact us to discuss.' },
+              { q: 'Can I upgrade or downgrade anytime?', a: 'Yes — upgrade to Pro instantly and downgrade back to Free at any time. No lock-in.' },
+              { q: 'Will my data be safe if I downgrade?', a: 'Yes. All your projects, tasks and history are kept even if you downgrade. You just lose access to Pro features.' },
+              { q: 'Is the free plan really free forever?', a: 'Yes. The Community plan is our gift to the IT PM community — no expiry, no credit card, no bait-and-switch.' },
+              { q: 'What payment methods are accepted?', a: 'Pro plan payments are handled securely. We accept all major credit and debit cards.' },
+              { q: 'Do I need to add a credit card for the free plan?', a: 'No. Sign up with Google or email — no payment details required for the Community plan.' },
+              { q: 'How does Enterprise pricing work?', a: 'Enterprise is custom-quoted based on team size and requirements. Contact us to discuss.' },
             ].map(faq => (
               <div key={faq.q} className="bg-surface2 rounded-xl p-4">
                 <p className="font-syne font-bold text-sm mb-2">{faq.q}</p>

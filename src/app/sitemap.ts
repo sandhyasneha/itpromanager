@@ -9,13 +9,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://www.nexplan.io'
 
   const staticPages: MetadataRoute.Sitemap = [
-    { url: baseUrl,              lastModified: new Date(), changeFrequency: 'weekly',  priority: 1.0 },
-    { url: `${baseUrl}/demo`,    lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${baseUrl}/pricing`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${baseUrl}/about`,   lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
-    { url: `${baseUrl}/docs`,    lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
-    { url: `${baseUrl}/kb`,      lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.9 },
-    { url: `${baseUrl}/login`,   lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
+    // ── Core public pages ──────────────────────────────────────
+    { url: baseUrl,                        lastModified: new Date(), changeFrequency: 'weekly',  priority: 1.0 },
+    { url: `${baseUrl}/demo`,              lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${baseUrl}/pricing`,           lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${baseUrl}/about`,             lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${baseUrl}/docs`,              lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${baseUrl}/kb`,                lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.9 },
+    { url: `${baseUrl}/login`,             lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
+
+    // ── App pages (indexed for SEO awareness) ─────────────────
+    { url: `${baseUrl}/kanban`,            lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${baseUrl}/dashboard`,         lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${baseUrl}/project-plan`,      lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${baseUrl}/reports`,           lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.7 },
+    { url: `${baseUrl}/settings`,          lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${baseUrl}/help`,              lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${baseUrl}/my-tasks`,          lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.7 },
+    { url: `${baseUrl}/analytics`,         lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.7 },
+    { url: `${baseUrl}/knowledge`,         lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.7 },
+    { url: `${baseUrl}/feedback`,          lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+
+    // ── Phase 8 & 9 features ───────────────────────────────────
+    { url: `${baseUrl}/network`,           lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${baseUrl}/network-diagram`,   lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
   ]
 
   try {

@@ -14,10 +14,12 @@
     "@supabase/supabase-js": "^2.39.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
+    "dodopayments": "^2.23.2",
     "lucide-react": "^0.344.0",
     "next": "^14.2.35",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "standardwebhooks": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",

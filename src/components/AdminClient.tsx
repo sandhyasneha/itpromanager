@@ -21,18 +21,32 @@ const PRIORITY_COLORS: Record<string, string> = {
 }
 
 const TABS = ['Overview', 'Feedback', 'Users', 'Audit Log', 'Subscriptions']
+const PAGE_SIZE = 20
 
 export default function AdminClient({ profiles, projects, tasks, articles, feedback }: {
   profiles: any[], projects: any[], tasks: any[], articles: any[], feedback: any[]
 }) {
   const supabase = createClient()
-  const [tab, setTab] = useState('Overview')
+  const [tab, setTab]                   = useState('Overview')
   const [feedbackList, setFeedbackList] = useState(feedback)
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null)
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterStatus, setFilterStatus]   = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
-  const [adminNote, setAdminNote] = useState('')
-  const [savingNote, setSavingNote] = useState(false)
+  const [adminNote, setAdminNote]         = useState('')
+  const [savingNote, setSavingNote]       = useState(false)
+  const [userPage, setUserPage]           = useState(1)
+  const [userSearch, setUserSearch]       = useState('')
+
+  const totalPages = Math.ceil(profiles.length / PAGE_SIZE)
+  const pagedUsers = profiles.slice((userPage - 1) * PAGE_SIZE, userPage * PAGE_SIZE)
+  const filteredUsers = userSearch.trim()
+    ? profiles.filter(u =>
+        u.full_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.country?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.ip_country?.toLowerCase().includes(userSearch.toLowerCase())
+      )
+    : pagedUsers
 
   const stats = [
     { label: 'Total Users',    value: profiles.length,                                     color: 'border-accent/40',  icon: '👥' },
@@ -55,7 +69,10 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
   const maxSignups = Math.max(...signupsByDay.map(d => d.count), 1)
 
   const countryMap: Record<string, number> = {}
-  profiles.forEach((u: any) => { if (u.country) countryMap[u.country] = (countryMap[u.country] ?? 0) + 1 })
+  profiles.forEach((u: any) => {
+    const c = u.ip_country || u.country
+    if (c) countryMap[c] = (countryMap[c] ?? 0) + 1
+  })
   const countries = Object.entries(countryMap).sort((a, b) => b[1] - a[1])
 
   const filteredFeedback = feedbackList.filter(f => {
@@ -124,7 +141,7 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
         ))}
       </div>
 
-      {/* ── OVERVIEW ───────────────────────────────────────── */}
+      {/* OVERVIEW */}
       {tab === 'Overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -157,33 +174,15 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
 
           {countries.length > 0 && (
             <div className="card">
-              <h3 className="font-syne font-bold text-lg mb-4">Users by Country</h3>
-              <div className="flex flex-wrap gap-2">
-                {countries.map(([country, count]) => (
-                  <div key={country} className="flex items-center gap-2 px-3 py-2 bg-surface2 rounded-xl">
-                    <span className="text-sm font-semibold">{country}</span>
-                    <span className="text-xs font-mono-code text-accent bg-accent/10 px-1.5 py-0.5 rounded">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {feedbackList.length > 0 && (
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-syne font-bold text-lg">Feedback Summary</h3>
-                <div className="text-right">
-                  <p className="font-syne font-black text-3xl">{avgRating}</p>
-                  <p className="text-xs text-muted">avg rating</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                {ratingCounts.map(r => (
-                  <div key={r.rating} className="flex-1 text-center">
-                    <div className="text-2xl mb-1">{r.emoji}</div>
-                    <div className="font-bold">{r.count}</div>
-                    <div className="text-xs text-muted">{r.rating}★</div>
+              <h3 className="font-syne font-bold text-lg mb-4">Users by Country <span className="text-xs text-muted font-normal ml-1">(IP detected)</span></h3>
+              <div className="space-y-2">
+                {countries.slice(0, 10).map(([country, count]) => (
+                  <div key={country} className="flex items-center gap-3">
+                    <span className="text-sm text-muted w-32 truncate">{country}</span>
+                    <div className="flex-1 bg-surface2 rounded-full h-2">
+                      <div className="bg-accent h-2 rounded-full" style={{ width: `${(count / profiles.length) * 100}%` }}/>
+                    </div>
+                    <span className="font-mono-code text-xs text-muted w-6 text-right">{count}</span>
                   </div>
                 ))}
               </div>
@@ -192,7 +191,7 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
         </div>
       )}
 
-      {/* ── FEEDBACK ───────────────────────────────────────── */}
+      {/* FEEDBACK */}
       {tab === 'Feedback' && (
         <div className="space-y-4">
           <div className="flex gap-3 flex-wrap">
@@ -210,13 +209,13 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
           {filteredFeedback.length === 0 ? (
             <div className="card text-center py-16">
               <p className="text-4xl mb-3">💬</p>
-              <p className="text-muted">No feedback yet. Users can submit feedback from the sidebar.</p>
+              <p className="text-muted">No feedback yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
               {filteredFeedback.map(f => (
                 <div key={f.id} onClick={() => openFeedback(f)}
-                  className="card cursor-pointer hover:border-accent/40 transition-all hover:-translate-y-0.5 group">
+                  className="card cursor-pointer hover:border-accent/40 transition-all hover:-translate-y-0.5">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-xs px-2 py-1 rounded-lg border font-mono-code ${STATUS_COLORS[f.status] ?? STATUS_COLORS.new}`}>{f.status}</span>
@@ -242,67 +241,114 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
         </div>
       )}
 
-      {/* ── USERS ──────────────────────────────────────────── */}
+      {/* USERS */}
       {tab === 'Users' && (
-        <div className="card p-0 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h3 className="font-syne font-bold text-lg">Registered Users</h3>
-            <span className="font-mono-code text-xs text-muted">{profiles.length} total</span>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <input
+              className="input text-sm w-64"
+              placeholder="Search name, email, country…"
+              value={userSearch}
+              onChange={e => { setUserSearch(e.target.value); setUserPage(1) }}
+            />
+            <span className="text-xs text-muted font-mono-code">
+              {userSearch ? `${filteredUsers.length} results` : `${profiles.length} total · Page ${userPage} of ${totalPages}`}
+            </span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  {['User','Email','Plan','Role','Country','Projects','Joined'].map(h => (
-                    <th key={h} className="text-left text-xs font-syne font-bold text-muted uppercase tracking-wide py-3 px-5">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {profiles.map((u: any) => {
-                  const userProjects = projects.filter((p: any) => p.owner_id === u.id).length
-                  return (
-                    <tr key={u.id} className="border-b border-border/50 hover:bg-surface2/50 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent2 flex items-center justify-center text-[10px] font-black text-black shrink-0">
-                            {(u.full_name ?? u.email ?? 'U').slice(0, 2).toUpperCase()}
+
+          <div className="card p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    {['#','User','Email','Plan','Role','Country (Selected)','Country (IP)','IP Address','Projects','Joined'].map(h => (
+                      <th key={h} className="text-left text-xs font-syne font-bold text-muted uppercase tracking-wide py-3 px-4 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((u: any, idx: number) => {
+                    const userProjects = projects.filter((p: any) => p.owner_id === u.id).length
+                    const rowNum = userSearch ? idx + 1 : (userPage - 1) * PAGE_SIZE + idx + 1
+                    return (
+                      <tr key={u.id} className="border-b border-border/50 hover:bg-surface2/50 transition-colors">
+                        <td className="px-4 py-3 font-mono-code text-xs text-muted">{rowNum}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent2 flex items-center justify-center text-[10px] font-black text-black shrink-0">
+                              {(u.full_name ?? u.email ?? 'U').slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="text-sm font-semibold whitespace-nowrap">{u.full_name ?? '—'}</span>
                           </div>
-                          <span className="text-sm font-semibold">{u.full_name ?? '—'}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 font-mono-code text-xs text-muted">{u.email}</td>
-                      <td className="px-5 py-3.5">
-                        {(() => {
-                          const plan = (u.plan ?? 'free') as Plan
-                          const d = PLAN_DISPLAY[plan]
-                          return (
-                            <span className={`text-[11px] px-2 py-1 rounded-lg font-semibold border ${d.bgColor} ${d.color} ${d.borderColor}`}>
-                              {d.badge}
-                            </span>
-                          )
-                        })()}
-                      </td>
-                      <td className="px-5 py-3.5"><span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-lg">{u.role ?? '—'}</span></td>
-                      <td className="px-5 py-3.5 text-sm text-muted">{u.country ?? '—'}</td>
-                      <td className="px-5 py-3.5 font-mono-code text-xs text-accent">{userProjects}</td>
-                      <td className="px-5 py-3.5 font-mono-code text-xs text-muted">{new Date(u.created_at).toLocaleDateString()}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-4 py-3 font-mono-code text-xs text-muted">{u.email}</td>
+                        <td className="px-4 py-3">
+                          {(() => {
+                            const plan = (u.plan ?? 'free') as Plan
+                            const d = PLAN_DISPLAY[plan]
+                            return (
+                              <span className={`text-[11px] px-2 py-1 rounded-lg font-semibold border ${d.bgColor} ${d.color} ${d.borderColor}`}>
+                                {d.badge}
+                              </span>
+                            )
+                          })()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-lg whitespace-nowrap">{u.role ?? '—'}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted">{u.country ?? '—'}</td>
+                        <td className="px-4 py-3">
+                          {u.ip_country
+                            ? <span className="text-xs bg-accent3/10 text-accent3 px-2 py-1 rounded-lg font-mono-code">{u.ip_country}</span>
+                            : <span className="text-xs text-muted/40">—</span>
+                          }
+                        </td>
+                        <td className="px-4 py-3 font-mono-code text-xs text-muted/60">{u.ip_address ?? '—'}</td>
+                        <td className="px-4 py-3 font-mono-code text-xs text-accent">{userProjects}</td>
+                        <td className="px-4 py-3 font-mono-code text-xs text-muted whitespace-nowrap">{new Date(u.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {!userSearch && totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+                <span className="text-xs text-muted font-mono-code">
+                  Showing {(userPage - 1) * PAGE_SIZE + 1}–{Math.min(userPage * PAGE_SIZE, profiles.length)} of {profiles.length} users
+                </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setUserPage(p => Math.max(1, p - 1))} disabled={userPage === 1}
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-border hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                    ← Prev
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <button key={p} onClick={() => setUserPage(p)}
+                      className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors
+                        ${userPage === p ? 'bg-accent text-black' : 'border border-border hover:bg-surface2 text-muted'}`}>
+                      {p}
+                    </button>
+                  ))}
+                  <button onClick={() => setUserPage(p => Math.min(totalPages, p + 1))} disabled={userPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-border hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── AUDIT LOG ──────────────────────────────────────── */}
+      {/* AUDIT LOG */}
       {tab === 'Audit Log' && <AdminAuditLog />}
 
-      {/* ── SUBSCRIPTIONS ──────────────────────────────────── */}
+      {/* SUBSCRIPTIONS */}
       {tab === 'Subscriptions' && <AdminSubscriptions />}
 
-      {/* ── FEEDBACK DETAIL MODAL ──────────────────────────── */}
+      {/* FEEDBACK DETAIL MODAL */}
       {selectedFeedback && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedFeedback(null)}>

@@ -1,11 +1,11 @@
 'use client'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import NexPlanLogo from '@/components/NexPlanLogo'
 
-export default function PricingPage() {
+function PricingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [billing, setBilling]           = useState<'monthly' | 'yearly'>('monthly')
@@ -640,5 +640,13 @@ export default function PricingPage() {
         <Link href="/" className="hover:text-text mx-2">Home</Link>
       </footer>
     </div>
+  )
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-bg"/>}>
+      <PricingContent />
+    </Suspense>
   )
 }

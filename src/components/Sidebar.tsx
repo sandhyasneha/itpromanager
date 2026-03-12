@@ -47,6 +47,20 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
+  // ── Capture IP/country on first load ─────────────────────
+  useEffect(() => {
+    if (!profile?.id) return
+    // Only capture once per session using sessionStorage
+    const key = `ip_captured_${profile.id}`
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+    fetch('/api/capture-ip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: profile.id }),
+    }).catch(() => {}) // silent fail — not critical
+  }, [profile?.id])
+
   const isAdmin  = profile?.email === ADMIN_EMAIL
   const fullName = profile?.full_name ?? profile?.email?.split('@')[0] ?? 'User'
   const initials = fullName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
@@ -152,12 +166,12 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
 
   return (
     <>
-      {/* ── Desktop sidebar ───────────────────────────── */}
+      {/* ── Desktop sidebar ── */}
       <div className="hidden md:flex fixed left-0 top-0 bottom-0 z-50">
         <SidebarContent />
       </div>
 
-      {/* ── Mobile hamburger button ───────────────────── */}
+      {/* ── Mobile hamburger ── */}
       <button
         onClick={() => setOpen(true)}
         className="md:hidden fixed top-4 left-4 z-50 p-2.5 bg-white rounded-xl shadow-md border border-slate-200">
@@ -166,7 +180,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         </svg>
       </button>
 
-      {/* ── Mobile sidebar overlay ────────────────────── */}
+      {/* ── Mobile sidebar overlay ── */}
       {open && (
         <>
           <div className="sidebar-overlay md:hidden" onClick={() => setOpen(false)} />

@@ -29,11 +29,356 @@ function getDaysUntil(dateStr: string) {
   return Math.ceil((new Date(dateStr).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000)
 }
 
+// ── Project Intelligence Hub component ─────────────────────
+function ProjectIntelligenceHub({ projects, tasks }: { projects: Project[], tasks: Task[] }) {
+  const [aiInsights, setAiInsights]   = useState<string | null>(null)
+  const [aiLoading, setAiLoading]     = useState(false)
+  const [selectedProject, setSelectedProject] = useState<string>('all')
+
+  const filteredTasks = selectedProject === 'all'
+    ? tasks
+    : tasks.filter(t => t.project_id === selectedProject)
+
+  const projectMap = Object.fromEntries(projects.map(p => [p.id, p]))
+
+  // ── Metrics ──────────────────────────────────────────────
+  const total      = filteredTasks.length
+  const done       = filteredTasks.filter(t => t.status === 'done').length
+  const overdue    = filteredTasks.filter(t => t.due_date && getDaysUntil(t.due_date) < 0 && t.status !== 'done').length
+  const blocked    = filteredTasks.filter(t => t.status === 'blocked').length
+  const inProgress = filteredTasks.filter(t => t.status === 'in_progress').length
+  const critical   = filteredTasks.filter(t => t.priority === 'critical' && t.status !== 'done').length
+  const completionRate = total > 0 ? Math.round((done / total) * 100) : 0
+
+  // ── Project Health Score per project ─────────────────────
+  const projectHealth = projects.map(p => {
+    const pt       = tasks.filter(t => t.project_id === p.id)
+    const pdone    = pt.filter(t => t.status === 'done').length
+    const pover    = pt.filter(t => t.due_date && getDaysUntil(t.due_date) < 0 && t.status !== 'done').length
+    const pblocked = pt.filter(t => t.status === 'blocked').length
+    const pcrit    = pt.filter(t => t.priority === 'critical' && t.status !== 'done').length
+    const total    = pt.length || 1
+
+    // Health score: start at 100, deduct for issues
+    let score = 100
+    score -= (pover / total) * 40    // overdue tasks hurt most
+    score -= (pblocked / total) * 25 // blocked tasks
+    score -= (pcrit / total) * 20    // critical unfinished
+    score += (pdone / total) * 15    // boost for completion
+    score = Math.max(0, Math.min(100, Math.round(score)))
+
+    const status = score >= 75 ? 'green' : score >= 50 ? 'amber' : 'red'
+    const daysLeft = p.end_date ? getDaysUntil(p.end_date) : null
+
+    return { ...p, score, status, pt, pdone, pover, pblocked, daysLeft }
+  })
+
+  // ── Risk Alerts ───────────────────────────────────────────
+  const riskAlerts: { level: 'critical'|'high'|'medium'; message: string; project?: string }[] = []
+
+  projectHealth.forEach(p => {
+    if (p.pover > 0)
+      riskAlerts.push({ level: 'critical', message: `${p.pover} overdue task${p.pover>1?'s':''} in "${p.name}"`, project: p.name })
+    if (p.pblocked > 0)
+      riskAlerts.push({ level: 'high', message: `${p.pblocked} blocked task${p.pblocked>1?'s':''} in "${p.name}"`, project: p.name })
+    if (p.daysLeft !== null && p.daysLeft <= 7 && p.daysLeft >= 0 && p.pdone < p.pt.length)
+      riskAlerts.push({ level: 'high', message: `"${p.name}" deadline in ${p.daysLeft} day${p.daysLeft!==1?'s':''}`, project: p.name })
+    if (p.score < 50)
+      riskAlerts.push({ level: 'critical', message: `"${p.name}" health score is critical (${p.score}/100)`, project: p.name })
+  })
+
+  if (critical > 0)
+    riskAlerts.push({ level: 'critical', message: `${critical} critical priority task${critical>1?'s':''} still open` })
+  if (completionRate < 20 && total > 5)
+    riskAlerts.push({ level: 'medium', message: `Overall completion rate is low (${completionRate}%) — review task progress` })
+
+  // ── Team Performance ──────────────────────────────────────
+  const assigneeMap: Record<string, { total: number; done: number; overdue: number; blocked: number }> = {}
+  filteredTasks.forEach(t => {
+    if (!t.assignee_name) return
+    if (!assigneeMap[t.assignee_name]) assigneeMap[t.assignee_name] = { total: 0, done: 0, overdue: 0, blocked: 0 }
+    assigneeMap[t.assignee_name].total++
+    if (t.status === 'done') assigneeMap[t.assignee_name].done++
+    if (t.due_date && getDaysUntil(t.due_date) < 0 && t.status !== 'done') assigneeMap[t.assignee_name].overdue++
+    if (t.status === 'blocked') assigneeMap[t.assignee_name].blocked++
+  })
+  const teamStats = Object.entries(assigneeMap)
+    .map(([name, s]) => ({ name, ...s, rate: Math.round((s.done / (s.total || 1)) * 100) }))
+    .sort((a, b) => b.rate - a.rate)
+
+  // ── AI Insights ───────────────────────────────────────────
+  async function generateInsights() {
+    setAiLoading(true)
+    setAiInsights(null)
+    try {
+      const summary = {
+        totalProjects: projects.length,
+        totalTasks: total,
+        completedTasks: done,
+        overdueTasks: overdue,
+        blockedTasks: blocked,
+        criticalTasks: critical,
+        completionRate,
+        projectHealth: projectHealth.map(p => ({
+          name: p.name,
+          score: p.score,
+          status: p.status,
+          overdue: p.pover,
+          blocked: p.pblocked,
+          daysLeft: p.daysLeft,
+        })),
+        teamPerformance: teamStats.slice(0, 5).map(t => ({
+          name: t.name,
+          completionRate: t.rate,
+          overdue: t.overdue,
+        })),
+        topRisks: riskAlerts.filter(r => r.level === 'critical').map(r => r.message),
+      }
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: `You are a senior IT project management consultant. Analyse this project portfolio data and provide concise, actionable intelligence report with 4 sections:
+
+1. **Portfolio Health Summary** (2-3 sentences)
+2. **Top 3 Risks & Recommended Actions** (bullet points)
+3. **Team Performance Observations** (2-3 sentences)
+4. **Priority Recommendations for This Week** (3 bullet points)
+
+Keep it sharp, specific and actionable. No fluff.
+
+Data: ${JSON.stringify(summary, null, 2)}`
+          }]
+        })
+      })
+      const data = await res.json()
+      setAiInsights(data.content?.[0]?.text || 'Unable to generate insights.')
+    } catch {
+      setAiInsights('Failed to generate insights. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const healthColor = (s: string) => s === 'green' ? 'text-accent3 bg-accent3/10 border-accent3/30' : s === 'amber' ? 'text-warn bg-warn/10 border-warn/30' : 'text-danger bg-danger/10 border-danger/30'
+  const healthDot   = (s: string) => s === 'green' ? 'bg-accent3' : s === 'amber' ? 'bg-warn' : 'bg-danger'
+  const riskColor   = (l: string) => l === 'critical' ? 'border-danger/40 bg-danger/5 text-danger' : l === 'high' ? 'border-warn/40 bg-warn/5 text-warn' : 'border-accent/40 bg-accent/5 text-accent'
+  const riskIcon    = (l: string) => l === 'critical' ? '🔴' : l === 'high' ? '🟡' : '🔵'
+
+  return (
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <p className="font-mono-code text-xs text-accent uppercase tracking-widest mb-1">// AI-Powered</p>
+          <h2 className="font-syne font-black text-2xl">Project Intelligence Hub</h2>
+          <p className="text-muted text-sm mt-1">Real-time health scores, risk alerts & AI-powered recommendations</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <select className="select text-sm py-1.5 w-44" value={selectedProject} onChange={e => setSelectedProject(e.target.value)}>
+            <option value="all">All Projects</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <button onClick={generateInsights} disabled={aiLoading}
+            className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60">
+            {aiLoading ? (
+              <><span className="animate-spin">⟳</span> Analysing...</>
+            ) : (
+              <>🤖 Generate AI Insights</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ── KPI Summary Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Completion Rate', value: `${completionRate}%`, sub: `${done} of ${total} tasks done`, color: 'border-accent3/40', text: 'text-accent3' },
+          { label: 'Overdue Tasks',   value: overdue,  sub: 'Require immediate attention', color: overdue > 0 ? 'border-danger/40' : 'border-border', text: overdue > 0 ? 'text-danger' : 'text-text' },
+          { label: 'Blocked Tasks',   value: blocked,  sub: 'Waiting on dependencies',     color: blocked > 0 ? 'border-warn/40'   : 'border-border', text: blocked > 0 ? 'text-warn'   : 'text-text' },
+          { label: 'Critical Open',   value: critical, sub: 'High priority unfinished',     color: critical > 0 ? 'border-danger/40': 'border-border', text: critical > 0 ? 'text-danger' : 'text-text' },
+        ].map(s => (
+          <div key={s.label} className={`card border ${s.color}`}>
+            <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-2">{s.label}</p>
+            <p className={`font-syne font-black text-4xl tabular-nums ${s.text}`}>{s.value}</p>
+            <p className="text-[11px] text-muted mt-1">{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Project Health Scores ── */}
+      <div className="card">
+        <h3 className="font-syne font-bold text-lg mb-4">📊 Project Health Scores</h3>
+        {projects.length === 0 ? (
+          <p className="text-muted text-sm">No projects found.</p>
+        ) : (
+          <div className="space-y-3">
+            {projectHealth.sort((a, b) => a.score - b.score).map(p => (
+              <div key={p.id} className="flex items-center gap-4 p-4 bg-surface2 rounded-xl border border-border">
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${healthDot(p.status)}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="font-semibold text-sm truncate">{p.name}</p>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {p.daysLeft !== null && (
+                        <span className={`text-[10px] font-mono-code ${p.daysLeft < 7 ? 'text-danger' : p.daysLeft < 14 ? 'text-warn' : 'text-muted'}`}>
+                          {p.daysLeft < 0 ? `${Math.abs(p.daysLeft)}d overdue` : `${p.daysLeft}d left`}
+                        </span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-lg border font-bold font-mono-code ${healthColor(p.status)}`}>
+                        {p.score}/100
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-2 bg-surface rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-700 ${p.status === 'green' ? 'bg-accent3' : p.status === 'amber' ? 'bg-warn' : 'bg-danger'}`}
+                      style={{ width: `${p.score}%` }} />
+                  </div>
+                  <div className="flex gap-3 mt-1.5">
+                    <span className="text-[10px] text-muted font-mono-code">{p.pt.length} tasks</span>
+                    {p.pover > 0 && <span className="text-[10px] text-danger font-mono-code">⚠ {p.pover} overdue</span>}
+                    {p.pblocked > 0 && <span className="text-[10px] text-warn font-mono-code">🔒 {p.pblocked} blocked</span>}
+                    <span className="text-[10px] text-accent3 font-mono-code">✓ {p.pdone} done</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Risk Alerts + Team Performance (side by side on desktop) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Risk Alerts */}
+        <div className="card">
+          <h3 className="font-syne font-bold text-lg mb-4">⚠️ Risk Prediction Alerts</h3>
+          {riskAlerts.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-3xl mb-2">✅</p>
+              <p className="font-semibold text-sm">All Clear</p>
+              <p className="text-muted text-xs mt-1">No risk alerts at this time</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {riskAlerts.slice(0, 8).map((alert, i) => (
+                <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border text-sm ${riskColor(alert.level)}`}>
+                  <span className="shrink-0 mt-0.5">{riskIcon(alert.level)}</span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-xs uppercase tracking-wide opacity-70 mb-0.5">{alert.level}</p>
+                    <p className="text-sm">{alert.message}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Team Performance */}
+        <div className="card">
+          <h3 className="font-syne font-bold text-lg mb-4">👥 Team Performance Analytics</h3>
+          {teamStats.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-3xl mb-2">👤</p>
+              <p className="font-semibold text-sm">No assignees yet</p>
+              <p className="text-muted text-xs mt-1">Assign team members to tasks to see performance data</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {teamStats.map(m => {
+                const initials = m.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+                const barColor = m.rate >= 70 ? '#22d3a5' : m.rate >= 40 ? '#f59e0b' : '#ef4444'
+                return (
+                  <div key={m.name} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-accent2 flex items-center justify-center text-[10px] font-black text-black shrink-0">
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold truncate">{m.name}</span>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          {m.overdue > 0 && <span className="text-[10px] text-danger font-mono-code">⚠ {m.overdue}</span>}
+                          <span className="text-xs font-mono-code font-bold" style={{ color: barColor }}>{m.rate}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full h-1.5 bg-surface2 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${m.rate}%`, background: barColor }} />
+                      </div>
+                      <p className="text-[10px] text-muted mt-0.5 font-mono-code">{m.done}/{m.total} tasks completed · {m.blocked > 0 ? `${m.blocked} blocked` : 'no blockers'}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── AI Insights Panel ── */}
+      <div className="card border border-accent/20">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center text-lg shrink-0">🤖</div>
+            <div>
+              <h3 className="font-syne font-bold text-lg">AI Insights & Recommendations</h3>
+              <p className="text-xs text-muted">Powered by Claude AI — analysing your live project data</p>
+            </div>
+          </div>
+          {aiInsights && (
+            <button onClick={generateInsights} disabled={aiLoading}
+              className="text-xs text-accent hover:underline font-mono-code disabled:opacity-50">
+              ↻ Refresh
+            </button>
+          )}
+        </div>
+
+        {!aiInsights && !aiLoading && (
+          <div className="text-center py-10 border border-dashed border-border rounded-xl">
+            <p className="text-4xl mb-3">🧠</p>
+            <p className="font-syne font-bold text-lg mb-1">Ready to Analyse Your Portfolio</p>
+            <p className="text-muted text-sm mb-4 max-w-sm mx-auto">Click "Generate AI Insights" to get a personalised intelligence report based on your live project data.</p>
+            <button onClick={generateInsights}
+              className="btn-primary px-6 py-2.5 text-sm">
+              🤖 Generate AI Insights
+            </button>
+          </div>
+        )}
+
+        {aiLoading && (
+          <div className="text-center py-10">
+            <div className="inline-flex items-center gap-3 text-accent">
+              <span className="animate-spin text-2xl">⟳</span>
+              <span className="font-syne font-semibold">Analysing your project portfolio...</span>
+            </div>
+            <p className="text-muted text-xs mt-2">This usually takes 5-10 seconds</p>
+          </div>
+        )}
+
+        {aiInsights && !aiLoading && (
+          <div className="prose prose-sm max-w-none">
+            <div className="bg-surface2 rounded-xl p-5 border border-border text-sm leading-relaxed whitespace-pre-wrap font-sans text-text">
+              {aiInsights}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Main ReportsClient ──────────────────────────────────────
 export default function ReportsClient({ projects, tasks, resources, userId }: {
   projects: Project[]; tasks: Task[]; resources: Resource[]; userId: string
 }) {
   const supabase = createClient()
-  const [tab, setTab] = useState<'upcoming'|'resource'|'digest'>('upcoming')
+  const [tab, setTab] = useState<'upcoming'|'resource'|'digest'|'intelligence'>('upcoming')
   const [bucket, setBucket]         = useState<'overdue'|'15'|'30'|'45'|'60'|'all'>('30')
   const [projectFilter, setProjectFilter] = useState('all')
   const [localResources, setLocalResources] = useState<Resource[]>(resources)
@@ -43,7 +388,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
 
   const projectMap = Object.fromEntries(projects.map(p => [p.id, p]))
 
-  // ── UPCOMING / OVERDUE ──
   const tasksWithDue = localTasks.filter(t => t.due_date && t.status !== 'done')
   const byProject = projectFilter === 'all' ? tasksWithDue : tasksWithDue.filter(t => t.project_id === projectFilter)
 
@@ -71,7 +415,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
     all:     byProject.length,
   }
 
-  // ── RESOURCE UTILIZATION ──
   const activeTasks = localTasks.filter(t => !['done','backlog'].includes(t.status) && t.assignee_name)
   const allNames = [...new Set([
     ...activeTasks.map(t => t.assignee_name!),
@@ -155,17 +498,24 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
         <div>
           <p className="font-mono-code text-xs text-accent uppercase tracking-widest mb-1">// Portfolio Reports</p>
           <h1 className="font-syne font-black text-3xl">Reports</h1>
-          <p className="text-muted text-sm mt-1">Upcoming deadlines & resource utilization across all projects</p>
+          <p className="text-muted text-sm mt-1">Upcoming deadlines, resource utilization & AI-powered intelligence</p>
         </div>
-        <button onClick={tab === 'upcoming' ? exportUpcomingCSV : exportResourceCSV}
-          className="btn-ghost px-4 py-2 text-sm flex items-center gap-2">
-          📥 Export CSV
-        </button>
+        {tab !== 'intelligence' && tab !== 'digest' && (
+          <button onClick={tab === 'upcoming' ? exportUpcomingCSV : exportResourceCSV}
+            className="btn-ghost px-4 py-2 text-sm flex items-center gap-2">
+            📥 Export CSV
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-surface2 rounded-xl w-fit">
-        {([['upcoming','📅 Upcoming & Overdue'],['resource','👥 Resource Utilization'],['digest','📧 Stakeholder Digest']] as const).map(([t,label]) => (
+      <div className="flex gap-1 p-1 bg-surface2 rounded-xl w-fit flex-wrap">
+        {([
+          ['upcoming',     '📅 Upcoming & Overdue'],
+          ['resource',     '👥 Resource Utilization'],
+          ['digest',       '📧 Stakeholder Digest'],
+          ['intelligence', '🧠 Intelligence Hub'],
+        ] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${tab===t ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
             {label}
@@ -176,7 +526,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
       {/* ── UPCOMING TAB ── */}
       {tab === 'upcoming' && (
         <div className="space-y-5">
-          {/* Bucket + project filter */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex gap-1 p-1 bg-surface2 rounded-xl flex-wrap">
               {([
@@ -202,7 +551,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
             </select>
           </div>
 
-          {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { label:'🚨 Overdue',  count: counts.overdue, color:'text-danger', bg:'bg-danger/10 border-danger/30' },
@@ -218,7 +566,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
             ))}
           </div>
 
-          {/* Table */}
           {bucketTasks.length === 0 ? (
             <div className="card text-center py-16">
               <p className="text-4xl mb-3">✅</p>
@@ -288,8 +635,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
       {/* ── RESOURCE UTILIZATION TAB ── */}
       {tab === 'resource' && (
         <div className="space-y-5">
-
-          {/* Summary */}
           <div className="grid grid-cols-3 gap-4">
             {[
               { label:'🔴 Overallocated', count: resourceStats.filter(r=>r.status==='over').length,  color:'text-danger', bg:'bg-danger/10 border-danger/30',   sub:'85%+ utilization — immediate action' },
@@ -309,7 +654,7 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
               <p className="text-4xl mb-3">👥</p>
               <p className="font-syne font-bold text-lg mb-2">No resource data yet</p>
               <p className="text-muted text-sm max-w-sm mx-auto">
-                Assign team members to tasks using the <strong>Assignee Name</strong> field in the Kanban Board task editor. 
+                Assign team members to tasks using the <strong>Assignee Name</strong> field in the Kanban Board task editor.
                 Once assigned, utilization will appear here automatically.
               </p>
             </div>
@@ -323,8 +668,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
                 return (
                   <div key={r.name} className={`card border ${borderCls} space-y-4`}>
                     <div className="flex items-start gap-4 flex-wrap">
-
-                      {/* Avatar */}
                       <div className="flex items-center gap-3 shrink-0 w-44">
                         <div className="w-11 h-11 rounded-full bg-surface2 border border-border flex items-center justify-center font-bold text-sm shrink-0">
                           {initials}
@@ -334,8 +677,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
                           <p className="text-xs text-muted">{r.myTasks.length} active task{r.myTasks.length!==1?'s':''}</p>
                         </div>
                       </div>
-
-                      {/* Workload bar */}
                       <div className="flex-1 min-w-[220px]">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-muted">{r.allocated}h allocated / {r.available}h available per week</span>
@@ -344,9 +685,7 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
                         <div className="w-full h-5 bg-surface2 rounded-full overflow-hidden relative">
                           <div className="h-full rounded-full transition-all duration-500"
                             style={{ width: `${Math.min(r.pct, 100)}%`, background: barColor }}/>
-                          {/* 80% marker */}
                           <div className="absolute top-0 bottom-0 w-px bg-warn/60" style={{ left: '80%' }}/>
-                          {/* 85% marker */}
                           <div className="absolute top-0 bottom-0 w-px bg-danger/60" style={{ left: '85%' }}/>
                         </div>
                         <div className="flex justify-between text-[9px] text-muted mt-1 font-mono-code">
@@ -361,8 +700,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
                           {r.status==='ok'   && <span className="text-xs bg-accent3/10 text-accent3 border border-accent3/30 px-3 py-1 rounded-lg font-semibold">🟢 Healthy — working at good capacity</span>}
                         </div>
                       </div>
-
-                      {/* Edit available hours */}
                       <div className="shrink-0">
                         {isEditing ? (
                           <div className="flex items-center gap-2">
@@ -387,8 +724,6 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
                         )}
                       </div>
                     </div>
-
-                    {/* Task chips */}
                     {r.myTasks.length > 0 && (
                       <div className="pt-3 border-t border-border">
                         <p className="text-xs font-syne font-bold text-muted mb-2">Active Tasks</p>
@@ -422,8 +757,13 @@ export default function ReportsClient({ projects, tasks, resources, userId }: {
           )}
         </div>
       )}
+
       {tab === 'digest' && (
         <StakeholderDigest projects={projects} tasks={localTasks} userId={userId} />
+      )}
+
+      {tab === 'intelligence' && (
+        <ProjectIntelligenceHub projects={projects} tasks={localTasks} />
       )}
     </div>
   )

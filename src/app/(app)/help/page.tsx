@@ -207,6 +207,28 @@ const GUIDES: Guide[] = [
       'Good docs to attach: Project Charter, SOW, Technical Specification, Network Diagrams',
     ],
   },
+  {
+    id: 'intelligence-hub', icon: '🧠', title: 'Project Intelligence Hub',
+    subtitle: 'AI-powered health scores, risk alerts & team analytics', category: 'AI Features',
+    color: '#7c3aed', estimated: '3 min',
+    steps: [
+      { step: 'Click "Reports" in the left sidebar', detail: 'The Reports page opens with multiple tabs at the top.' },
+      { step: 'Click the "🧠 Intelligence Hub" tab', detail: 'The Project Intelligence Hub opens — your AI-powered command centre for data-driven decision making.' },
+      { step: 'Review the 4 KPI summary cards at the top', detail: 'Completion Rate, Overdue Tasks, Blocked Tasks and Critical Open tasks — all calculated live from your project data. Red cards require immediate attention.' },
+      { step: 'Check the Project Health Scores section', detail: 'Every project is scored 0–100 based on overdue tasks, blockers, critical items and completion rate. Green (75+) = healthy, Amber (50–74) = caution, Red (<50) = at risk. Projects are sorted lowest score first so the most at-risk projects appear at the top.' },
+      { step: 'Review the Risk Prediction Alerts panel', detail: 'Auto-generated alerts highlight overdue tasks, blocked tasks, approaching deadlines and critically scored projects. No setup required — alerts are calculated automatically from your live data.' },
+      { step: 'Check Team Performance Analytics', detail: 'Each team member is shown with their task completion rate, overdue count and blocker status. Colour-coded bars make it easy to spot who needs support.' },
+      { step: 'Click "🤖 Generate AI Insights" for your intelligence report', detail: 'Claude AI analyses your entire portfolio and generates a 4-section report: Portfolio Health Summary, Top 3 Risks & Recommended Actions, Team Performance Observations, and Priority Recommendations for This Week. Takes 5–10 seconds.' },
+      { step: 'Use the project filter to focus on a single project', detail: 'Select any project from the dropdown at the top right to filter all metrics and alerts to that project only. Select "All Projects" to return to the portfolio view.' },
+    ],
+    tips: [
+      'Health scores update live — add tasks, mark items done or unblock tasks and the score recalculates immediately',
+      'Run AI Insights at the start of each week for a prioritised action plan',
+      'Red health score projects should be reviewed first — click into the project Kanban to investigate',
+      'Team Performance % = tasks completed ÷ total tasks assigned — focus on team members with high overdue counts',
+      'Risk alerts are prioritised: 🔴 Critical → 🟡 High → 🔵 Medium — address critical alerts first',
+    ],
+  },
 
 
   // Phase 8 Features

@@ -208,6 +208,182 @@ const GUIDES: Guide[] = [
     ],
   },
 
+
+  // Phase 8 Features
+  {
+    id: 'dashboard-overview', icon: '📊', title: 'Understanding the Dashboard',
+    subtitle: 'Portfolio health, RAG status and project overview',
+    category: 'Phase 8 Features', color: '#00d4ff', estimated: '3 min',
+    steps: [
+      { step: 'Click "Dashboard" in the left sidebar', detail: 'The Dashboard is your home screen — it shows the health of your entire IT project portfolio at a glance.' },
+      { step: 'Read the Project Health Score at the top', detail: 'The AI health score (0-100) grades your portfolio A-F. Green = Healthy, Amber = Caution, Red = At Risk. It factors in completion rate, overdue tasks, blockers and red risks.' },
+      { step: 'Check the 4 top stat cards', detail: 'Total Projects, Total Tasks, Completion % and Overdue Tasks. These update in real time as your team moves tasks.' },
+      { step: 'Review the RAG Portfolio Summary', detail: 'Each project is shown with a RAG (Red / Amber / Green) status. Red = at risk, Amber = caution, Green = on track. Click any project to go directly to its Kanban board.' },
+      { step: 'Check Upcoming Deadlines', detail: 'Tasks due in the next 7 days are listed here so you can proactively manage deadline risk.' },
+      { step: 'Review Recently Completed Tasks', detail: 'Confirms what your team has achieved recently — useful for quick stand-up meetings.' },
+    ],
+    tips: [
+      'Health Score below 60 = At Risk — review overdue tasks and blockers immediately',
+      'A score of 80+ with grade A or B means your portfolio is well managed',
+      'The health score recalculates on every page load based on live data',
+      'Use the Dashboard as your daily morning check before reviewing individual projects',
+    ],
+  },
+  {
+    id: 'reports-overview', icon: '📈', title: 'Reports — Upcoming, Overdue & Resource',
+    subtitle: 'Analyse deadlines, overdue tasks and team utilisation',
+    category: 'Phase 8 Features', color: '#7c3aed', estimated: '4 min',
+    steps: [
+      { step: 'Click "Reports" in the left sidebar', detail: 'The Reports page has 3 tabs: Upcoming & Overdue, Resource Utilisation, and Stakeholder Digest.' },
+      { step: 'Upcoming & Overdue tab — view tasks due soon', detail: 'All tasks due in the next 14 days are listed here, sorted by due date. Red = overdue, Amber = due within 3 days, Green = due within 14 days.' },
+      { step: 'Filter by project or priority', detail: 'Use the filter dropdowns at the top to narrow down by specific project or priority level (Critical / High / Medium / Low).' },
+      { step: 'Resource Utilisation tab — see who is overloaded', detail: 'Switch to the Resource Utilisation tab to see a breakdown of tasks assigned per team member. Spot team members with too many tasks or none at all.' },
+      { step: 'Stakeholder Digest tab — generate and send weekly updates', detail: 'Select a project, enter PM name and recipient emails, then click Generate. AI drafts a full stakeholder email. Review, edit and click Send or Copy.' },
+      { step: 'Use reports before weekly project meetings', detail: 'Run the Upcoming & Overdue report each Monday to prepare your weekly status update.' },
+    ],
+    tips: [
+      'Overdue tasks shown in red need immediate attention — assign or escalate',
+      'Resource Utilisation helps prevent team burnout before it happens',
+      'Stakeholder Digest saves 30-45 minutes of email writing per project per week',
+      'The digest email is fully editable before sending — always review the AI draft',
+    ],
+  },
+  {
+    id: 'change-freeze', icon: '🗓️', title: 'Setting Up a Change Freeze',
+    subtitle: 'Block changes during critical periods like year-end or audits',
+    category: 'Phase 8 Features', color: '#f59e0b', estimated: '3 min',
+    steps: [
+      { step: 'Click "Settings" in the left sidebar', detail: 'Settings is at the bottom of the left navigation menu.' },
+      { step: 'Scroll down to the Change Freeze Calendar section', detail: 'It appears below your profile settings. Admins see a Global freeze option; PMs see project-level freeze.' },
+      { step: 'Click "+ Add Change Freeze"', detail: 'The Add Freeze form appears.' },
+      { step: 'Enter a Freeze Name', detail: 'Give it a clear name — e.g. "Christmas Freeze 2025" or "Q4 Financial Year-End".' },
+      { step: 'Set the Start Date and End Date', detail: 'These define the protected window. No changes should be deployed during this period.' },
+      { step: 'Select a Reason', detail: 'Choose from 9 preset reasons: Christmas/New Year, Quarter-End, Financial Year-End, Major Release, Audit Period, Regulatory Compliance, Data Centre Migration, DR Test, or Custom.' },
+      { step: 'Choose Scope — Global or Project-specific', detail: 'Global applies to all projects (Admin only). Project applies to a specific project you own.' },
+      { step: 'Click "Add Freeze" to save', detail: 'The freeze period appears in the calendar list. Active freezes show a red pulsing banner at the top.' },
+      { step: 'View warnings on the Gantt Timeline', detail: 'Tasks that fall within a freeze window will show a warning on the Gantt chart, alerting the PM to reschedule if needed.' },
+    ],
+    tips: [
+      'Set Christmas freeze every year — it is the most commonly forgotten change window',
+      'Active freezes show a red banner — visible to all team members on the Settings page',
+      'Freeze periods are visible in the Gantt Timeline as warning indicators on affected tasks',
+      'Admins can delete any freeze; PMs can only delete their own',
+    ],
+  },
+  {
+    id: 'post-mortem', icon: '🧠', title: 'Generating a Post-Mortem Report',
+    subtitle: 'AI lessons learned report for completed projects',
+    category: 'Phase 8 Features', color: '#7c3aed', estimated: '5 min',
+    steps: [
+      { step: 'Open the Kanban board for the project you want to post-mortem', detail: 'Click the project name in the left sidebar to open its Kanban board.' },
+      { step: 'Click the Edit Project (pencil) button in the toolbar', detail: 'The Edit Project modal opens.' },
+      { step: 'In the Details tab, change Project Status to Completed', detail: 'You will see 4 status options: Active, On Hold, Completed, Cancelled. Select Completed.' },
+      { step: 'Click "Save Project"', detail: 'The project status is updated. Close the modal.' },
+      { step: 'A Post-Mortem button now appears in the toolbar', detail: 'It appears in the toolbar highlighted in purple. It is only visible when the project is marked Completed.' },
+      { step: 'Click "Post-Mortem"', detail: 'The Post-Mortem modal opens showing project stats — tasks done, overdue at closure, blocked tasks and planned duration.' },
+      { step: 'Click "Generate Post-Mortem Report"', detail: 'AI analyses all tasks, overdue items, blockers and the project timeline. This takes 15-20 seconds.' },
+      { step: 'Navigate the 7 sections in the left sidebar', detail: 'Sections: Executive Summary, What Went Well, What Went Wrong, Root Cause Analysis, Lessons Learned, Recommendations for Next Project, Timeline vs Actual, Risk & Issues Summary.' },
+      { step: 'Copy a section or the full report', detail: 'Click "Copy Section" for a single section or "Copy Full Report" to copy everything. Paste into Word, email or your documentation system.' },
+      { step: 'Click Regenerate if you want a fresh analysis', detail: 'The Regenerate button re-runs the AI analysis. Each generation may give slightly different insights.' },
+    ],
+    tips: [
+      'Run the post-mortem within 1 week of project closure for most accurate insights',
+      'Share the report with your steering committee as part of project closure documentation',
+      'The Recommendations section is particularly useful for planning your next similar project',
+      'Copy the full report into Confluence, SharePoint or your ITSM tool for permanent record',
+      'The AI bases all observations on actual task data — the more tasks you tracked, the better the report',
+    ],
+  },
+
+  // ── Phase 9 Features ──────────────────────────────────────
+  {
+    id: 'network-diagram', icon: '🗺️', title: 'AI Network Diagram Generator',
+    subtitle: 'Describe your network change — AI draws it instantly',
+    category: 'Phase 9 Features', color: '#00d4ff', estimated: '5 min',
+    steps: [
+      { step: 'Click "Network Diagram" in the left sidebar', detail: 'The AI Network Diagram Generator opens with a prompt form on the left and tips on the right.' },
+      { step: 'Describe your network change in the free-text box', detail: 'Type a plain-English description of what you want to add or change. Example: "I want to install a new Cisco Catalyst 9300 switch on Floor 3 of Singapore HQ. The existing core router is at 10.0.0.1 and I need to connect the new switch via a 10G fiber uplink on VLAN 100." The more detail you provide, the more accurate the diagram.' },
+      { step: 'Fill in the structured fields for best results', detail: 'Use the 8 prompt fields to provide specific details: Change Type (e.g. Add new switch), Location / Site (e.g. Singapore HQ Floor 3), New Device (e.g. Cisco Catalyst 9300), New IP / Subnet, Existing Devices with their IPs, Connection type, VLAN details, and any Additional Notes.' },
+      { step: 'Click "🤖 Generate Network Diagram"', detail: 'AI analyses your description and generates a complete network diagram with nodes, connections and IP addresses. This takes 5–10 seconds.' },
+      { step: 'Review the generated diagram on the canvas', detail: 'Your diagram appears with all devices positioned logically — Internet/Cloud at top, core devices in the middle, access devices at the bottom. New devices are highlighted with a green NEW badge.' },
+      { step: 'Drag devices to reposition them', detail: 'Click and drag any device node to move it anywhere on the canvas. The connection lines update automatically.' },
+      { step: 'Click a device to view and edit its details', detail: 'Select any device to see its type, IP address and location in the right panel. Click ✏️ Edit to update the label, type, IP or location. Click 🗑️ Delete to remove it from the diagram.' },
+      { step: 'Add new devices manually with "+ Add Device"', detail: 'Click the "+ Add Device" button in the top toolbar to add any device manually. Select type, enter a label, IP and location. The new device is added to the canvas with a NEW badge.' },
+      { step: 'Use zoom controls to navigate large diagrams', detail: 'Use the − and + buttons in the toolbar to zoom out or in. The zoom percentage is shown between the buttons.' },
+      { step: 'Click "← Edit Prompt" to regenerate with changes', detail: 'Go back to the prompt form at any time to refine your description and regenerate a fresh diagram.' },
+    ],
+    tips: [
+      'Always mention the vendor and model (e.g. "Cisco Catalyst 9300" not just "switch") for IT-specific diagrams',
+      'Include existing IP ranges so AI places new devices in the correct subnet',
+      'Use the example scenario buttons on the right for quick starting points',
+      'New devices are automatically marked with a green NEW badge — useful for presenting changes to your team or CAB',
+      'Link types: solid blue = Ethernet, solid green = Fiber, dashed orange = Wireless, dashed red = WAN',
+      'Use the free-text box for complex scenarios and the structured fields for specific technical details — combine both for best results',
+    ],
+  },
+  {
+    id: 'stakeholder-analysis', icon: '🤝', title: 'Stakeholder Analysis',
+    subtitle: 'Map influence, interest and communication preferences',
+    category: 'Phase 9 Features', color: '#f59e0b', estimated: '4 min',
+    steps: [
+      { step: 'Your role must be Portfolio Manager to access this feature', detail: 'Stakeholder Analysis is available to Portfolio Manager role only. Check your role in Settings → Profile if you cannot see the feature.' },
+      { step: 'Click "Reports" in the left sidebar', detail: 'The Reports page opens with three tabs in the right pane.' },
+      { step: 'Click the "📧 Stakeholder Digest" tab', detail: 'The Stakeholder Digest panel appears. From here you can view stakeholder engagement, send digest emails and manage your stakeholder list.' },
+      { step: 'Add or review stakeholders for your project', detail: 'Select the project from the dropdown, then view or add stakeholders with their name, role and email.' },
+      { step: 'Review the Upcoming & Overdue and Resource Utilization tabs as needed', detail: 'The Reports page also shows 📅 Upcoming & Overdue tasks and 👥 Resource Utilization — useful context when preparing stakeholder communications.' },
+      { step: 'Generate and send a stakeholder digest', detail: 'Click "Generate Digest" — AI drafts a professional update email. Review, edit and send directly to your stakeholder list.' },
+    ],
+    tips: [
+      'Portfolio Manager role is required — ask your admin to update your role in the user management panel',
+      'Use Upcoming & Overdue tab before generating the digest to ensure all task data is current',
+      'The digest email is AI-drafted but fully editable — always review before sending',
+      'Send digests on a consistent day each week so stakeholders know when to expect updates',
+    ],
+  },
+  {
+    id: 'change-freeze-p9', icon: '🧊', title: 'Change Freeze',
+    subtitle: 'Lock critical periods and flag tasks on the Gantt',
+    category: 'Phase 9 Features', color: '#ef4444', estimated: '3 min',
+    steps: [
+      { step: 'Your role must be Portfolio Manager to manage Change Freeze', detail: 'Change Freeze is a Portfolio Manager feature. Check your role in Settings → Profile if you cannot see the option.' },
+      { step: 'Click "Settings" in the left sidebar', detail: 'Settings is at the bottom of the left navigation pane.' },
+      { step: 'Scroll down to find "🗓️ Change Freeze Calendar" in the Project Settings section', detail: 'The Change Freeze Calendar shows all freeze windows — Active 🔴, Upcoming 🔜, and Past.' },
+      { step: 'Click "+ Add Freeze Period"', detail: 'The Add Freeze form appears. Fill in the freeze name, start date, end date and reason.' },
+      { step: 'Review the freeze window tabs', detail: 'All (total count), 🔴 Active (currently live freezes), 🔜 Upcoming (scheduled), and Past (historical). Use these to manage your freeze calendar across the year.' },
+      { step: 'Save the freeze period', detail: 'Click "Add Freeze" to confirm. The freeze is added to the calendar immediately.' },
+      { step: 'Check the Gantt Timeline for flagged tasks', detail: 'Any tasks scheduled during a freeze window will be flagged with a warning indicator on the Gantt chart, prompting you to review or reschedule.' },
+    ],
+    tips: [
+      'Portfolio Manager role is required to create and manage freeze periods',
+      'Tasks falling inside a freeze window are flagged on the Gantt — review them before activating a freeze',
+      'Use the Upcoming tab to plan freeze periods in advance — e.g. set Christmas freeze in November',
+      'Past freezes are retained for audit trail and post-mortem reporting',
+    ],
+  },
+  {
+    id: 'budget-tracker', icon: '💰', title: 'Budget Tracker',
+    subtitle: 'Set budget, track spend and view RAG status with AI assessment',
+    category: 'Phase 9 Features', color: '#22d3a5', estimated: '4 min',
+    steps: [
+      { step: 'Your role must be Portfolio Manager to access Budget Tracker', detail: 'Budget Tracker is a Portfolio Manager feature. Check your role in Settings → Profile if you cannot see the Budget tab.' },
+      { step: 'Open your project and click the ✏️ Edit Project button in the toolbar', detail: 'The Edit Project modal opens.' },
+      { step: 'Go to the 💰 Budget tab', detail: 'The Budget tab is alongside Details, Team and Attachment tabs inside the Edit Project modal.' },
+      { step: 'Select your currency', detail: 'Choose the appropriate currency for your project budget (e.g. USD, GBP, SGD).' },
+      { step: 'Enter the Total Budget amount', detail: 'Type the approved total project budget figure.' },
+      { step: 'Set the Contingency %', detail: 'Enter a contingency percentage (e.g. 10%). This is calculated as a buffer on top of your planned spend.' },
+      { step: 'Click "Save Project"', detail: 'The budget is saved. A 💰 Budget button now appears in the project toolbar.' },
+      { step: 'Click the 💰 Budget button in the toolbar to open the full tracker', detail: 'The Budget Tracker shows: RAG status, a donut ring chart of spend vs budget, overrun cost if applicable, and an AI budget assessment.' },
+      { step: 'Edit and update budget scope as needed', detail: 'Click "Edit Budget" in the tracker to update the total, contingency or add scope changes. The same process applies when adding new scope to the project.' },
+    ],
+    tips: [
+      'Portfolio Manager role is required — contact your admin if the Budget tab is not visible',
+      'Set budget at project kick-off for the most accurate RAG status throughout the project lifecycle',
+      'The donut ring turns red when spend exceeds budget — use contingency % to build in a safety margin',
+      'AI assessment gives a plain-English summary of your budget health — useful for status reports and sponsor updates',
+      'Updating scope through the Budget tab keeps your budget and project scope aligned in one place',
+    ],
+  },
+
   // ── SUPPORT GUIDES (Phase 6) ──────────────────────────────
   {
     id: 'raise-ticket', icon: '🎫', title: 'Raising a Support Ticket',
@@ -280,7 +456,7 @@ const GUIDES: Guide[] = [
   },
 ]
 
-const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Support']
+const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Phase 9 Features', 'Support']
 
 const CAT_COLORS: Record<string, string> = {
   'Getting Started':    '#00d4ff',
@@ -288,6 +464,8 @@ const CAT_COLORS: Record<string, string> = {
   'PCR & Risk Register':'#f59e0b',
   'AI Features':        '#7c3aed',
   'Support':            '#ef4444',
+  'Phase 8 Features':   '#06b6d4',
+  'Phase 9 Features':   '#22d3a5',
 }
 
 const CAT_ICONS: Record<string, string> = {
@@ -297,6 +475,8 @@ const CAT_ICONS: Record<string, string> = {
   'PCR & Risk Register':'🛡️',
   'AI Features':        '🤖',
   'Support':            '🎫',
+  'Phase 8 Features':   '✨',
+  'Phase 9 Features':   '🚀',
 }
 
 // ── Support Ticket Form (inline, no import needed) ──────────

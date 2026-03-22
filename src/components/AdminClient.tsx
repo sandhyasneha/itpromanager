@@ -21,7 +21,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 }
 
 const TABS = ['Overview', 'Feedback', 'Users', 'Audit Log', 'Subscriptions']
-const PAGE_SIZE = 20
+const PAGE_SIZE = 15
 
 export default function AdminClient({ profiles, projects, tasks, articles, feedback }: {
   profiles: any[], projects: any[], tasks: any[], articles: any[], feedback: any[]

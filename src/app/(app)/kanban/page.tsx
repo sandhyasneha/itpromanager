@@ -26,6 +26,7 @@ export default async function KanbanPage() {
     .from('project_members')
     .select('project_id, role')
     .eq('user_id', user!.id)
+    .eq('status', 'active')
 
   let sharedProjects: Project[] = []
   if (memberRows && memberRows.length > 0) {

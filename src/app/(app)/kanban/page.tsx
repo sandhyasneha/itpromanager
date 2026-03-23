@@ -11,7 +11,7 @@ const COLUMNS: { id: TaskStatus; title: string; emoji: string; color: string }[]
 ]
 
 export default async function KanbanPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   // Load owned projects
@@ -21,7 +21,7 @@ export default async function KanbanPage() {
     .eq('owner_id', user!.id)
     .order('created_at', { ascending: false })
 
-  // Load projects shared with this user as a member
+  // Load projects shared with this user as an active member
   const { data: memberRows } = await supabase
     .from('project_members')
     .select('project_id, role')
@@ -30,20 +30,23 @@ export default async function KanbanPage() {
 
   let sharedProjects: Project[] = []
   if (memberRows && memberRows.length > 0) {
-    const sharedIds = memberRows.map(m => m.project_id)
-    const { data: shared } = await supabase
-      .from('projects')
-      .select('*')
-      .in('id', sharedIds)
-      .order('created_at', { ascending: false })
-    sharedProjects = (shared ?? []) as Project[]
+    const ownedIds  = new Set((ownedProjects ?? []).map(p => p.id))
+    const sharedIds = memberRows.map(m => m.project_id).filter(id => !ownedIds.has(id))
+    if (sharedIds.length > 0) {
+      const { data: shared } = await supabase
+        .from('projects')
+        .select('*')
+        .in('id', sharedIds)
+        .order('created_at', { ascending: false })
+      sharedProjects = (shared ?? []) as Project[]
+    }
   }
 
   // Build membership map: projectId -> role
   const membershipMap: Record<string, string> = {}
   ;(memberRows ?? []).forEach(m => { membershipMap[m.project_id] = m.role })
 
-  // Combine: owned first, then shared
+  // Combine: owned first, then shared (no duplicates)
   const projectList = [
     ...(ownedProjects ?? []).map(p => ({ ...p, userRole: 'owner' })),
     ...sharedProjects.map(p => ({ ...p, userRole: membershipMap[p.id] || 'viewer' })),

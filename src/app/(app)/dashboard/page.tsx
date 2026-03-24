@@ -193,7 +193,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {projectStats.map(p => {
-                const ragCfg = RAG_CONFIG[p.rag]
+                const ragCfg = RAG_CONFIG[p.rag as 'red' | 'amber' | 'green']
                 return (
                   <Link key={p.id} href="/kanban"
                     className={`card border ${ragCfg.border} hover:-translate-y-0.5 transition-all flex items-center gap-4`}>

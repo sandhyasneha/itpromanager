@@ -22,11 +22,17 @@ export default async function KanbanPage() {
     .order('created_at', { ascending: false })
 
   // Load projects shared with this user as an active member
-  const { data: memberRows } = await supabase
+  const { data: memberRows, error: memberError } = await supabase
     .from('project_members')
     .select('project_id, role')
     .eq('user_id', user!.id)
     .eq('status', 'active')
+
+  console.log('[kanban] user id:', user!.id)
+  console.log('[kanban] memberRows:', JSON.stringify(memberRows))
+  console.log('[kanban] memberError:', JSON.stringify(memberError))
+  console.log('[kanban] sharedIds will be:', memberRows?.map(m => m.project_id))
+
 
   let sharedProjects: Project[] = []
   if (memberRows && memberRows.length > 0) {

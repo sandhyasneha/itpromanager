@@ -54,13 +54,13 @@ export default function TeamManager({
 
   async function loadMembers() {
     setLoading(true)
-    const { data } = await supabase
-      .from('project_members')
-      .select('*, profiles(full_name)')
-      .eq('project_id', projectId)
-      .neq('status', 'removed')
-      .order('created_at', { ascending: true })
-    setMembers(data || [])
+    try {
+      const res  = await fetch(`/api/project-members?projectId=${projectId}`)
+      const data = await res.json()
+      if (res.ok) setMembers(data.members || [])
+    } catch (e) {
+      console.error('Failed to load members', e)
+    }
     setLoading(false)
   }
 

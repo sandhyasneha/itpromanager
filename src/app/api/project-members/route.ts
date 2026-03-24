@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     // Fetch all members with profile info
     const { data: members, error } = await serviceClient
       .from('project_members')
-      .select('*, profiles(full_name, avatar_url)')
+      .select('*, profiles!project_members_user_id_fkey(full_name, avatar_url)')
       .eq('project_id', projectId)
       .neq('status', 'removed')
       .order('created_at', { ascending: true })

@@ -406,6 +406,92 @@ const GUIDES: Guide[] = [
     ],
   },
 
+  // ── TEAM COLLABORATION ────────────────────────────────────
+  {
+    id: 'invite-team-email', icon: '✉️', title: 'Inviting Team Members by Email',
+    subtitle: 'Add colleagues to your project with a personal invite',
+    category: 'Team Collaboration', color: '#00d4ff', estimated: '3 min',
+    steps: [
+      { step: 'Open your project in the Kanban Board', detail: 'Navigate to the Kanban Board from the left sidebar. Make sure the correct project is selected in the project dropdown at the top.' },
+      { step: 'Click the "👥 Team" button in the toolbar', detail: 'The toolbar runs across the top of the Kanban Board — you will see Board, Timeline, PCR, Risks, Report, Alerts, Team, Plan, Excel buttons. Click "👥 Team" to open the Team Members modal.' },
+      { step: 'Scroll down to the "✉️ Invite by Email" section', detail: 'The modal shows current team members at the top, followed by pending invites, then the invite form at the bottom.' },
+      { step: 'Enter the colleague\'s email address', detail: 'Type the full email address of the person you want to invite — e.g. john.smith@nttdata.com. They must use this exact email to sign up or log in.' },
+      { step: 'Select their Role', detail: 'Choose the appropriate role from the dropdown: Admin (full access + invite others), Project Manager (manage tasks, PCR, risks), Engineer (view and update tasks), or Viewer (read-only access). For most team members, Engineer is the right choice.' },
+      { step: 'Click "📨 Invite"', detail: 'NexPlan sends a personalised invitation email to the colleague immediately. The email shows your name, the project name, their assigned role, and a direct "Accept Invitation" link.' },
+      { step: 'Colleague clicks "Accept Invitation" in their email', detail: 'The invite link takes them to the NexPlan invite page showing the project name and their role. If they are not logged in, they are prompted to sign in or create a free account first. Once logged in, they click "✅ Accept Invitation".' },
+      { step: 'Colleague is redirected to the Kanban Board', detail: 'After accepting, they land directly on the Kanban Board and can see the shared project immediately. The project appears in their project dropdown with their role label — e.g. [ENGINEER] NEW ROUTER INSTALLATION - INDIA.' },
+    ],
+    tips: [
+      'Only project Admins and Project Managers can send invites — Engineers and Viewers cannot invite others',
+      'The invite email is sent instantly — ask your colleague to check their spam folder if they do not receive it within 2 minutes',
+      'You can resend an invite from the "⏳ Pending Invites" section if the colleague missed the original email',
+      'The invited person must sign up with the same email address the invite was sent to',
+      'You can change a member\'s role at any time from the Team Members modal using the role dropdown',
+      'Removing a member (✕ button) immediately revokes their access to the project',
+    ],
+  },
+  {
+    id: 'invite-team-link', icon: '🔗', title: 'Sharing a Project Join Link',
+    subtitle: 'Let anyone join your project with a shareable link',
+    category: 'Team Collaboration', color: '#7c3aed', estimated: '2 min',
+    steps: [
+      { step: 'Open the "👥 Team" modal from the Kanban toolbar', detail: 'Click the 👥 Team button in the Kanban Board toolbar to open the Team Members modal.' },
+      { step: 'Scroll down to the "🔗 Share Join Link" section', detail: 'This section is below the Invite by Email form. It lets you generate a link that anyone can use to join the project — no email needed.' },
+      { step: 'Select the role for people who join via this link', detail: 'Choose from the role dropdown: Admin, Project Manager, Engineer, or Viewer. Everyone who joins via this specific link will receive this role. For most cases, Engineer is recommended.' },
+      { step: 'Click "🔗 Generate"', detail: 'NexPlan generates a unique join link for your project. The link appears in a box below the button.' },
+      { step: 'Click "📋 Copy" to copy the link', detail: 'The link is copied to your clipboard. You will see "✅ Copied!" confirm the copy was successful.' },
+      { step: 'Share the link with your team', detail: 'Paste the link into an email, Slack, Teams, or WhatsApp message. Anyone who clicks the link and has a NexPlan account (or creates one) will be able to join the project instantly.' },
+      { step: 'Colleague opens the link and clicks "✅ Join Project"', detail: 'The join page shows the project name and their assigned role. If they are not logged in, they are prompted to sign in first. After joining, they are redirected to the Kanban Board.' },
+    ],
+    tips: [
+      'The join link gives everyone who uses it the same role — generate separate links for different roles if needed',
+      'Share join links only with trusted colleagues — anyone with the link can join',
+      'Generate a new link to effectively invalidate the old one if you need to restrict access',
+      'Join links are ideal for onboarding a whole team at once — share in a group chat for quick setup',
+    ],
+  },
+  {
+    id: 'manage-team', icon: '👥', title: 'Managing Your Project Team',
+    subtitle: 'View members, change roles and remove access',
+    category: 'Team Collaboration', color: '#22d3a5', estimated: '3 min',
+    steps: [
+      { step: 'Open the "👥 Team" modal from the Kanban toolbar', detail: 'Click the 👥 Team button in the Kanban Board toolbar. The modal opens showing all current team members.' },
+      { step: 'View all active team members', detail: 'The "Team Members" section lists everyone with active access to the project. Each person shows their name, email, and current role. Your own name is marked with "(you)".' },
+      { step: 'Change a member\'s role', detail: 'Click the role dropdown next to any member\'s name to change their role. Options are Admin, Project Manager, Engineer, and Viewer. The change takes effect immediately — no save button needed.' },
+      { step: 'Remove a member', detail: 'Click the ✕ button next to any member to remove them from the project. A confirmation prompt appears. Once confirmed, the member immediately loses access to the project.' },
+      { step: 'View and manage pending invites', detail: 'The "⏳ Pending Invites" section shows colleagues who have been invited but have not yet accepted. You can resend the invite email or cancel the invite using the ✕ button.' },
+      { step: 'Understand the Role Permissions legend', detail: 'The bottom of the modal shows the Role Permissions legend: Admin (full access + invite members), Project Manager (manage tasks, PCR, risks), Engineer (view and update tasks), Viewer (view only, no edits).' },
+    ],
+    tips: [
+      'Only the project owner (Admin) can change roles and remove members',
+      'Engineers and Viewers will not see the invite form or role management controls',
+      'Removing a member does not delete their work — tasks they created or were assigned to remain',
+      'There is no limit to the number of team members you can add to a project',
+      'The project owner cannot be removed from their own project',
+      'Shared projects appear in every team member\'s Kanban Board and Dashboard automatically',
+    ],
+  },
+  {
+    id: 'shared-project-view', icon: '📋', title: 'Working on a Shared Project',
+    subtitle: 'How shared projects appear and what you can do as a team member',
+    category: 'Team Collaboration', color: '#f59e0b', estimated: '2 min',
+    steps: [
+      { step: 'Accept your project invitation', detail: 'Click "Accept Invitation" in the invite email, or open the invite link shared by your PM. Log in to NexPlan if prompted. Click "✅ Accept Invitation" on the invite page.' },
+      { step: 'Your shared project appears in the Kanban Board', detail: 'After accepting, go to the Kanban Board. The shared project appears in the project dropdown at the top, labelled with your role — e.g. [ENGINEER] NEW ROUTER INSTALLATION - INDIA.' },
+      { step: 'Your shared project appears in your Dashboard', detail: 'The Dashboard shows all projects you have access to — both projects you own and projects shared with you. Shared projects show a role badge (e.g. ENGINEER) next to the project name.' },
+      { step: 'Add and update tasks as an Engineer', detail: 'As an Engineer, you can add new tasks, update task details, move tasks between columns (drag and drop), and add comments. You can see all project tasks, PCR, risks, and reports.' },
+      { step: 'View-only access as a Viewer', detail: 'As a Viewer, you can see all project tasks, timeline, risks, and reports but cannot make any changes. This is ideal for stakeholders and clients who need visibility without editing rights.' },
+      { step: 'See your teammates in the 👥 Team modal', detail: 'Click the 👥 Team button to see all team members on the project, their roles, and contact emails.' },
+    ],
+    tips: [
+      'Your role label [ENGINEER], [PM] etc. is shown in the project dropdown so you always know your access level',
+      'You can be a member of unlimited projects — both your own and shared projects',
+      'If you cannot see a shared project, ask the project owner to re-send the invite',
+      'Your My Tasks page shows tasks assigned to you across all projects — both owned and shared',
+      'Notifications (due date alerts, daily digest) work across all your projects including shared ones',
+    ],
+  },
+
   // ── SUPPORT GUIDES (Phase 6) ──────────────────────────────
   {
     id: 'raise-ticket', icon: '🎫', title: 'Raising a Support Ticket',
@@ -478,7 +564,7 @@ const GUIDES: Guide[] = [
   },
 ]
 
-const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Phase 9 Features', 'Support']
+const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Phase 9 Features', 'Team Collaboration', 'Support']
 
 const CAT_COLORS: Record<string, string> = {
   'Getting Started':    '#00d4ff',
@@ -488,6 +574,7 @@ const CAT_COLORS: Record<string, string> = {
   'Support':            '#ef4444',
   'Phase 8 Features':   '#06b6d4',
   'Phase 9 Features':   '#22d3a5',
+  'Team Collaboration': '#00d4ff',
 }
 
 const CAT_ICONS: Record<string, string> = {
@@ -499,6 +586,7 @@ const CAT_ICONS: Record<string, string> = {
   'Support':            '🎫',
   'Phase 8 Features':   '✨',
   'Phase 9 Features':   '🚀',
+  'Team Collaboration': '👥',
 }
 
 // ── Support Ticket Form (inline, no import needed) ──────────

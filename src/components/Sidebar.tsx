@@ -17,6 +17,7 @@ const NAV = [
   { href: '/reports',      label: 'Reports',         icon: '📈' },
   { href: '/analytics',    label: 'Analytics',       icon: '🔬' },
   { href: '/help',         label: 'Help Center',     icon: '❓' },
+  { href: '/organisation', label: 'Organisation', icon: '🏢' },
 ]
 
 const ADMIN_NAV = [

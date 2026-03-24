@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import ProjectHealthScore from '@/components/ProjectHealthScore'
+import DelayPredictor from '@/components/DelayPredictor'
+import DashboardTabs from '@/components/DashboardTabs'
 
 function getRAG(tasks: any[], risks: any[]): 'red' | 'amber' | 'green' {
   const blocked = tasks.filter(t => t.status === 'blocked').length
@@ -42,6 +44,7 @@ export default async function DashboardPage() {
   const taskList = allTasks ?? []
   const riskList = allRisks ?? []
   const firstName = (profile?.full_name || 'there').split(' ')[0]
+  const isPortfolioManager = profile?.role === 'Portfolio Manager'
 
   const projectStats = projectList.map(p => {
     const tasks = taskList.filter(t => t.project_id === p.id)
@@ -92,6 +95,21 @@ export default async function DashboardPage() {
         totalRedRisks={totalRedRisks.length}
         ragCounts={ragCounts}
         portfolioPct={portfolioPct}
+      />
+
+      {/* ── PORTFOLIO TABS — Portfolio Manager only ─────── */}
+      {isPortfolioManager && (
+        <DashboardTabs
+          projects={projectList}
+          tasks={taskList}
+          risks={allRisks ?? []}
+        />
+      )}
+
+      {/* ── DELAY PREDICTOR ──────────────────────────────── */}
+      <DelayPredictor
+        projects={projectList}
+        tasks={taskList}
       />
 
       {/* Top stats */}

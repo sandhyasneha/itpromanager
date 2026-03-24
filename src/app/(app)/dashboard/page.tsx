@@ -3,6 +3,7 @@ import Link from 'next/link'
 import ProjectHealthScore from '@/components/ProjectHealthScore'
 import DelayPredictor from '@/components/DelayPredictor'
 import DashboardTabs from '@/components/DashboardTabs'
+import type { Project } from '@/types'
 
 function getRAG(tasks: any[], risks: any[]): 'red' | 'amber' | 'green' {
   const blocked = tasks.filter(t => t.status === 'blocked').length
@@ -33,14 +34,36 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: projects }, { data: allTasks }, { data: allRisks }, { data: profile }] = await Promise.all([
+  // Load owned projects + member rows + profile in parallel
+  const [{ data: ownedProjects }, { data: memberRows }, { data: allTasks }, { data: allRisks }, { data: profile }] = await Promise.all([
     supabase.from('projects').select('*').eq('owner_id', user!.id).order('created_at', { ascending: false }),
+    supabase.from('project_members').select('project_id, role').eq('user_id', user!.id).eq('status', 'active'),
     supabase.from('tasks').select('*'),
     supabase.from('risk_register').select('*'),
     supabase.from('profiles').select('*').eq('id', user!.id).single(),
   ])
 
-  const projectList = projects ?? []
+  // Load shared projects
+  let sharedProjects: Project[] = []
+  if (memberRows && memberRows.length > 0) {
+    const ownedIds  = new Set((ownedProjects ?? []).map(p => p.id))
+    const sharedIds = memberRows.map(m => m.project_id).filter(id => !ownedIds.has(id))
+    if (sharedIds.length > 0) {
+      const { data: shared } = await supabase
+        .from('projects').select('*').in('id', sharedIds).order('created_at', { ascending: false })
+      sharedProjects = (shared ?? []) as Project[]
+    }
+  }
+
+  // Combine owned + shared
+  const membershipMap: Record<string, string> = {}
+  ;(memberRows ?? []).forEach(m => { membershipMap[m.project_id] = m.role })
+
+  const projectList = [
+    ...(ownedProjects ?? []).map(p => ({ ...p, userRole: 'owner' })),
+    ...sharedProjects.map(p => ({ ...p, userRole: membershipMap[p.id] || 'viewer' })),
+  ]
+
   const taskList = allTasks ?? []
   const riskList = allRisks ?? []
   const firstName = (profile?.full_name || 'there').split(' ')[0]
@@ -58,11 +81,11 @@ export default async function DashboardPage() {
     return { ...p, tasks, risks, rag, progress, overdue, blocked, redRisks, daysLeft }
   })
 
-  const totalTasks    = taskList.length
-  const totalDone     = taskList.filter(t => t.status === 'done').length
-  const totalOverdue  = taskList.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) < new Date(new Date().toDateString()))
-  const totalBlocked  = taskList.filter(t => t.status === 'blocked')
-  const totalRedRisks = riskList.filter(r => r.rag_status === 'red' && r.status === 'open')
+  const totalTasks    = taskList.filter(t => projectList.some(p => p.id === t.project_id)).length
+  const totalDone     = taskList.filter(t => t.status === 'done' && projectList.some(p => p.id === t.project_id)).length
+  const totalOverdue  = taskList.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) < new Date(new Date().toDateString()) && projectList.some(p => p.id === t.project_id))
+  const totalBlocked  = taskList.filter(t => t.status === 'blocked' && projectList.some(p => p.id === t.project_id))
+  const totalRedRisks = riskList.filter(r => r.rag_status === 'red' && r.status === 'open' && projectList.some(p => p.id === r.project_id))
   const portfolioPct  = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0
   const ragCounts     = { red: projectStats.filter(p => p.rag === 'red').length, amber: projectStats.filter(p => p.rag === 'amber').length, green: projectStats.filter(p => p.rag === 'green').length }
 
@@ -85,7 +108,7 @@ export default async function DashboardPage() {
         <Link href="/kanban" className="btn-primary px-5 py-2.5 text-sm">Open Kanban Board →</Link>
       </div>
 
-      {/* ── AI PROJECT HEALTH SCORE ──────────────────────── */}
+      {/* AI PROJECT HEALTH SCORE */}
       <ProjectHealthScore
         projects={projectStats}
         totalTasks={totalTasks}
@@ -97,7 +120,7 @@ export default async function DashboardPage() {
         portfolioPct={portfolioPct}
       />
 
-      {/* ── PORTFOLIO TABS — Portfolio Manager only ─────── */}
+      {/* PORTFOLIO TABS — Portfolio Manager only */}
       {isPortfolioManager && (
         <DashboardTabs
           projects={projectList}
@@ -106,11 +129,8 @@ export default async function DashboardPage() {
         />
       )}
 
-      {/* ── DELAY PREDICTOR ──────────────────────────────── */}
-      <DelayPredictor
-        projects={projectList}
-        tasks={taskList}
-      />
+      {/* DELAY PREDICTOR */}
+      <DelayPredictor projects={projectList} tasks={taskList} />
 
       {/* Top stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -142,64 +162,60 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-4 mt-3 text-xs text-muted flex-wrap">
           {[
-            { label: 'Done',        count: totalDone,                                                   color: 'bg-accent3' },
-            { label: 'In Progress', count: taskList.filter(t => t.status === 'in_progress').length,    color: 'bg-accent' },
-            { label: 'Review',      count: taskList.filter(t => t.status === 'review').length,          color: 'bg-warn' },
-            { label: 'Blocked',     count: totalBlocked.length,                                         color: 'bg-danger' },
-            { label: 'Backlog',     count: taskList.filter(t => t.status === 'backlog').length,         color: 'bg-border' },
+            { label: 'Done',        count: totalDone,                                                color: 'bg-accent3' },
+            { label: 'In Progress', count: taskList.filter(t => t.status === 'in_progress').length, color: 'bg-accent' },
+            { label: 'Review',      count: taskList.filter(t => t.status === 'review').length,      color: 'bg-warn' },
+            { label: 'Blocked',     count: taskList.filter(t => t.status === 'blocked').length,     color: 'bg-danger' },
+            { label: 'Backlog',     count: taskList.filter(t => t.status === 'backlog').length,     color: 'bg-muted' },
           ].map(s => (
-            <span key={s.label} className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${s.color}`}/>{s.count} {s.label}
-            </span>
+            <div key={s.label} className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${s.color}`}/>
+              <span>{s.count} {s.label}</span>
+            </div>
           ))}
         </div>
       </div>
 
+      {/* Projects + Right Column */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Project Health Grid */}
-        <div className="lg:col-span-2 card">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className="font-syne font-bold text-lg">Project Health</h3>
-              <p className="text-xs text-muted">RAG status across your portfolio</p>
-            </div>
-            <div className="flex gap-2 text-xs">
-              {(Object.entries(ragCounts) as ['red'|'amber'|'green', number][]).map(([rag, count]) => (
-                <span key={rag} className={`px-2.5 py-1 rounded-lg font-semibold border ${RAG_CONFIG[rag].bg} ${RAG_CONFIG[rag].border}`}
-                  style={{ color: RAG_CONFIG[rag].color }}>
-                  {count} {rag}
-                </span>
-              ))}
-            </div>
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-syne font-bold text-lg">Your Projects</h2>
+            <Link href="/kanban" className="text-xs text-accent font-mono-code hover:underline">View All →</Link>
           </div>
-
           {projectList.length === 0 ? (
-            <div className="text-center py-12 text-muted">
-              <p className="text-3xl mb-3">📋</p>
-              <p className="text-sm mb-3">No projects yet</p>
-              <Link href="/kanban" className="btn-primary text-sm px-4 py-2">Create First Project →</Link>
+            <div className="card text-center py-12">
+              <p className="text-4xl mb-3">📋</p>
+              <p className="font-syne font-bold text-lg mb-2">No projects yet</p>
+              <p className="text-muted text-sm mb-4">Create your first project or ask a PM to invite you</p>
+              <Link href="/kanban" className="btn-primary px-5 py-2">+ Create Project</Link>
             </div>
           ) : (
             <div className="space-y-3">
               {projectStats.map(p => {
-                const ragCfg = RAG_CONFIG[p.rag as 'red' | 'amber' | 'green']
+                const ragCfg = RAG_CONFIG[p.rag]
                 return (
-                  <Link href="/kanban" key={p.id}
-                    className="flex items-center gap-4 p-4 bg-surface2 rounded-xl border border-border hover:border-accent/30 transition-all group">
-                    <div className={`w-3 h-3 rounded-full shrink-0 ${ragCfg.dot}`}/>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color || '#00d4ff' }}/>
-                        <p className="font-semibold text-sm truncate group-hover:text-accent transition-colors">{p.name}</p>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${ragCfg.bg} ${ragCfg.border} shrink-0`}
-                          style={{ color: ragCfg.color }}>{ragCfg.label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${p.progress}%`, background: p.color || '#00d4ff' }}/>
+                  <Link key={p.id} href="/kanban"
+                    className={`card border ${ragCfg.border} hover:-translate-y-0.5 transition-all flex items-center gap-4`}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${ragCfg.dot}`}/>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="font-syne font-bold text-sm truncate">{p.name}</p>
+                          {(p as any).userRole && (p as any).userRole !== 'owner' && (
+                            <span className="text-[10px] font-mono-code bg-accent/10 text-accent px-1.5 py-0.5 rounded shrink-0">
+                              {((p as any).userRole as string).toUpperCase()}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[10px] font-mono-code text-muted shrink-0">{p.progress}%</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ragCfg.bg} border ${ragCfg.border}`}
+                          style={{ color: ragCfg.color }}>{ragCfg.label}</span>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${p.progress}%`, background: p.color || '#00d4ff' }}/>
+                          </div>
+                          <span className="text-[10px] font-mono-code text-muted shrink-0">{p.progress}%</span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-xs shrink-0">
@@ -211,12 +227,6 @@ export default async function DashboardPage() {
                         <div className="text-center">
                           <p className="font-bold text-sm text-danger">{p.overdue.length}</p>
                           <p className="text-muted text-[10px]">Overdue</p>
-                        </div>
-                      )}
-                      {p.redRisks.length > 0 && (
-                        <div className="text-center">
-                          <p className="font-bold text-sm text-danger">{p.redRisks.length}</p>
-                          <p className="text-muted text-[10px]">Red Risk</p>
                         </div>
                       )}
                       {p.daysLeft !== null && (
@@ -237,7 +247,6 @@ export default async function DashboardPage() {
 
         {/* Right column */}
         <div className="space-y-5">
-
           {/* Overdue Tasks */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">

@@ -55,7 +55,8 @@ export async function POST(request: Request) {
           .insert({ org_id: orgId, email: email.toLowerCase(), role, status: 'invited', invited_by: user.id })
           .select('invite_token').single()
 
-    const inviteUrl   = `${APP_URL}/org-invite/${member.invite_token}`
+    if (!member) return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
+const inviteUrl = `${APP_URL}/org-invite/${member.invite_token}`
     const roleLabel   = role.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
     const inviterName = inviter?.full_name || inviter?.email || 'Your organisation admin'
 

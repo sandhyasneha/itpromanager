@@ -169,6 +169,7 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
         String(progressByStatus[t.status] ?? 0) + '%',
       ]),
     ]
+
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -177,6 +178,31 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
     a.download = `${(project?.name ?? 'project').replace(/\s+/g, '-')}-Gantt.csv`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  // Download Gantt as PNG image
+  async function downloadGanttPNG() {
+    try {
+      const ganttEl = document.getElementById('gantt-chart-container')
+      if (!ganttEl) { alert('Gantt chart not found'); return }
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(ganttEl, {
+        scale: 2, useCORS: true, backgroundColor: '#0f172a', logging: false,
+      })
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.font = 'bold 20px Arial'
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.6)'
+        ctx.textAlign = 'right'
+        ctx.fillText('nexplan.io', canvas.width - 20, canvas.height - 20)
+      }
+      const link = document.createElement('a')
+      link.download = `${(project?.name ?? 'gantt').replace(/[^a-zA-Z0-9]/g, '-')}-NexPlan-Gantt.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (e) {
+      alert('PNG export failed — please try again')
+    }
   }
 
   // Download timeline as TXT
@@ -222,6 +248,7 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
     URL.revokeObjectURL(url)
   }
 
+
   return (
     <div className="space-y-4">
 
@@ -264,6 +291,10 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
                 className="flex items-center gap-1 px-2.5 py-1.5 bg-accent3/10 border border-accent3/30 text-accent3 rounded-lg hover:bg-accent3/20 transition-colors font-semibold">
                 📊 CSV
               </button>
+              <button onClick={downloadGanttPNG}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-500/10 border border-violet-500/30 text-violet-400 rounded-lg hover:bg-violet-500/20 transition-colors font-semibold text-xs">
+                🖼️ PNG
+              </button>
             </div>
           </div>
         </div>
@@ -276,6 +307,15 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
           <span className="text-sm font-syne font-bold text-accent3 w-12 text-right">{totalProgress}% completed</span>
         </div>
       </div>
+
+<div className="card p-0 overflow-hidden">
+  <div className="overflow-x-auto">
+    <div style={{ minWidth: `${NAME_W + days.length * COL_W}px` }}>
+```
+Change the outer div to:
+```typescript
+<div className="card p-0 overflow-hidden" id="gantt-chart-container">
+
 
       {/* Gantt chart */}
       <div className="card p-0 overflow-hidden">
@@ -955,7 +995,7 @@ function ProjectModal({ project, onSave, onClose }: {
 
         <div className="flex gap-2 justify-end p-6 pt-0 border-t border-border mt-2">
           <button onClick={onClose} className="btn-ghost text-sm px-4 py-2">Cancel</button>
-          <button onClick={() => onSave({ ...form })} className="btn-primary text-sm px-4 py-2">Save Project</button>
+          <button onClick={() => onSave({ ...form, budget_total: form.budget_total !== '' ? Number(form.budget_total) : null })} className="btn-primary text-sm px-4 py-2">Save Project</button>
         </div>
       </div>
     </div>

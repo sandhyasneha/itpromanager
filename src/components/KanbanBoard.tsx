@@ -170,22 +170,6 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
       ]),
     ]
 
-// Download Gantt as PNG image
-async function downloadGanttPNG() {
-  try {
-    // Find the gantt chart element
-    const ganttEl = document.getElementById('gantt-chart-container')
-    if (!ganttEl) { alert('Gantt chart not found'); return }
-
-    // Dynamically import html2canvas
-    const html2canvas = (await import('html2canvas')).default
-    const canvas = await html2canvas(ganttEl, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#0f172a',
-      logging: false,
-    })
-
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -196,20 +180,30 @@ async function downloadGanttPNG() {
     URL.revokeObjectURL(url)
   }
 
-<div className="flex items-center gap-2 ml-2 border-l border-border pl-2">
-  <button onClick={downloadTimelineTXT}
-    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent2/10 border border-accent2/30 text-accent2 rounded-lg hover:bg-accent2/20 transition-colors font-semibold text-xs">
-    📄 TXT
-  </button>
-  <button onClick={downloadTimelineCSV}
-    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent3/10 border border-accent3/30 text-accent3 rounded-lg hover:bg-accent3/20 transition-colors font-semibold text-xs">
-    📊 CSV
-  </button>
-  <button onClick={downloadGanttPNG}
-    className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-500/10 border border-violet-500/30 text-violet-400 rounded-lg hover:bg-violet-500/20 transition-colors font-semibold text-xs">
-    🖼️ PNG
-  </button>
-</div>
+  // Download Gantt as PNG image
+  async function downloadGanttPNG() {
+    try {
+      const ganttEl = document.getElementById('gantt-chart-container')
+      if (!ganttEl) { alert('Gantt chart not found'); return }
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(ganttEl, {
+        scale: 2, useCORS: true, backgroundColor: '#0f172a', logging: false,
+      })
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.font = 'bold 20px Arial'
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.6)'
+        ctx.textAlign = 'right'
+        ctx.fillText('nexplan.io', canvas.width - 20, canvas.height - 20)
+      }
+      const link = document.createElement('a')
+      link.download = `${(project?.name ?? 'gantt').replace(/[^a-zA-Z0-9]/g, '-')}-NexPlan-Gantt.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (e) {
+      alert('PNG export failed — please try again')
+    }
+  }
 
   // Download timeline as TXT
   function downloadTimelineTXT() {
@@ -255,21 +249,6 @@ async function downloadGanttPNG() {
   }
 
 
-<div className="flex items-center gap-2 ml-2 border-l border-border pl-2">
-  <button onClick={downloadTimelineTXT}
-    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent2/10 border border-accent2/30 text-accent2 rounded-lg hover:bg-accent2/20 transition-colors font-semibold text-xs">
-    📄 TXT
-  </button>
-  <button onClick={downloadTimelineCSV}
-    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent3/10 border border-accent3/30 text-accent3 rounded-lg hover:bg-accent3/20 transition-colors font-semibold text-xs">
-    📊 CSV
-  </button>
-  <button onClick={downloadGanttPNG}
-    className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-500/10 border border-violet-500/30 text-violet-400 rounded-lg hover:bg-violet-500/20 transition-colors font-semibold text-xs">
-    🖼️ PNG
-  </button>
-</div>
-
   return (
     <div className="space-y-4">
 
@@ -311,6 +290,10 @@ async function downloadGanttPNG() {
               <button onClick={downloadTimelineCSV}
                 className="flex items-center gap-1 px-2.5 py-1.5 bg-accent3/10 border border-accent3/30 text-accent3 rounded-lg hover:bg-accent3/20 transition-colors font-semibold">
                 📊 CSV
+              </button>
+              <button onClick={downloadGanttPNG}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-500/10 border border-violet-500/30 text-violet-400 rounded-lg hover:bg-violet-500/20 transition-colors font-semibold text-xs">
+                🖼️ PNG
               </button>
             </div>
           </div>

@@ -61,6 +61,77 @@ export default function OrganisationClient({
   const [inviteRole, setInviteRole]   = useState('pm')
   const [inviteSending, setInviteSending] = useState(false)
 
+  // Edit workspace state
+  const [editingWs, setEditingWs]     = useState<any>(null)
+  const [editWsName, setEditWsName]   = useState('')
+  const [editWsClient, setEditWsClient] = useState('')
+  const [editWsEmail, setEditWsEmail] = useState('')
+  const [editWsDesc, setEditWsDesc]   = useState('')
+  const [editWsColor, setEditWsColor] = useState('#00d4ff')
+  const [editWsLoading, setEditWsLoading] = useState(false)
+
+  // Settings state
+  const [settingsName, setSettingsName]       = useState(org?.name || '')
+  const [settingsIndustry, setSettingsIndustry] = useState(org?.industry || '')
+  const [settingsDesc, setSettingsDesc]       = useState(org?.description || '')
+  const [settingsSaving, setSettingsSaving]   = useState(false)
+
+  function openEditWs(ws: any) {
+    setEditingWs(ws)
+    setEditWsName(ws.name)
+    setEditWsClient(ws.client_name || '')
+    setEditWsEmail(ws.client_email || '')
+    setEditWsDesc(ws.description || '')
+    setEditWsColor(ws.color || '#00d4ff')
+  }
+
+  async function saveWorkspace() {
+    if (!editingWs) return
+    setEditWsLoading(true)
+    try {
+      const { error } = await supabase.from('workspaces').update({
+        name:         editWsName.trim(),
+        client_name:  editWsClient.trim() || null,
+        client_email: editWsEmail.trim() || null,
+        description:  editWsDesc.trim() || null,
+        color:        editWsColor,
+        updated_at:   new Date().toISOString(),
+      }).eq('id', editingWs.id)
+      if (error) throw error
+      setWorkspaces(ws => ws.map(w => w.id === editingWs.id ? {
+        ...w, name: editWsName, client_name: editWsClient,
+        client_email: editWsEmail, description: editWsDesc, color: editWsColor
+      } : w))
+      setMsg({ type: 'success', text: `✅ Workspace "${editWsName}" updated!` })
+      setEditingWs(null)
+    } catch (err: any) {
+      setMsg({ type: 'error', text: `❌ ${err.message}` })
+    } finally {
+      setEditWsLoading(false)
+    }
+  }
+
+  async function saveSettings() {
+    if (!org) return
+    setSettingsSaving(true)
+    try {
+      const { error } = await supabase.from('organisations').update({
+        name:        settingsName.trim(),
+        industry:    settingsIndustry,
+        description: settingsDesc.trim() || null,
+        updated_at:  new Date().toISOString(),
+      }).eq('id', org.id)
+      if (error) throw error
+      setMsg({ type: 'success', text: '✅ Organisation settings saved!' })
+    } catch (err: any) {
+      setMsg({ type: 'error', text: `❌ ${err.message}` })
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  }
+
   function generateSlug(name: string) {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   }
@@ -425,17 +496,25 @@ export default function OrganisationClient({
                     <p className="text-[10px] text-muted font-mono-code">
                       {new Date(ws.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
-                    {isOwner && (
-                      <select value={ws.status}
-                        onChange={e => updateWsStatus(ws.id, e.target.value)}
-                        onClick={e => e.stopPropagation()}
-                        className="text-[10px] border border-border rounded px-1.5 py-1 bg-surface text-muted">
-                        <option value="active">Active</option>
-                        <option value="on_hold">On Hold</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isOwner && (
+                        <button onClick={() => openEditWs(ws)}
+                          className="text-xs text-accent hover:underline font-semibold">
+                          ✏️ Edit
+                        </button>
+                      )}
+                      {isOwner && (
+                        <select value={ws.status}
+                          onChange={e => updateWsStatus(ws.id, e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          className="text-[10px] border border-border rounded px-1.5 py-1 bg-surface text-muted">
+                          <option value="active">Active</option>
+                          <option value="on_hold">On Hold</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -512,24 +591,94 @@ export default function OrganisationClient({
       {/* ── SETTINGS TAB ── */}
       {tab === 'settings' && (
         <div className="card space-y-4 max-w-lg">
-          <h3 className="font-syne font-bold text-lg">Organisation Settings</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-syne font-bold text-lg">⚙️ Organisation Settings</h3>
+            <button onClick={() => setTab('workspaces')} className="text-muted hover:text-text text-xl px-2">✕</button>
+          </div>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Organisation Name</label>
-              <input className="input w-full" defaultValue={org.name}/>
+              <input className="input w-full" value={settingsName} onChange={e => setSettingsName(e.target.value)}/>
             </div>
             <div>
               <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Industry</label>
-              <select className="select w-full" defaultValue={org.industry}>
+              <select className="select w-full" value={settingsIndustry} onChange={e => setSettingsIndustry(e.target.value)}>
                 {INDUSTRY_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Description</label>
-              <textarea className="input w-full resize-none h-20 text-sm" defaultValue={org.description}/>
+              <textarea className="input w-full resize-none h-20 text-sm"
+                value={settingsDesc} onChange={e => setSettingsDesc(e.target.value)}/>
             </div>
           </div>
-          <button className="btn-primary px-6 py-2 text-sm">Save Changes</button>
+          <div className="flex gap-3">
+            <button onClick={saveSettings} disabled={settingsSaving}
+              className="btn-primary px-6 py-2 text-sm disabled:opacity-50">
+              {settingsSaving ? '⟳ Saving...' : '💾 Save Changes'}
+            </button>
+            <button onClick={() => setTab('workspaces')} className="btn-ghost px-6 py-2 text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── WORKSPACE EDIT MODAL ── */}
+      {editingWs && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setEditingWs(null)}>
+          <div className="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
+              <h3 className="font-syne font-bold text-lg">✏️ Edit Workspace</h3>
+              <button onClick={() => setEditingWs(null)} className="text-muted hover:text-text text-xl px-2">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Workspace Name *</label>
+                  <input className="input w-full" value={editWsName} onChange={e => setEditWsName(e.target.value)}/>
+                </div>
+                <div>
+                  <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Client Name</label>
+                  <input className="input w-full" value={editWsClient} onChange={e => setEditWsClient(e.target.value)}/>
+                </div>
+                <div>
+                  <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Client Email</label>
+                  <input className="input w-full" type="email" value={editWsEmail} onChange={e => setEditWsEmail(e.target.value)}/>
+                </div>
+                <div>
+                  <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Colour</label>
+                  <div className="flex items-center gap-3">
+                    <input type="color" value={editWsColor} onChange={e => setEditWsColor(e.target.value)}
+                      className="w-10 h-10 rounded-lg border border-border cursor-pointer"/>
+                    <div className="flex gap-2">
+                      {['#00d4ff','#7c3aed','#22d3a5','#f59e0b','#ef4444','#06b6d4'].map(c => (
+                        <button key={c} onClick={() => setEditWsColor(c)}
+                          className={`w-7 h-7 rounded-full border-2 transition-all ${editWsColor === c ? 'border-text scale-110' : 'border-transparent'}`}
+                          style={{ background: c }}/>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Description</label>
+                <textarea className="input w-full resize-none h-16 text-sm"
+                  value={editWsDesc} onChange={e => setEditWsDesc(e.target.value)}/>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={saveWorkspace} disabled={editWsLoading || !editWsName.trim()}
+                  className="btn-primary px-6 py-2 text-sm disabled:opacity-50">
+                  {editWsLoading ? '⟳ Saving...' : '💾 Save Changes'}
+                </button>
+                <button onClick={() => setEditingWs(null)} className="btn-ghost px-6 py-2 text-sm">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

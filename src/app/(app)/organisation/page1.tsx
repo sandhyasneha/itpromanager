@@ -1,6 +1,7 @@
 // src/app/(app)/organisation/page.tsx
+// Organisation management page — create org, manage workspaces & members
+
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import OrganisationClient from '@/components/OrganisationClient'
 
@@ -9,53 +10,40 @@ export default async function OrganisationPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Use service client to bypass RLS for org data
-  const serviceClient = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-
   // Check if user owns an org
-  const { data: myOrg } = await serviceClient
+  const { data: myOrg } = await supabase
     .from('organisations')
     .select('*')
     .eq('owner_id', user.id)
     .single()
 
   // Check if user is a member of an org
-  const { data: membership } = await serviceClient
+  const { data: membership } = await supabase
     .from('organisation_members')
     .select('*, organisations(*)')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .single()
 
-  const org = myOrg || (membership?.organisations as any) || null
-
+  // Load workspaces if org exists
   let workspaces: any[] = []
   let orgMembers: any[] = []
+  const org = myOrg || membership?.organisations
 
   if (org) {
     const [{ data: ws }, { data: members }] = await Promise.all([
-      serviceClient
-        .from('workspaces')
-        .select('*')
-        .eq('org_id', org.id)
-        .order('created_at', { ascending: false }),
-      serviceClient
-        .from('organisation_members')
-        .select('*, profiles(full_name, email)')
-        .eq('org_id', org.id)
-        .neq('status', 'removed')
-        .order('created_at', { ascending: true }),
+      supabase.from('workspaces').select('*').eq('org_id', org.id).order('created_at', { ascending: false }),
+      supabase.from('organisation_members').select('*, profiles(full_name, email)').eq('org_id', org.id).neq('status', 'removed'),
     ])
-    workspaces = ws      ?? []
-    orgMembers = members ?? []
+    workspaces  = ws      ?? []
+    orgMembers  = members ?? []
   }
+
+  const profile = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
   return (
     <OrganisationClient
-      org={org}
+      org={org || null}
       isOwner={!!myOrg}
       workspaces={workspaces}
       orgMembers={orgMembers}

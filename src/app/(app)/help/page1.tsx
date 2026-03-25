@@ -492,109 +492,6 @@ const GUIDES: Guide[] = [
     ],
   },
 
-  // ── ORGANISATION & WORKSPACES ────────────────────────────
-  {
-    id: 'create-organisation', icon: '🏢', title: 'Creating Your Organisation',
-    subtitle: 'Set up your company account for corporate project management',
-    category: 'Organisation & Workspaces', color: '#7c3aed', estimated: '3 min',
-    steps: [
-      { step: 'Click "Organisation" in the left sidebar', detail: 'The Organisation option appears in the sidebar navigation. If you have not created an organisation yet, you will see the Organisation Setup screen.' },
-      { step: 'Review the benefits and Free Beta badge', detail: 'Organisation accounts are completely free during the beta period — no credit card required. You get unlimited client workspaces, team management and portfolio visibility.' },
-      { step: 'Enter your Organisation Name', detail: 'Use your company name — e.g. "NTT DATA", "TechM", "Wipro". This is the name your team and clients will see.' },
-      { step: 'Set your Organisation URL Slug', detail: 'The slug is auto-generated from your name — e.g. "ntt-data". It appears in your organisation URL: nexplan.io/org/ntt-data. Use only lowercase letters, numbers and hyphens.' },
-      { step: 'Select your Industry', detail: 'Choose the industry that best describes your organisation — e.g. Information Technology, Banking & Finance, Consulting. This helps NexPlan tailor recommendations.' },
-      { step: 'Add a Description (optional)', detail: 'A brief description of your organisation — e.g. "Global IT infrastructure and managed services provider". This is optional but useful for context.' },
-      { step: 'Click "🏢 Create Organisation →"', detail: 'Your organisation is created instantly. You are automatically set as the Organisation Admin with full access to all features.' },
-      { step: 'You land on the Organisation Dashboard', detail: 'The dashboard shows your Client Workspaces, Active Workspaces, Team Members and Pending Invites at a glance. From here you can create workspaces, invite team members and manage settings.' },
-    ],
-    tips: [
-      'Each NexPlan account can have one organisation — your company account',
-      'The Organisation Admin (you) has full control over workspaces, members and settings',
-      'Organisation accounts are free during beta — pricing will be announced before general availability',
-      'Your existing personal projects are separate from Organisation workspaces',
-      'Other companies (e.g. TechM) create their own separate organisations — each company has its own isolated account',
-    ],
-  },
-  {
-    id: 'create-workspace', icon: '📁', title: 'Creating a Client Workspace',
-    subtitle: 'Set up an isolated workspace for each client engagement',
-    category: 'Organisation & Workspaces', color: '#00d4ff', estimated: '3 min',
-    steps: [
-      { step: 'Go to Organisation → Workspaces tab', detail: 'Click "Organisation" in the sidebar. The Workspaces tab is selected by default and shows all your existing client workspaces.' },
-      { step: 'Click "+ New Client Workspace"', detail: 'The button is in the top right of the Organisation page. Clicking it opens the New Workspace form at the top of the page.' },
-      { step: 'Enter the Workspace Name', detail: 'Use a descriptive name that identifies the client and engagement — e.g. "UBS Bank — Network Upgrade 2026" or "Citi Bank — DC Migration Q1". This name is visible to all team members assigned to the workspace.' },
-      { step: 'Enter the Client Name', detail: 'The short client name — e.g. "UBS Bank". This appears on the workspace card and is used for quick identification.' },
-      { step: 'Enter the Client Contact Email', detail: 'The primary contact email at the client organisation — e.g. "john.smith@ubsbank.com". This is used for the Client Viewer Portal (coming soon) and communications.' },
-      { step: 'Choose a Workspace Colour', detail: 'Select a colour to visually distinguish this workspace from others. Click one of the preset colours or use the colour picker for a custom colour. Each client workspace should have a unique colour.' },
-      { step: 'Add a Description (optional)', detail: 'A brief description of the engagement — e.g. "Q1 2026 network infrastructure upgrade across 3 Singapore data centres". Useful for onboarding new team members.' },
-      { step: 'Click "✅ Create Workspace"', detail: 'The workspace is created and appears as a card on your Workspaces tab. You can now create projects inside this workspace and assign team members to it.' },
-    ],
-    tips: [
-      'Create one workspace per client — e.g. separate workspaces for UPS, Citi Bank, UBS',
-      'Each workspace is completely isolated — team members in one workspace cannot see another client\'s data',
-      'Use distinctive colours for each client workspace for easy visual identification',
-      'You can change the workspace status (Active, On Hold, Completed, Cancelled) using the dropdown on the workspace card',
-      'Click ✏️ Edit on any workspace card to update the name, client details, colour or description at any time',
-    ],
-  },
-  {
-    id: 'edit-workspace', icon: '✏️', title: 'Editing a Client Workspace',
-    subtitle: 'Update workspace details, client info and status',
-    category: 'Organisation & Workspaces', color: '#22d3a5', estimated: '2 min',
-    steps: [
-      { step: 'Go to Organisation → Workspaces tab', detail: 'Click "Organisation" in the sidebar to see all your client workspace cards.' },
-      { step: 'Find the workspace you want to edit', detail: 'Each workspace card shows the workspace name, client name, description, client email, creation date and current status.' },
-      { step: 'Click "✏️ Edit" on the workspace card', detail: 'The Edit Workspace modal opens with all current details pre-filled.' },
-      { step: 'Update the details as needed', detail: 'You can change the Workspace Name, Client Name, Client Email, Description and Colour. All fields are editable.' },
-      { step: 'Click "💾 Save Changes"', detail: 'Changes are saved immediately. The workspace card updates to show the new details.' },
-      { step: 'To change workspace status, use the dropdown', detail: 'The status dropdown on the workspace card (not in the edit modal) lets you change the status: Active, On Hold, Completed, or Cancelled. This updates instantly without needing to save.' },
-    ],
-    tips: [
-      'Update the workspace status to "Completed" when a client engagement ends — this keeps your workspace list clean',
-      'Use "On Hold" for paused engagements — the workspace and all its data is preserved',
-      'Changing the workspace colour updates it immediately across all views',
-    ],
-  },
-  {
-    id: 'org-settings', icon: '⚙️', title: 'Managing Organisation Settings',
-    subtitle: 'Update your organisation name, industry and description',
-    category: 'Organisation & Workspaces', color: '#f59e0b', estimated: '2 min',
-    steps: [
-      { step: 'Go to Organisation → Settings tab', detail: 'Click "Organisation" in the sidebar, then click the "⚙️ Settings" tab.' },
-      { step: 'Update Organisation Name', detail: 'Change your organisation name if needed — e.g. if your company rebrands or you entered it incorrectly. The URL slug does not change when you update the name.' },
-      { step: 'Update Industry', detail: 'Select the most appropriate industry from the dropdown for your organisation.' },
-      { step: 'Update Description', detail: 'Add or update the description to reflect your organisation\'s services and focus areas.' },
-      { step: 'Click "💾 Save Changes"', detail: 'Changes are saved immediately and reflected across the Organisation page.' },
-      { step: 'Click ✕ or Cancel to discard changes', detail: 'If you change your mind, click the ✕ close button in the top right of the Settings panel or click "Cancel" to discard your changes and return to the Workspaces tab.' },
-    ],
-    tips: [
-      'Only the Organisation Admin can access and change organisation settings',
-      'The organisation URL slug (e.g. nexplan.io/org/ntt-data) cannot be changed after creation — choose it carefully',
-      'Settings changes take effect immediately — no need to refresh the page',
-    ],
-  },
-  {
-    id: 'org-invite-team', icon: '👥', title: 'Inviting Team Members to Your Organisation',
-    subtitle: 'Add PMs, engineers and account managers to your organisation',
-    category: 'Organisation & Workspaces', color: '#00d4ff', estimated: '3 min',
-    steps: [
-      { step: 'Go to Organisation → 👥 Team tab', detail: 'Click "Organisation" in the sidebar, then click the "👥 Team" tab to see your organisation members and invite new ones.' },
-      { step: 'Enter the colleague\'s email address', detail: 'Type the full email address of the person you want to invite to your organisation — e.g. pm@nttdata.com.' },
-      { step: 'Select their Organisation Role', detail: 'Choose the appropriate role: Account Manager (oversees client relationships and has broad visibility), Project Manager (manages specific workspace projects), Engineer (works on tasks within assigned workspaces), or Viewer (read-only access).' },
-      { step: 'Click "📨 Invite"', detail: 'NexPlan sends a personalised organisation invitation email immediately. The email contains your organisation name, the invitee\'s assigned role and a direct "Accept Invitation" link.' },
-      { step: 'Colleague clicks "Accept Invitation" in their email', detail: 'The invite link takes them to the NexPlan organisation invite page showing your organisation name and their role. They sign in or create a free account, then click "✅ Accept Invitation".' },
-      { step: 'They are redirected to the Organisation page', detail: 'After accepting, the new member lands on the Organisation page and can see the organisation. Their status changes from "invited" to "active" and the Team Members count increases.' },
-      { step: 'Assign them to specific client workspaces', detail: 'Being an organisation member gives access to the organisation — you also need to assign them to specific workspace projects. Use the 👥 Team button in the Kanban Board to add them to individual projects.' },
-    ],
-    tips: [
-      'Organisation roles are separate from project roles — an org PM can be assigned as an Engineer on a specific project',
-      'Pending invites show in the Pending Invites count on the organisation dashboard',
-      'Team members who have not yet accepted show as "⏳ pending" in the Team tab',
-      'There is no limit to the number of team members you can invite during beta',
-      'Invited members receive their invitation email instantly — ask them to check spam if they do not receive it within 2 minutes',
-    ],
-  },
-
   // ── SUPPORT GUIDES (Phase 6) ──────────────────────────────
   {
     id: 'raise-ticket', icon: '🎫', title: 'Raising a Support Ticket',
@@ -667,7 +564,7 @@ const GUIDES: Guide[] = [
   },
 ]
 
-const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Phase 9 Features', 'Team Collaboration', 'Organisation & Workspaces', 'Support']
+const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Phase 9 Features', 'Team Collaboration', 'Support']
 
 const CAT_COLORS: Record<string, string> = {
   'Getting Started':    '#00d4ff',
@@ -678,7 +575,6 @@ const CAT_COLORS: Record<string, string> = {
   'Phase 8 Features':   '#06b6d4',
   'Phase 9 Features':   '#22d3a5',
   'Team Collaboration': '#00d4ff',
-  'Organisation & Workspaces': '#7c3aed',
 }
 
 const CAT_ICONS: Record<string, string> = {
@@ -691,7 +587,6 @@ const CAT_ICONS: Record<string, string> = {
   'Phase 8 Features':   '✨',
   'Phase 9 Features':   '🚀',
   'Team Collaboration': '👥',
-  'Organisation & Workspaces': '🏢',
 }
 
 // ── Support Ticket Form (inline, no import needed) ──────────

@@ -169,6 +169,23 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
         String(progressByStatus[t.status] ?? 0) + '%',
       ]),
     ]
+
+// Download Gantt as PNG image
+async function downloadGanttPNG() {
+  try {
+    // Find the gantt chart element
+    const ganttEl = document.getElementById('gantt-chart-container')
+    if (!ganttEl) { alert('Gantt chart not found'); return }
+
+    // Dynamically import html2canvas
+    const html2canvas = (await import('html2canvas')).default
+    const canvas = await html2canvas(ganttEl, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#0f172a',
+      logging: false,
+    })
+
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -178,6 +195,21 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
     a.click()
     URL.revokeObjectURL(url)
   }
+
+<div className="flex items-center gap-2 ml-2 border-l border-border pl-2">
+  <button onClick={downloadTimelineTXT}
+    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent2/10 border border-accent2/30 text-accent2 rounded-lg hover:bg-accent2/20 transition-colors font-semibold text-xs">
+    📄 TXT
+  </button>
+  <button onClick={downloadTimelineCSV}
+    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent3/10 border border-accent3/30 text-accent3 rounded-lg hover:bg-accent3/20 transition-colors font-semibold text-xs">
+    📊 CSV
+  </button>
+  <button onClick={downloadGanttPNG}
+    className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-500/10 border border-violet-500/30 text-violet-400 rounded-lg hover:bg-violet-500/20 transition-colors font-semibold text-xs">
+    🖼️ PNG
+  </button>
+</div>
 
   // Download timeline as TXT
   function downloadTimelineTXT() {
@@ -221,6 +253,22 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
     a.click()
     URL.revokeObjectURL(url)
   }
+
+
+<div className="flex items-center gap-2 ml-2 border-l border-border pl-2">
+  <button onClick={downloadTimelineTXT}
+    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent2/10 border border-accent2/30 text-accent2 rounded-lg hover:bg-accent2/20 transition-colors font-semibold text-xs">
+    📄 TXT
+  </button>
+  <button onClick={downloadTimelineCSV}
+    className="flex items-center gap-1 px-2.5 py-1.5 bg-accent3/10 border border-accent3/30 text-accent3 rounded-lg hover:bg-accent3/20 transition-colors font-semibold text-xs">
+    📊 CSV
+  </button>
+  <button onClick={downloadGanttPNG}
+    className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-500/10 border border-violet-500/30 text-violet-400 rounded-lg hover:bg-violet-500/20 transition-colors font-semibold text-xs">
+    🖼️ PNG
+  </button>
+</div>
 
   return (
     <div className="space-y-4">
@@ -276,6 +324,15 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
           <span className="text-sm font-syne font-bold text-accent3 w-12 text-right">{totalProgress}% completed</span>
         </div>
       </div>
+
+<div className="card p-0 overflow-hidden">
+  <div className="overflow-x-auto">
+    <div style={{ minWidth: `${NAME_W + days.length * COL_W}px` }}>
+```
+Change the outer div to:
+```typescript
+<div className="card p-0 overflow-hidden" id="gantt-chart-container">
+
 
       {/* Gantt chart */}
       <div className="card p-0 overflow-hidden">

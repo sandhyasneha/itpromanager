@@ -1,4 +1,3 @@
-// src/components/OrganisationClient.tsx
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -25,6 +24,8 @@ const WS_STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-red-500/10 text-red-400 border-red-500/30',
 }
 
+const COLORS = ['#00d4ff','#7c3aed','#22d3a5','#f59e0b','#ef4444','#06b6d4']
+
 export default function OrganisationClient({
   org, isOwner, workspaces: initialWorkspaces, orgMembers: initialMembers,
   userId, userEmail, userRole
@@ -42,39 +43,43 @@ export default function OrganisationClient({
   const [loading, setLoading]       = useState(false)
 
   // Create org form
-  const [orgName, setOrgName]       = useState('')
-  const [orgSlug, setOrgSlug]       = useState('')
-  const [orgDesc, setOrgDesc]       = useState('')
+  const [orgName, setOrgName]         = useState('')
+  const [orgSlug, setOrgSlug]         = useState('')
+  const [orgDesc, setOrgDesc]         = useState('')
   const [orgIndustry, setOrgIndustry] = useState('Information Technology')
 
   // Create workspace form
-  const [showWsForm, setShowWsForm] = useState(false)
-  const [wsName, setWsName]         = useState('')
-  const [wsClient, setWsClient]     = useState('')
+  const [showWsForm, setShowWsForm]   = useState(false)
+  const [wsName, setWsName]           = useState('')
+  const [wsClient, setWsClient]       = useState('')
   const [wsClientEmail, setWsClientEmail] = useState('')
-  const [wsDesc, setWsDesc]         = useState('')
-  const [wsColor, setWsColor]       = useState('#00d4ff')
-  const [wsLoading, setWsLoading]   = useState(false)
+  const [wsDesc, setWsDesc]           = useState('')
+  const [wsColor, setWsColor]         = useState('#00d4ff')
+  const [wsLoading, setWsLoading]     = useState(false)
 
-  // Invite member form
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole]   = useState('pm')
-  const [inviteSending, setInviteSending] = useState(false)
-
-  // Edit workspace state
-  const [editingWs, setEditingWs]     = useState<any>(null)
-  const [editWsName, setEditWsName]   = useState('')
+  // Edit workspace form
+  const [editingWs, setEditingWs]       = useState<any>(null)
+  const [editWsName, setEditWsName]     = useState('')
   const [editWsClient, setEditWsClient] = useState('')
-  const [editWsEmail, setEditWsEmail] = useState('')
-  const [editWsDesc, setEditWsDesc]   = useState('')
-  const [editWsColor, setEditWsColor] = useState('#00d4ff')
+  const [editWsEmail, setEditWsEmail]   = useState('')
+  const [editWsDesc, setEditWsDesc]     = useState('')
+  const [editWsColor, setEditWsColor]   = useState('#00d4ff')
   const [editWsLoading, setEditWsLoading] = useState(false)
 
-  // Settings state
-  const [settingsName, setSettingsName]       = useState(org?.name || '')
+  // Invite member form
+  const [inviteEmail, setInviteEmail]   = useState('')
+  const [inviteRole, setInviteRole]     = useState('pm')
+  const [inviteSending, setInviteSending] = useState(false)
+
+  // Settings
+  const [settingsName, setSettingsName]         = useState(org?.name || '')
   const [settingsIndustry, setSettingsIndustry] = useState(org?.industry || '')
-  const [settingsDesc, setSettingsDesc]       = useState(org?.description || '')
-  const [settingsSaving, setSettingsSaving]   = useState(false)
+  const [settingsDesc, setSettingsDesc]         = useState(org?.description || '')
+  const [settingsSaving, setSettingsSaving]     = useState(false)
+
+  function generateSlug(name: string) {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  }
 
   function openEditWs(ws: any) {
     setEditingWs(ws)
@@ -85,24 +90,68 @@ export default function OrganisationClient({
     setEditWsColor(ws.color || '#00d4ff')
   }
 
+  async function createOrganisation() {
+    if (!orgName.trim() || !orgSlug.trim()) return
+    setLoading(true)
+    setMsg(null)
+    try {
+      const { data, error } = await supabase.from('organisations').insert({
+        name: orgName.trim(), slug: orgSlug.trim(),
+        description: orgDesc.trim() || null, industry: orgIndustry,
+        owner_id: userId, plan: 'beta', status: 'active',
+      }).select().single()
+      if (error) throw error
+      await supabase.from('organisation_members').insert({
+        org_id: data.id, user_id: userId, email: userEmail,
+        role: 'org_admin', status: 'active', joined_at: new Date().toISOString(),
+      })
+      await supabase.from('profiles').update({ org_id: data.id, org_role: 'org_admin' }).eq('id', userId)
+      setMsg({ type: 'success', text: '🎉 Organisation created!' })
+      setTimeout(() => router.refresh(), 1000)
+    } catch (err: any) {
+      setMsg({ type: 'error', text: err.message.includes('slug') ? '❌ Slug already taken.' : `❌ ${err.message}` })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function createWorkspace() {
+    if (!wsName.trim() || !org) return
+    setWsLoading(true)
+    setMsg(null)
+    try {
+      const { data, error } = await supabase.from('workspaces').insert({
+        org_id: org.id, name: wsName.trim(),
+        client_name: wsClient.trim() || null, client_email: wsClientEmail.trim() || null,
+        description: wsDesc.trim() || null, color: wsColor, created_by: userId, status: 'active',
+      }).select().single()
+      if (error) throw error
+      setWorkspaces((ws: any[]) => [data, ...ws])
+      setShowWsForm(false)
+      setWsName(''); setWsClient(''); setWsClientEmail(''); setWsDesc('')
+      setMsg({ type: 'success', text: `✅ Workspace "${data.name}" created!` })
+    } catch (err: any) {
+      setMsg({ type: 'error', text: `❌ ${err.message}` })
+    } finally {
+      setWsLoading(false)
+    }
+  }
+
   async function saveWorkspace() {
     if (!editingWs) return
     setEditWsLoading(true)
     try {
       const { error } = await supabase.from('workspaces').update({
-        name:         editWsName.trim(),
-        client_name:  editWsClient.trim() || null,
-        client_email: editWsEmail.trim() || null,
-        description:  editWsDesc.trim() || null,
-        color:        editWsColor,
-        updated_at:   new Date().toISOString(),
+        name: editWsName.trim(), client_name: editWsClient.trim() || null,
+        client_email: editWsEmail.trim() || null, description: editWsDesc.trim() || null,
+        color: editWsColor, updated_at: new Date().toISOString(),
       }).eq('id', editingWs.id)
       if (error) throw error
-      setWorkspaces(ws => ws.map(w => w.id === editingWs.id ? {
+      setWorkspaces((ws: any[]) => ws.map(w => w.id === editingWs.id ? {
         ...w, name: editWsName, client_name: editWsClient,
-        client_email: editWsEmail, description: editWsDesc, color: editWsColor
+        client_email: editWsEmail, description: editWsDesc, color: editWsColor,
       } : w))
-      setMsg({ type: 'success', text: `✅ Workspace "${editWsName}" updated!` })
+      setMsg({ type: 'success', text: `✅ Workspace updated!` })
       setEditingWs(null)
     } catch (err: any) {
       setMsg({ type: 'error', text: `❌ ${err.message}` })
@@ -116,91 +165,15 @@ export default function OrganisationClient({
     setSettingsSaving(true)
     try {
       const { error } = await supabase.from('organisations').update({
-        name:        settingsName.trim(),
-        industry:    settingsIndustry,
-        description: settingsDesc.trim() || null,
-        updated_at:  new Date().toISOString(),
+        name: settingsName.trim(), industry: settingsIndustry,
+        description: settingsDesc.trim() || null, updated_at: new Date().toISOString(),
       }).eq('id', org.id)
       if (error) throw error
-      setMsg({ type: 'success', text: '✅ Organisation settings saved!' })
+      setMsg({ type: 'success', text: '✅ Settings saved!' })
     } catch (err: any) {
       setMsg({ type: 'error', text: `❌ ${err.message}` })
     } finally {
       setSettingsSaving(false)
-    }
-  }
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  }
-
-  function generateSlug(name: string) {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  }
-
-  async function createOrganisation() {
-    if (!orgName.trim() || !orgSlug.trim()) return
-    setLoading(true)
-    setMsg(null)
-    try {
-      const { data, error } = await supabase.from('organisations').insert({
-        name: orgName.trim(),
-        slug: orgSlug.trim(),
-        description: orgDesc.trim() || null,
-        industry: orgIndustry,
-        owner_id: userId,
-        plan: 'beta',
-        status: 'active',
-      }).select().single()
-
-      if (error) throw error
-
-      // Add owner as org_admin member
-      await supabase.from('organisation_members').insert({
-        org_id:    data.id,
-        user_id:   userId,
-        email:     userEmail,
-        role:      'org_admin',
-        status:    'active',
-        joined_at: new Date().toISOString(),
-      })
-
-      // Update profile with org
-      await supabase.from('profiles').update({ org_id: data.id, org_role: 'org_admin' }).eq('id', userId)
-
-      setMsg({ type: 'success', text: '🎉 Organisation created successfully!' })
-      setTimeout(() => router.refresh(), 1000)
-    } catch (err: any) {
-      setMsg({ type: 'error', text: err.message.includes('slug') ? '❌ This organisation slug is already taken. Try another.' : `❌ ${err.message}` })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function createWorkspace() {
-    if (!wsName.trim() || !org) return
-    setWsLoading(true)
-    setMsg(null)
-    try {
-      const { data, error } = await supabase.from('workspaces').insert({
-        org_id:       org.id,
-        name:         wsName.trim(),
-        client_name:  wsClient.trim() || null,
-        client_email: wsClientEmail.trim() || null,
-        description:  wsDesc.trim() || null,
-        color:        wsColor,
-        created_by:   userId,
-        status:       'active',
-      }).select().single()
-
-      if (error) throw error
-
-      setWorkspaces(ws => [data, ...ws])
-      setShowWsForm(false)
-      setWsName(''); setWsClient(''); setWsClientEmail(''); setWsDesc('')
-      setMsg({ type: 'success', text: `✅ Workspace "${data.name}" created!` })
-    } catch (err: any) {
-      setMsg({ type: 'error', text: `❌ ${err.message}` })
-    } finally {
-      setWsLoading(false)
     }
   }
 
@@ -210,8 +183,7 @@ export default function OrganisationClient({
     setMsg(null)
     try {
       const res  = await fetch('/api/org/invite-member', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId: org.id, email: inviteEmail.trim(), role: inviteRole }),
       })
       const data = await res.json()
@@ -228,10 +200,10 @@ export default function OrganisationClient({
 
   async function updateWsStatus(wsId: string, status: string) {
     await supabase.from('workspaces').update({ status }).eq('id', wsId)
-    setWorkspaces(ws => ws.map(w => w.id === wsId ? { ...w, status } : w))
+    setWorkspaces((ws: any[]) => ws.map(w => w.id === wsId ? { ...w, status } : w))
   }
 
-  // ── No org yet — Setup screen ─────────────────────────────
+  // ── No org — Setup screen ─────────────────────────────────
   if (!org) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
@@ -240,8 +212,6 @@ export default function OrganisationClient({
           <h1 className="font-syne font-black text-3xl">Create Your Organisation</h1>
           <p className="text-muted text-sm mt-1">Set up your company account to manage multiple client workspaces and teams.</p>
         </div>
-
-        {/* Benefits */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { icon: '🏢', title: 'Client Workspaces', desc: 'Isolate each client\'s projects in their own workspace' },
@@ -255,68 +225,47 @@ export default function OrganisationClient({
             </div>
           ))}
         </div>
-
-        {/* Beta badge */}
         <div className="flex items-center gap-3 p-4 bg-accent3/10 border border-accent3/30 rounded-xl">
           <span className="text-2xl">🎉</span>
           <div>
             <p className="font-syne font-bold text-sm text-accent3">Free During Beta</p>
-            <p className="text-xs text-muted">Organisation accounts are completely free during our beta period. No credit card required.</p>
+            <p className="text-xs text-muted">Completely free. No credit card required.</p>
           </div>
         </div>
-
-        {/* Form */}
         <div className="card space-y-4">
           <h3 className="font-syne font-bold text-lg">Organisation Details</h3>
-
           {msg && (
             <div className={`px-4 py-3 rounded-xl text-sm font-semibold ${msg.type === 'success' ? 'bg-accent3/10 text-accent3 border border-accent3/30' : 'bg-danger/10 text-danger border border-danger/30'}`}>
               {msg.text}
             </div>
           )}
-
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">
-                Organisation Name *
-              </label>
+              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Organisation Name *</label>
               <input className="input w-full" placeholder="e.g. NTT DATA"
-                value={orgName}
-                onChange={e => { setOrgName(e.target.value); setOrgSlug(generateSlug(e.target.value)) }}/>
+                value={orgName} onChange={e => { setOrgName(e.target.value); setOrgSlug(generateSlug(e.target.value)) }}/>
             </div>
-
             <div>
-              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">
-                Organisation URL Slug *
-              </label>
+              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Organisation URL Slug *</label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted font-mono-code bg-surface2 px-3 py-2.5 rounded-lg border border-border">nexplan.io/org/</span>
                 <input className="input flex-1" placeholder="ntt-data"
-                  value={orgSlug}
-                  onChange={e => setOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}/>
+                  value={orgSlug} onChange={e => setOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}/>
               </div>
               <p className="text-xs text-muted mt-1">Lowercase letters, numbers and hyphens only</p>
             </div>
-
             <div>
-              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">
-                Industry
-              </label>
+              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Industry</label>
               <select className="select w-full" value={orgIndustry} onChange={e => setOrgIndustry(e.target.value)}>
                 {INDUSTRY_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </div>
-
             <div>
-              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">
-                Description (optional)
-              </label>
-              <textarea className="input w-full resize-none h-20 text-sm"
-                placeholder="Brief description of your organisation..."
+              <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Description (optional)</label>
+              <textarea className="input w-full resize-none h-20 text-sm" placeholder="Brief description..."
                 value={orgDesc} onChange={e => setOrgDesc(e.target.value)}/>
             </div>
           </div>
-
           <button onClick={createOrganisation} disabled={loading || !orgName.trim() || !orgSlug.trim()}
             className="btn-primary w-full py-3 text-sm font-bold disabled:opacity-50">
             {loading ? '⟳ Creating...' : '🏢 Create Organisation →'}
@@ -337,12 +286,8 @@ export default function OrganisationClient({
           <h1 className="font-syne font-black text-3xl">{org.name}</h1>
           <div className="flex items-center gap-3 mt-1">
             <p className="text-muted text-sm">{org.industry}</p>
-            <span className="text-xs font-mono-code text-accent bg-accent/10 px-2 py-0.5 rounded">
-              nexplan.io/org/{org.slug}
-            </span>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-accent3/10 text-accent3 border border-accent3/30">
-              🎉 Beta — Free
-            </span>
+            <span className="text-xs font-mono-code text-accent bg-accent/10 px-2 py-0.5 rounded">nexplan.io/org/{org.slug}</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-accent3/10 text-accent3 border border-accent3/30">🎉 Beta — Free</span>
           </div>
         </div>
         {isOwner && (
@@ -363,10 +308,10 @@ export default function OrganisationClient({
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Client Workspaces', value: workspaces.length,                                      icon: '🏢', color: 'border-accent/30' },
-          { label: 'Active Workspaces', value: workspaces.filter(w => w.status === 'active').length,   icon: '✅', color: 'border-accent3/30' },
-          { label: 'Team Members',      value: members.filter(m => m.status === 'active').length,      icon: '👥', color: 'border-accent2/30' },
-          { label: 'Pending Invites',   value: members.filter(m => m.status === 'invited').length,     icon: '⏳', color: 'border-warn/30' },
+          { label: 'Client Workspaces', value: workspaces.length,                                   icon: '🏢', color: 'border-accent/30' },
+          { label: 'Active Workspaces', value: workspaces.filter((w:any) => w.status === 'active').length, icon: '✅', color: 'border-accent3/30' },
+          { label: 'Team Members',      value: members.filter((m:any) => m.status === 'active').length,    icon: '👥', color: 'border-accent2/30' },
+          { label: 'Pending Invites',   value: members.filter((m:any) => m.status === 'invited').length,   icon: '⏳', color: 'border-warn/30' },
         ].map(s => (
           <div key={s.label} className={`card border ${s.color}`}>
             <div className="flex items-center justify-between mb-2">
@@ -388,18 +333,15 @@ export default function OrganisationClient({
         ))}
       </div>
 
-      {/* ── WORKSPACES TAB ── */}
+      {/* WORKSPACES TAB */}
       {tab === 'workspaces' && (
         <div className="space-y-4">
-
-          {/* Create Workspace Form */}
           {showWsForm && (
             <div className="card border border-accent/30 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-syne font-bold text-lg">➕ New Client Workspace</h3>
                 <button onClick={() => setShowWsForm(false)} className="text-muted hover:text-text">✕</button>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Workspace Name *</label>
@@ -422,7 +364,7 @@ export default function OrganisationClient({
                     <input type="color" value={wsColor} onChange={e => setWsColor(e.target.value)}
                       className="w-10 h-10 rounded-lg border border-border cursor-pointer"/>
                     <div className="flex gap-2">
-                      {['#00d4ff','#7c3aed','#22d3a5','#f59e0b','#ef4444','#06b6d4'].map(c => (
+                      {COLORS.map(c => (
                         <button key={c} onClick={() => setWsColor(c)}
                           className={`w-7 h-7 rounded-full border-2 transition-all ${wsColor === c ? 'border-text scale-110' : 'border-transparent'}`}
                           style={{ background: c }}/>
@@ -431,42 +373,34 @@ export default function OrganisationClient({
                   </div>
                 </div>
               </div>
-
               <div>
                 <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Description</label>
-                <textarea className="input w-full resize-none h-16 text-sm"
-                  placeholder="Brief description of this client engagement..."
+                <textarea className="input w-full resize-none h-16 text-sm" placeholder="Brief description of this client engagement..."
                   value={wsDesc} onChange={e => setWsDesc(e.target.value)}/>
               </div>
-
               <div className="flex gap-3">
                 <button onClick={createWorkspace} disabled={wsLoading || !wsName.trim()}
                   className="btn-primary px-6 py-2 text-sm disabled:opacity-50">
                   {wsLoading ? '⟳ Creating...' : '✅ Create Workspace'}
                 </button>
-                <button onClick={() => setShowWsForm(false)} className="btn-ghost px-6 py-2 text-sm">
-                  Cancel
-                </button>
+                <button onClick={() => setShowWsForm(false)} className="btn-ghost px-6 py-2 text-sm">Cancel</button>
               </div>
             </div>
           )}
 
-          {/* Workspace List */}
           {workspaces.length === 0 ? (
             <div className="card text-center py-16">
               <p className="text-5xl mb-4">🏢</p>
               <p className="font-syne font-bold text-xl mb-2">No Client Workspaces Yet</p>
               <p className="text-muted text-sm mb-6 max-w-md mx-auto">
-                Create a workspace for each client — e.g. "UBS Bank", "Citi Bank", "UPS". Each workspace isolates that client's projects and team.
+                Create a workspace for each client — e.g. "UBS Bank", "Citi Bank", "UPS".
               </p>
-              <button onClick={() => setShowWsForm(true)} className="btn-primary px-6 py-2.5 text-sm">
-                + Create First Workspace
-              </button>
+              <button onClick={() => setShowWsForm(true)} className="btn-primary px-6 py-2.5 text-sm">+ Create First Workspace</button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {workspaces.map(ws => (
-                <div key={ws.id} className="card hover:border-accent/40 transition-all cursor-pointer group"
+              {workspaces.map((ws:any) => (
+                <div key={ws.id} className="card hover:border-accent/40 transition-all"
                   style={{ borderLeft: `4px solid ${ws.color || '#00d4ff'}` }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -483,15 +417,8 @@ export default function OrganisationClient({
                       {ws.status}
                     </span>
                   </div>
-
-                  {ws.description && (
-                    <p className="text-xs text-muted mb-3 line-clamp-2">{ws.description}</p>
-                  )}
-
-                  {ws.client_email && (
-                    <p className="text-xs text-muted font-mono-code mb-3">📧 {ws.client_email}</p>
-                  )}
-
+                  {ws.description && <p className="text-xs text-muted mb-3 line-clamp-2">{ws.description}</p>}
+                  {ws.client_email && <p className="text-xs text-muted font-mono-code mb-3">📧 {ws.client_email}</p>}
                   <div className="flex items-center justify-between pt-3 border-t border-border">
                     <p className="text-[10px] text-muted font-mono-code">
                       {new Date(ws.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -499,14 +426,10 @@ export default function OrganisationClient({
                     <div className="flex items-center gap-2">
                       {isOwner && (
                         <button onClick={() => openEditWs(ws)}
-                          className="text-xs text-accent hover:underline font-semibold">
-                          ✏️ Edit
-                        </button>
+                          className="text-xs text-accent hover:underline font-semibold">✏️ Edit</button>
                       )}
                       {isOwner && (
-                        <select value={ws.status}
-                          onChange={e => updateWsStatus(ws.id, e.target.value)}
-                          onClick={e => e.stopPropagation()}
+                        <select value={ws.status} onChange={e => updateWsStatus(ws.id, e.target.value)}
                           className="text-[10px] border border-border rounded px-1.5 py-1 bg-surface text-muted">
                           <option value="active">Active</option>
                           <option value="on_hold">On Hold</option>
@@ -523,10 +446,9 @@ export default function OrganisationClient({
         </div>
       )}
 
-      {/* ── MEMBERS TAB ── */}
+      {/* MEMBERS TAB */}
       {tab === 'members' && (
         <div className="space-y-5">
-          {/* Invite member */}
           {isOwner && (
             <div className="card space-y-3">
               <h3 className="font-syne font-bold text-base">✉️ Invite Team Member</h3>
@@ -535,8 +457,7 @@ export default function OrganisationClient({
                   value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && inviteMember()}
                   className="input flex-1 min-w-[200px] text-sm"/>
-                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
-                  className="select text-sm w-44">
+                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="select text-sm w-44">
                   <option value="account_manager">Account Manager</option>
                   <option value="pm">Project Manager</option>
                   <option value="engineer">Engineer</option>
@@ -549,15 +470,13 @@ export default function OrganisationClient({
               </div>
             </div>
           )}
-
-          {/* Members list */}
           <div className="card p-0 overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
               <h3 className="font-syne font-bold text-base">Organisation Members</h3>
               <span className="font-mono-code text-xs text-muted">{members.length} total</span>
             </div>
             <div className="divide-y divide-border">
-              {members.map(m => {
+              {members.map((m:any) => {
                 const name     = m.profiles?.full_name || m.email.split('@')[0]
                 const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
                 const isMe     = m.user_id === userId
@@ -576,9 +495,7 @@ export default function OrganisationClient({
                       <span className={`text-xs px-2 py-1 rounded-lg border font-bold ${ORG_ROLE_COLORS[m.role] || ORG_ROLE_COLORS.viewer}`}>
                         {m.role.replace('_', ' ')}
                       </span>
-                      {m.status === 'invited' && (
-                        <span className="text-xs text-warn font-mono-code">⏳ pending</span>
-                      )}
+                      {m.status === 'invited' && <span className="text-xs text-warn font-mono-code">⏳ pending</span>}
                     </div>
                   </div>
                 )
@@ -588,13 +505,18 @@ export default function OrganisationClient({
         </div>
       )}
 
-      {/* ── SETTINGS TAB ── */}
+      {/* SETTINGS TAB */}
       {tab === 'settings' && (
         <div className="card space-y-4 max-w-lg">
           <div className="flex items-center justify-between">
             <h3 className="font-syne font-bold text-lg">⚙️ Organisation Settings</h3>
             <button onClick={() => setTab('workspaces')} className="text-muted hover:text-text text-xl px-2">✕</button>
           </div>
+          {msg && (
+            <div className={`px-4 py-3 rounded-xl text-sm font-semibold ${msg.type === 'success' ? 'bg-accent3/10 text-accent3 border border-accent3/30' : 'bg-danger/10 text-danger border border-danger/30'}`}>
+              {msg.text}
+            </div>
+          )}
           <div className="space-y-3">
             <div>
               <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Organisation Name</label>
@@ -617,14 +539,12 @@ export default function OrganisationClient({
               className="btn-primary px-6 py-2 text-sm disabled:opacity-50">
               {settingsSaving ? '⟳ Saving...' : '💾 Save Changes'}
             </button>
-            <button onClick={() => setTab('workspaces')} className="btn-ghost px-6 py-2 text-sm">
-              Cancel
-            </button>
+            <button onClick={() => setTab('workspaces')} className="btn-ghost px-6 py-2 text-sm">Cancel</button>
           </div>
         </div>
       )}
 
-      {/* ── WORKSPACE EDIT MODAL ── */}
+      {/* WORKSPACE EDIT MODAL */}
       {editingWs && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setEditingWs(null)}>
@@ -654,7 +574,7 @@ export default function OrganisationClient({
                     <input type="color" value={editWsColor} onChange={e => setEditWsColor(e.target.value)}
                       className="w-10 h-10 rounded-lg border border-border cursor-pointer"/>
                     <div className="flex gap-2">
-                      {['#00d4ff','#7c3aed','#22d3a5','#f59e0b','#ef4444','#06b6d4'].map(c => (
+                      {COLORS.map(c => (
                         <button key={c} onClick={() => setEditWsColor(c)}
                           className={`w-7 h-7 rounded-full border-2 transition-all ${editWsColor === c ? 'border-text scale-110' : 'border-transparent'}`}
                           style={{ background: c }}/>
@@ -673,9 +593,7 @@ export default function OrganisationClient({
                   className="btn-primary px-6 py-2 text-sm disabled:opacity-50">
                   {editWsLoading ? '⟳ Saving...' : '💾 Save Changes'}
                 </button>
-                <button onClick={() => setEditingWs(null)} className="btn-ghost px-6 py-2 text-sm">
-                  Cancel
-                </button>
+                <button onClick={() => setEditingWs(null)} className="btn-ghost px-6 py-2 text-sm">Cancel</button>
               </div>
             </div>
           </div>

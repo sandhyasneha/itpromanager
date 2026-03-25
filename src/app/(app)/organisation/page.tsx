@@ -53,6 +53,11 @@ export default async function OrganisationPage() {
     orgMembers = members ?? []
   }
 
+
+console.log('[org-page] org:', org?.id)
+console.log('[org-page] members count:', orgMembers?.length)
+console.log('[org-page] members:', JSON.stringify(orgMembers?.slice(0,2)))
+
   return (
     <OrganisationClient
       org={org}

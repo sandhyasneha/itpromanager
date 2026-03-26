@@ -250,15 +250,6 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
   return (
     <div className="space-y-4">
 
-      {/* Back to Board button inside timeline */}
-      <div className="flex justify-start mb-2">
-        <button
-          onClick={() => { const btn = document.querySelector('[data-view-board]') as HTMLButtonElement; if (btn) btn.click() }}
-          className="text-xs text-accent hover:underline font-semibold flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg transition-colors">
-          ← Back to Board
-        </button>
-      </div>
-
       {/* Summary bar */}
       <div className="card p-4">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-3">
@@ -558,13 +549,13 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}>
-      <div className="card w-full max-w-lg max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="card w-full max-w-lg max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
           <h3 className="font-syne font-black text-lg">Edit Task</h3>
           <button onClick={onClose} className="text-muted hover:text-text text-xl">✕</button>
         </div>
 
-        <div className="overflow-y-auto p-5 space-y-3 flex-1 min-h-0">
+        <div className="overflow-y-auto p-6 space-y-4 flex-1 min-h-0">
           {/* Title */}
           <div>
             <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Task Title</label>
@@ -708,15 +699,7 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
           <button onClick={() => onDelete(task.id)} className="text-danger text-sm hover:underline">Delete Task</button>
           <div className="flex gap-2">
             <button onClick={onClose} className="btn-ghost text-sm px-4 py-2">Cancel</button>
-            <button onClick={() => {
-              // Validate task dates against project dates
-              if (project?.end_date && form.end_date && form.end_date > project.end_date) {
-                if (!confirm(`⚠️ Task end date (${form.end_date}) is after the project end date (${project.end_date}).\n\nThis is only allowed if there is an approved PCR extending the project.\n\nClick OK to save anyway, or Cancel to fix the date.`)) return
-              }
-              if (project?.start_date && form.start_date && form.start_date < project.start_date) {
-                if (!confirm(`⚠️ Task start date (${form.start_date}) is before the project start date (${project.start_date}).\n\nClick OK to save anyway, or Cancel to fix the date.`)) return
-              }
-              onSave({
+            <button onClick={() => onSave({
               title: form.title,
               description: form.description,
               priority: form.priority as TaskPriority,
@@ -1338,7 +1321,7 @@ export default function KanbanBoard({
           {currentProject && (
             <div className="flex items-center gap-1 p-1 bg-surface2 rounded-xl">
               {/* Board / Timeline toggle */}
-              <button onClick={() => setView('board')} data-view-board="true"
+              <button onClick={() => setView('board')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${view === 'board' ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
                 📋 Board
               </button>

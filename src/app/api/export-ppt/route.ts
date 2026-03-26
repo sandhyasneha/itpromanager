@@ -356,10 +356,11 @@ export async function POST(request: Request) {
     sEnd.addShape(pres.ShapeType.rect, { x: 0, y: 5.5, w: '100%', h: 0.12, fill: { color: BRAND.violet } })
 
     // ── Generate file ──────────────────────────────────────────
-    const buffer = await pres.write({ outputType: 'nodebuffer' }) as Buffer
+    
+const buffer = await pres.write({ outputType: 'nodebuffer' }) as Buffer
+const uint8 = new Uint8Array(buffer)
 
-    return new NextResponse(buffer, {
-      headers: {
+return new NextResponse(uint8, {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'Content-Disposition': `attachment; filename="NexPlan-Portfolio-Report-${new Date().toISOString().split('T')[0]}.pptx"`,
       },

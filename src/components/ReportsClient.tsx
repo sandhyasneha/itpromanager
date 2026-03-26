@@ -36,6 +36,38 @@ function ProjectIntelligenceHub({ projects, tasks }: { projects: Project[], task
   const [selectedProject, setSelectedProject] = useState<string>('all')
   const [exportingPPT, setExportingPPT] = useState(false)
 
+  const [exportingPDF, setExportingPDF] = useState(false)
+
+  async function exportToPDF() {
+    setExportingPDF(true)
+    try {
+      const res = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projects: projectHealth,
+          tasks,
+          risks: [],
+          orgName: 'IT Portfolio',
+          generatedBy: 'Portfolio Manager',
+          aiInsights,
+        })
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `NexPlan-Portfolio-Report-${new Date().toISOString().split('T')[0]}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('PDF export failed — please try again')
+    } finally {
+      setExportingPDF(false)
+    }
+  }
+
   async function exportToPPT() {
     setExportingPPT(true)
     try {
@@ -201,6 +233,10 @@ function ProjectIntelligenceHub({ projects, tasks }: { projects: Project[], task
             <option value="all">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+          <button onClick={exportToPDF} disabled={exportingPDF}
+            className="btn-ghost px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60 border border-red-500/30 text-red-400 hover:bg-red-500/10">
+            {exportingPDF ? <><span className="animate-spin">⟳</span> Generating...</> : <>📄 Export PDF</>}
+          </button>
           <button onClick={exportToPPT} disabled={exportingPPT}
             className="btn-ghost px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60 border border-violet-500/30 text-violet-400 hover:bg-violet-500/10">
             {exportingPPT ? <><span className="animate-spin">⟳</span> Generating...</> : <>📊 Export PPT</>}

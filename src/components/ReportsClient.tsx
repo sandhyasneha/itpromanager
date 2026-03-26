@@ -34,6 +34,37 @@ function ProjectIntelligenceHub({ projects, tasks }: { projects: Project[], task
   const [aiInsights, setAiInsights]   = useState<string | null>(null)
   const [aiLoading, setAiLoading]     = useState(false)
   const [selectedProject, setSelectedProject] = useState<string>('all')
+  const [exportingPPT, setExportingPPT] = useState(false)
+
+  async function exportToPPT() {
+    setExportingPPT(true)
+    try {
+      const res = await fetch('/api/export-ppt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projects: projectHealth,
+          tasks,
+          risks: [],
+          orgName: 'IT Portfolio',
+          generatedBy: 'Portfolio Manager',
+          aiInsights,
+        })
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `NexPlan-Portfolio-Report-${new Date().toISOString().split('T')[0]}.pptx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('PPT export failed — please try again')
+    } finally {
+      setExportingPPT(false)
+    }
+  }
 
   const filteredTasks = selectedProject === 'all'
     ? tasks
@@ -135,29 +166,14 @@ function ProjectIntelligenceHub({ projects, tasks }: { projects: Project[], task
         topRisks: riskAlerts.filter(r => r.level === 'critical').map(r => r.message),
       }
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/generate-insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: `You are a senior IT project management consultant. Analyse this project portfolio data and provide concise, actionable intelligence report with 4 sections:
-
-1. **Portfolio Health Summary** (2-3 sentences)
-2. **Top 3 Risks & Recommended Actions** (bullet points)
-3. **Team Performance Observations** (2-3 sentences)
-4. **Priority Recommendations for This Week** (3 bullet points)
-
-Keep it sharp, specific and actionable. No fluff.
-
-Data: ${JSON.stringify(summary, null, 2)}`
-          }]
-        })
+        body: JSON.stringify({ summary })
       })
       const data = await res.json()
-      setAiInsights(data.content?.[0]?.text || 'Unable to generate insights.')
+      if (!res.ok) throw new Error(data.error || 'Failed to generate insights')
+      setAiInsights(data.insights || 'Unable to generate insights.')
     } catch {
       setAiInsights('Failed to generate insights. Please try again.')
     } finally {
@@ -185,6 +201,10 @@ Data: ${JSON.stringify(summary, null, 2)}`
             <option value="all">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+          <button onClick={exportToPPT} disabled={exportingPPT}
+            className="btn-ghost px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60 border border-violet-500/30 text-violet-400 hover:bg-violet-500/10">
+            {exportingPPT ? <><span className="animate-spin">⟳</span> Generating...</> : <>📊 Export PPT</>}
+          </button>
           <button onClick={generateInsights} disabled={aiLoading}
             className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60">
             {aiLoading ? (

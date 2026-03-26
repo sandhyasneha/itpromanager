@@ -717,17 +717,18 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
                 if (!confirm(`⚠️ Task start date (${form.start_date}) is before the project start date (${project.start_date}).\n\nClick OK to save anyway, or Cancel to fix the date.`)) return
               }
               onSave({
-              title: form.title,
-              description: form.description,
-              priority: form.priority as TaskPriority,
-              assignee_name: form.assignee_name,
-              assignee_email: form.assignee_email || undefined,
-              start_date: form.start_date || undefined,
-              end_date: form.end_date || undefined,
-              due_date: form.due_date || undefined,
-              duration: duration ?? undefined,
-              tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-            })} className="btn-primary text-sm px-4 py-2">Save Changes</button>
+                title: form.title,
+                description: form.description,
+                priority: form.priority as TaskPriority,
+                assignee_name: form.assignee_name,
+                assignee_email: form.assignee_email || undefined,
+                start_date: form.start_date || undefined,
+                end_date: form.end_date || undefined,
+                due_date: form.due_date || undefined,
+                duration: duration ?? undefined,
+                tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+              })
+            }} className="btn-primary text-sm px-4 py-2">Save Changes</button>
           </div>
         </div>
       </div>

@@ -41,11 +41,19 @@ function RagBadge({ rag }: { rag: string }) {
   )
 }
 
+interface ExecDashProps {
+  org: any
+  workspaces: any[]
+  projects: any[]
+  tasks: any[]
+  members: any[]
+  userId: string
+  unassignedCount?: number
+}
+
 export default function ExecutiveDashboardClient({
-  org, workspaces, projects, tasks, members, userId
-}: {
-  org: any; workspaces: any[]; projects: any[]; tasks: any[]; members: any[]; userId: string
-}) {
+  org, workspaces, projects, tasks, members, userId, unassignedCount = 0
+}: ExecDashProps) {
   const [selectedWs, setSelectedWs] = useState<string>('all')
   const [exportingPDF, setExportingPDF] = useState(false)
   const [exportingPPT, setExportingPPT] = useState(false)
@@ -98,10 +106,15 @@ export default function ExecutiveDashboardClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projects: projectStats,
+          projects: projectStats.map(p => ({
+            ...p,
+            workspaceName: workspaces.find((w: any) => w.id === p.workspace_id)?.name || '',
+            clientName: workspaces.find((w: any) => w.id === p.workspace_id)?.client_name || '',
+          })),
           tasks,
           risks: [],
           orgName: org.name,
+          workspaces: wsStats,
           generatedBy: 'Portfolio Manager',
           aiInsights: null,
         })
@@ -240,15 +253,15 @@ export default function ExecutiveDashboardClient({
       </div>
 
       {/* Unassigned projects warning */}
-      {projects.filter(p => !p.workspace_id).length > 0 && selectedWs === 'all' && (
+      {unassignedCount > 0 && (
         <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
           <span className="text-2xl">⚠️</span>
           <div>
             <p className="font-syne font-bold text-sm text-amber-400">
-              {projects.filter(p => !p.workspace_id).length} project(s) not assigned to a client workspace
+              {unassignedCount} project(s) not assigned to any client workspace
             </p>
             <p className="text-xs text-amber-300/70">
-              These projects won't appear in workspace health scores. Ask PMs to select a workspace when creating projects.
+              These personal projects are hidden from this dashboard. PMs should select a workspace when creating projects for client accounts.
             </p>
           </div>
         </div>

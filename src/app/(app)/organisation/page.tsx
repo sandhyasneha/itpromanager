@@ -10,6 +10,17 @@ export default async function OrganisationPage() {
   if (!user) redirect('/login')
 
   // Use service client to bypass RLS for org data
+  // Check user plan — only Enterprise users can access Organisation
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.plan !== 'enterprise') {
+    redirect('/dashboard?msg=upgrade')
+  }
+
   const serviceClient = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -44,20 +55,14 @@ export default async function OrganisationPage() {
         .order('created_at', { ascending: false }),
       serviceClient
         .from('organisation_members')
-  .select('*, profiles!organisation_members_user_id_fkey(full_name, email)')
-  .eq('org_id', org.id)
-  .neq('status', 'removed')
-  .order('created_at', { ascending: true }),
+        .select('*, profiles(full_name, email)')
+        .eq('org_id', org.id)
+        .neq('status', 'removed')
+        .order('created_at', { ascending: true }),
     ])
     workspaces = ws      ?? []
     orgMembers = members ?? []
   }
-
-
- 
-console.log('[org-page] org:', org?.id)
-console.log('[org-page] members count:', orgMembers?.length)
-console.log('[org-page] members:', JSON.stringify(orgMembers?.slice(0,2)))
 
   return (
     <OrganisationClient

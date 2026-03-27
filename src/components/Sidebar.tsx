@@ -17,8 +17,6 @@ const NAV = [
   { href: '/reports',      label: 'Reports',         icon: '📈' },
   { href: '/analytics',    label: 'Analytics',       icon: '🔬' },
   { href: '/help',         label: 'Help Center',     icon: '❓' },
-  { href: '/organisation',  label: 'Organisation',    icon: '🏢' },
-  { href: '/organisation/dashboard', label: 'Exec Dashboard', icon: '📊' },
 ]
 
 const ADMIN_NAV = [
@@ -129,6 +127,23 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
             <span className="truncate">{item.label}</span>
           </Link>
         ))}
+
+        {/* Corporate — Enterprise plan only */}
+        {plan === 'enterprise' && (
+          <>
+            <p className="font-mono-code text-slate-400 text-[10px] tracking-widest uppercase px-3 pt-4 pb-1">Corporate</p>
+            <Link href="/organisation"
+              className={`nav-item mb-0.5 ${path.startsWith('/organisation') && !path.includes('dashboard') ? 'active' : ''}`}>
+              <span className="text-base w-5 text-center shrink-0">🏢</span>
+              <span className="truncate">Organisation</span>
+            </Link>
+            <Link href="/organisation/dashboard"
+              className={`nav-item mb-0.5 ${path.includes('/organisation/dashboard') ? 'active' : ''}`}>
+              <span className="text-base w-5 text-center shrink-0">📊</span>
+              <span className="truncate">Exec Dashboard</span>
+            </Link>
+          </>
+        )}
 
         <p className="font-mono-code text-slate-400 text-[10px] tracking-widest uppercase px-3 mt-5 mb-2">
           {isAdmin ? 'Administration' : 'Account'}

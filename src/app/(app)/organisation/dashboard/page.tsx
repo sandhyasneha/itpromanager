@@ -11,6 +11,17 @@ export default async function ExecutiveDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Check user plan — only Enterprise users can access Executive Dashboard
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.plan !== 'enterprise') {
+    redirect('/dashboard?msg=upgrade')
+  }
+
   const serviceClient = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!

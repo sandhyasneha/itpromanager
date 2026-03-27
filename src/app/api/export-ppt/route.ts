@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const pres = new PptxGenJS()
     pres.layout  = 'LAYOUT_16x9'
     pres.author  = generatedBy || 'NexPlan'
-    pres.title   = `${orgName || 'Portfolio'} — Project Intelligence Report`
+    pres.title   = `${orgName || 'Portfolio'} - Project Intelligence Report`
     pres.subject = 'IT Project Management Report'
 
     const totalTasks   = tasks?.length || 0
@@ -182,8 +182,8 @@ export async function POST(request: Request) {
 
       // Workspace/Project name
       const rowLabel = p.client_name
-        ? `${p.name} — ${p.client_name}`
-        : (p.clientName ? `${p.name} — ${p.clientName}` : p.name || 'Unnamed')
+        ? `${p.name} - ${p.client_name}`
+        : (p.clientName ? `${p.name} - ${p.clientName}` : p.name || 'Unnamed')
       s3.addText(rowLabel.substring(0, 45), {
         x: 0.7, y, w: 4.5, h: 0.45,
         fontSize: 13, color: BRAND.text, fontFace: 'Arial', bold: true,
@@ -340,7 +340,7 @@ export async function POST(request: Request) {
         ps.addText('Recent Tasks', { x: 0.5, y: 3.95, w: 9, h: 0.3, fontSize: 13, bold: true, color: BRAND.text, fontFace: 'Arial' })
         projTasks.slice(0, 3).forEach((t: any, ti: number) => {
           const tc = t.status === 'done' ? BRAND.green : t.status === 'blocked' ? BRAND.red : BRAND.accent
-          ps.addText(`${t.title} — ${t.status.replace('_', ' ')}`, {
+          ps.addText(`${t.title} - ${t.status.replace('_', ' ')}`, {
             x: 0.7, y: 4.3 + ti * 0.3, w: 8.8, h: 0.28,
             fontSize: 11, color: tc, fontFace: 'Arial',
           })
@@ -362,13 +362,11 @@ export async function POST(request: Request) {
     sEnd.addShape(pres.ShapeType.rect, { x: 0, y: 5.5, w: '100%', h: 0.12, fill: { color: BRAND.violet } })
 
     // ── Generate file ──────────────────────────────────────────
+    const buffer = await pres.write({ outputType: 'nodebuffer' }) as Buffer
+    const uint8 = new Uint8Array(buffer)
 
-const buffer = await pres.write({ outputType: 'nodebuffer' }) as Buffer
-const uint8 = new Uint8Array(buffer)
-
-return new NextResponse(uint8, {
-
-
+    return new NextResponse(uint8, {
+      headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'Content-Disposition': `attachment; filename="NexPlan-Portfolio-Report-${new Date().toISOString().split('T')[0]}.pptx"`,
       },

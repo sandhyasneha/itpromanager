@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
-    const { projects, tasks, risks, orgName, generatedBy, aiInsights } = await request.json()
+    const { projects, tasks, risks, orgName, generatedBy, aiInsights, workspaces: wsData } = await request.json()
 
     // Use jsPDF via dynamic import
     const { jsPDF } = await import('jspdf')
@@ -136,33 +136,36 @@ export async function POST(request: Request) {
     setFont(C.muted); doc.setFontSize(9)
     doc.text(`${doneTasks} of ${totalTasks} tasks completed`, 20, 116)
 
-    // Project RAG table
-    setFont(C.white); doc.setFontSize(13); doc.setFont('helvetica', 'bold')
-    doc.text('Project Health Overview', 20, 130)
+    // Workspace breakdown
+    const projList  = projects || []
+    const wsList    = wsData   || []
 
-    // Table header
+    setFont(C.white); doc.setFontSize(13); doc.setFont('helvetica', 'bold')
+    doc.text('Client Workspace Overview', 20, 130)
+
+    // Workspace header
     setFill(C.surface); doc.rect(20, 134, 170, 8, 'F')
     setFont(C.muted); doc.setFontSize(9); doc.setFont('helvetica', 'bold')
-    doc.text('PROJECT', 25, 140)
-    doc.text('STATUS', 120, 140)
-    doc.text('SCORE', 155, 140)
-    doc.text('TASKS', 175, 140)
+    doc.text('CLIENT WORKSPACE', 25, 140)
+    doc.text('PROJECTS', 115, 140)
+    doc.text('HEALTH', 140, 140)
+    doc.text('DONE%', 162, 140)
+    doc.text('STATUS', 178, 140)
 
-    const projList = projects || []
-    projList.slice(0, 10).forEach((p: any, i: number) => {
+    const wsToShow = wsList.length > 0 ? wsList : projList.slice(0, 8)
+    wsToShow.slice(0, 8).forEach((ws: any, i: number) => {
       const y = 146 + i * 10
-      const isEven = i % 2 === 0
-      if (isEven) { setFill([20, 30, 48]); doc.rect(20, y - 4, 170, 10, 'F') }
-      const col = ragColor(p.rag || 'green')
+      if (i % 2 === 0) { setFill([20, 30, 48]); doc.rect(20, y - 4, 170, 10, 'F') }
+      const col = ragColor(ws.rag || 'green')
       setFill(col); doc.circle(25, y + 1, 2, 'F')
       setFont(C.white); doc.setFontSize(9); doc.setFont('helvetica', 'normal')
-      const name = (p.name || 'Project').substring(0, 35)
-      doc.text(name, 30, y + 2)
-      const ragText = p.rag === 'green' ? 'On Track' : p.rag === 'amber' ? 'Attention' : 'At Risk'
-      setFont(col); doc.text(ragText, 120, y + 2)
-      setFont(C.white); doc.text(`${p.score || 80}/100`, 155, y + 2)
-      const pTasks = tasks?.filter((t: any) => t.project_id === p.id).length || 0
-      doc.text(String(pTasks), 178, y + 2)
+      const label = ws.client_name ? `${ws.name} — ${ws.client_name}` : (ws.name || ws.clientName || 'Project')
+      doc.text(label.substring(0, 40), 30, y + 2)
+      doc.text(String(ws.projectCount || ws.taskCount || '—'), 118, y + 2)
+      setFont(col); doc.text(`${ws.score || 80}/100`, 140, y + 2)
+      setFont(C.white); doc.text(`${ws.pct || 0}%`, 162, y + 2)
+      const ragText = (ws.rag || 'green') === 'green' ? 'On Track' : (ws.rag || 'green') === 'amber' ? 'Attention' : 'At Risk'
+      setFont(col); doc.text(ragText, 178, y + 2)
     })
 
     setFill(C.violet); doc.rect(0, H - 15, W, 15, 'F')

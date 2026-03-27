@@ -34,7 +34,7 @@ function ragLabel(rag: string) {
 
 export async function POST(request: Request) {
   try {
-    const { projects, tasks, risks, orgName, generatedBy, aiInsights } = await request.json()
+    const { projects, tasks, risks, orgName, generatedBy, aiInsights, workspaces: wsData } = await request.json()
 
     const pres = new PptxGenJS()
     pres.layout  = 'LAYOUT_16x9'
@@ -166,9 +166,12 @@ export async function POST(request: Request) {
     })
 
     const projectList = projects || []
-    const maxRows = Math.min(projectList.length, 8)
+    const wsList      = wsData   || []
+    // Show workspaces if available, otherwise fall back to projects
+    const rowData = wsList.length > 0 ? wsList : projectList
+    const maxRows = Math.min(rowData.length, 8)
 
-    projectList.slice(0, maxRows).forEach((p: any, i: number) => {
+    rowData.slice(0, maxRows).forEach((p: any, i: number) => {
       const y = 1.1 + i * 0.52
       const rag = p.rag || 'green'
       const score = p.score || 80
@@ -177,8 +180,11 @@ export async function POST(request: Request) {
       // RAG dot
       s3.addShape(pres.ShapeType.ellipse, { x: 0.3, y: y + 0.1, w: 0.25, h: 0.25, fill: { color: col } })
 
-      // Project name
-      s3.addText(p.name || 'Unnamed Project', {
+      // Workspace/Project name
+      const rowLabel = p.client_name
+        ? `${p.name} — ${p.client_name}`
+        : (p.clientName ? `${p.name} — ${p.clientName}` : p.name || 'Unnamed')
+      s3.addText(rowLabel.substring(0, 45), {
         x: 0.7, y, w: 4.5, h: 0.45,
         fontSize: 13, color: BRAND.text, fontFace: 'Arial', bold: true,
       })
@@ -356,12 +362,9 @@ export async function POST(request: Request) {
     sEnd.addShape(pres.ShapeType.rect, { x: 0, y: 5.5, w: '100%', h: 0.12, fill: { color: BRAND.violet } })
 
     // ── Generate file ──────────────────────────────────────────
-const buffer = await pres.write({ outputType: 'nodebuffer' }) as Buffer
-const uint8 = new Uint8Array(buffer)
+    const buffer = await pres.write({ outputType: 'nodebuffer' }) as Buffer
 
-return new NextResponse(uint8, {
-
-
+    return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'Content-Disposition': `attachment; filename="NexPlan-Portfolio-Report-${new Date().toISOString().split('T')[0]}.pptx"`,

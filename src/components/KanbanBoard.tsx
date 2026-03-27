@@ -1011,12 +1011,15 @@ function ProjectModal({ project, onSave, onClose }: {
 
 export default function KanbanBoard({
   initialColumns, projects, initialProjectId, currentUserId = '',
+  orgId, orgWorkspaces = [],
 }: {
   initialColumns: KanbanColumn[]
   projects: Project[]
   initialProjectId: string | null
   allTasks?: Task[]
   currentUserId?: string
+  orgId?: string | null
+  orgWorkspaces?: { id: string; name: string; client_name?: string; color?: string }[]
 }) {
   const supabase = createClient()
   const [columns, setColumns] = useState(initialColumns)
@@ -1047,6 +1050,7 @@ export default function KanbanBoard({
   const [showPostMortem, setShowPostMortem] = useState(false)
   const [showBudget, setShowBudget] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
+  const [newProjectWorkspaceId, setNewProjectWorkspaceId] = useState<string>('')
 
   const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
   useEffect(() => {
@@ -1228,6 +1232,8 @@ export default function KanbanBoard({
       const { data: { user } } = await supabase.auth.getUser()
       const { data: project, error: projError } = await supabase.from('projects').insert({
         name: newProjectName.trim(),
+        workspace_id: newProjectWorkspaceId || undefined,
+        org_id: orgId || undefined,
         owner_id: user!.id,
         color: '#00d4ff',
         status: 'active',
@@ -1284,6 +1290,8 @@ export default function KanbanBoard({
       progress: 0,
       start_date: newProjectStart || undefined,
       end_date: newProjectEnd || undefined,
+      workspace_id: newProjectWorkspaceId || undefined,
+      org_id: orgId || undefined,
     }).select().single()
     if (data) {
       setLocalProjects(p => [data as Project, ...p])
@@ -1473,6 +1481,34 @@ export default function KanbanBoard({
                   <input className="input" placeholder="e.g. OSPF to BGP Migration — Singapore"
                     value={newProjectName} onChange={e => setNewProjectName(e.target.value)} autoFocus/>
                 </div>
+
+                {/* Workspace selector — only shown for org members */}
+                {orgWorkspaces.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-syne font-semibold text-muted mb-1.5">
+                      Client Account (Workspace) <span className="text-danger">*</span>
+                    </label>
+                    <select className="select w-full" value={newProjectWorkspaceId}
+                      onChange={e => setNewProjectWorkspaceId(e.target.value)}>
+                      <option value="">— Personal project (no workspace) —</option>
+                      {orgWorkspaces.map(ws => (
+                        <option key={ws.id} value={ws.id}>
+                          {ws.client_name ? `${ws.name} — ${ws.client_name}` : ws.name}
+                        </option>
+                      ))}
+                    </select>
+                    {newProjectWorkspaceId && (
+                      <p className="text-xs text-accent mt-1">
+                        ✅ This project will appear in the Executive Dashboard under {orgWorkspaces.find(w => w.id === newProjectWorkspaceId)?.name}
+                      </p>
+                    )}
+                    {!newProjectWorkspaceId && orgWorkspaces.length > 0 && (
+                      <p className="text-xs text-amber-400 mt-1">
+                        ⚠️ Select a client workspace to include in portfolio reporting
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Dates */}
                 <div className="grid grid-cols-2 gap-3">

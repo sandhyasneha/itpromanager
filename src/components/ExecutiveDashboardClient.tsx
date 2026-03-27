@@ -239,6 +239,21 @@ export default function ExecutiveDashboardClient({
         </div>
       </div>
 
+      {/* Unassigned projects warning */}
+      {projects.filter(p => !p.workspace_id).length > 0 && selectedWs === 'all' && (
+        <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <p className="font-syne font-bold text-sm text-amber-400">
+              {projects.filter(p => !p.workspace_id).length} project(s) not assigned to a client workspace
+            </p>
+            <p className="text-xs text-amber-300/70">
+              These projects won't appear in workspace health scores. Ask PMs to select a workspace when creating projects.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Projects Table */}
       <div>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">

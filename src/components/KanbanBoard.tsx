@@ -1156,6 +1156,30 @@ export default function KanbanBoard({
   async function saveTask(updates: Partial<Task>) {
     if (!editingTask) return
     const old = editingTask
+
+    // Auto-send assignment notification if assignee email changed
+    if (
+      updates.assignee_email &&
+      updates.assignee_email !== old.assignee_email &&
+      updates.assignee_email.trim()
+    ) {
+      const currentProject = localProjects.find(p => p.id === old.project_id)
+      fetch('/api/send-task-assignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assigneeEmail:  updates.assignee_email,
+          assigneeName:   updates.assignee_name || '',
+          assignedBy:     currentUser.name || currentUser.email,
+          taskTitle:      updates.title || old.title,
+          taskDescription: updates.description || old.description || '',
+          taskPriority:   updates.priority || old.priority,
+          taskDueDate:    updates.due_date || old.due_date || null,
+          projectName:    currentProject?.name || '',
+          taskId:         old.id,
+        })
+      }).catch(e => console.warn('Assignment email failed:', e))
+    }
     await supabase.from('tasks').update(updates).eq('id', old.id)
     // Phase 5: log changed fields
     const logBase = {

@@ -474,7 +474,7 @@ function TimelineView({ tasks, project, onEditTask, onEditProject }: {
 }
 
 // Task Edit Modal
-function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, currentUserEmail }: {
+function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, currentUserEmail, orgMembers = [] }: {
   task: Task
   project: Project | null
   onSave: (updates: Partial<Task>) => void
@@ -482,6 +482,7 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
   onDelete: (id: string) => void
   currentUserName: string
   currentUserEmail: string
+  orgMembers?: { user_id: string; email: string; full_name?: string; role?: string }[]
 }) {
   const [form, setForm] = useState({
     title: task.title,
@@ -649,10 +650,35 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
           <div className="bg-surface2 rounded-xl p-4 space-y-3">
             <p className="text-xs font-syne font-bold text-accent2 uppercase tracking-wide">📧 Assignee Notifications</p>
             <div>
-              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">Assignee Email</label>
-              <input type="email" className="input" placeholder="john@company.com" value={form.assignee_email}
-                onChange={e => setForm(f => ({ ...f, assignee_email: e.target.value }))}/>
-              <p className="text-[10px] text-muted mt-1">Team member logs in to nexplan.io/my-tasks to update status</p>
+              <label className="block text-xs font-syne font-semibold text-muted mb-1.5">
+                {orgMembers.length > 0 ? 'Assign to Team Member' : 'Assignee Email'}
+              </label>
+              {orgMembers.length > 0 ? (
+                <select className="select w-full" value={form.assignee_email}
+                  onChange={e => {
+                    const member = orgMembers.find(m => m.email === e.target.value)
+                    setForm(f => ({
+                      ...f,
+                      assignee_email: e.target.value,
+                      assignee_name: member?.full_name || f.assignee_name,
+                    }))
+                  }}>
+                  <option value="">— Select org member —</option>
+                  {orgMembers.map(m => (
+                    <option key={m.user_id} value={m.email}>
+                      {m.full_name ? `${m.full_name} (${m.email})` : m.email}
+                      {m.role ? ` — ${m.role.replace('_',' ')}` : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input type="email" className="input" placeholder="john@company.com" value={form.assignee_email}
+                  onChange={e => setForm(f => ({ ...f, assignee_email: e.target.value }))}/>
+              )}
+              {orgMembers.length > 0
+                ? <p className="text-[10px] text-muted mt-1">Only organisation members can be assigned tasks</p>
+                : <p className="text-[10px] text-muted mt-1">Team member logs in to nexplan.io/my-tasks to update status</p>
+              }
             </div>
             {form.assignee_email && (
               <div className="space-y-2">
@@ -1011,7 +1037,7 @@ function ProjectModal({ project, onSave, onClose }: {
 
 export default function KanbanBoard({
   initialColumns, projects, initialProjectId, currentUserId = '',
-  orgId, orgWorkspaces = [],
+  orgId, orgWorkspaces = [], orgMembers = [],
 }: {
   initialColumns: KanbanColumn[]
   projects: Project[]
@@ -1020,6 +1046,7 @@ export default function KanbanBoard({
   currentUserId?: string
   orgId?: string | null
   orgWorkspaces?: { id: string; name: string; client_name?: string; color?: string }[]
+  orgMembers?: { user_id: string; email: string; full_name?: string; role?: string }[]
 }) {
   const supabase = createClient()
   const [columns, setColumns] = useState(initialColumns)
@@ -1960,6 +1987,7 @@ export default function KanbanBoard({
           onDelete={deleteTask}
           currentUserName={currentUser.name}
           currentUserEmail={currentUser.email}
+          orgMembers={orgMembers}
         />
       )}
 

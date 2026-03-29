@@ -65,6 +65,7 @@ export default async function KanbanPage() {
   // ── Fetch org membership + workspaces (service client) ───────
   let orgId: string | null = null
   let orgWorkspaces: { id: string; name: string; client_name?: string; color?: string }[] = []
+  let orgMembers: { user_id: string; email: string; full_name?: string; role?: string }[] = []
 
   try {
     const serviceClient = createServiceClient(
@@ -82,13 +83,26 @@ export default async function KanbanPage() {
     orgId = ownedOrg?.id || membership?.org_id || null
 
     if (orgId) {
-      const { data: workspaces } = await serviceClient
-        .from('workspaces')
-        .select('id, name, client_name, color')
-        .eq('org_id', orgId)
-        .eq('status', 'active')
-        .order('name')
+      const [{ data: workspaces }, { data: members }] = await Promise.all([
+        serviceClient
+          .from('workspaces')
+          .select('id, name, client_name, color')
+          .eq('org_id', orgId)
+          .eq('status', 'active')
+          .order('name'),
+        serviceClient
+          .from('organisation_members')
+          .select('user_id, email, role, profiles!organisation_members_user_id_fkey(full_name)')
+          .eq('org_id', orgId)
+          .eq('status', 'active'),
+      ])
       orgWorkspaces = workspaces || []
+      orgMembers = (members || []).map((m: any) => ({
+        user_id: m.user_id,
+        email: m.email,
+        full_name: m.profiles?.full_name || null,
+        role: m.role,
+      }))
     }
   } catch (e) {
     // User not in an org — that's fine
@@ -109,6 +123,7 @@ export default async function KanbanPage() {
       currentUserId={user!.id}
       orgId={orgId}
       orgWorkspaces={orgWorkspaces}
+      orgMembers={orgMembers}
     />
   )
 }

@@ -559,8 +559,8 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}>
-      <div className="card w-full max-w-lg max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
+      <div className="card w-full max-w-lg max-h-[98vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 pb-3 border-b border-border shrink-0">
           <h3 className="font-syne font-black text-lg">Edit Task</h3>
           <button onClick={onClose} className="text-muted hover:text-text text-xl">✕</button>
         </div>
@@ -730,7 +730,7 @@ function TaskModal({ task, project, onSave, onClose, onDelete, currentUserName, 
             currentUserEmail={currentUserEmail}
           />
 
-        <div className="flex items-center justify-between p-6 pt-4 border-t border-border shrink-0">
+        <div className="flex items-center justify-between p-4 pt-3 border-t border-border shrink-0">
           <button onClick={() => onDelete(task.id)} className="text-danger text-sm hover:underline">Delete Task</button>
           <div className="flex gap-2">
             <button onClick={onClose} className="btn-ghost text-sm px-4 py-2">Cancel</button>
@@ -1511,7 +1511,7 @@ export default function KanbanBoard({
             onClick={e => e.stopPropagation()}>
 
             {/* Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
+            <div className="flex items-center justify-between p-4 pb-3 border-b border-border shrink-0">
               <div>
                 <p className="font-mono-code text-xs text-accent2 uppercase tracking-widest mb-1">
                   {aiStep === 'form' ? '🤖 AI Project Manager' : '✅ Review AI Generated Tasks'}
@@ -1774,7 +1774,7 @@ export default function KanbanBoard({
             <div className="card w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
 
               {/* Header */}
-              <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
+              <div className="flex items-center justify-between p-4 pb-3 border-b border-border shrink-0">
                 <div>
                   <p className="font-mono-code text-xs text-accent2 uppercase tracking-widest mb-1">Project Plan</p>
                   <h2 className="font-syne font-black text-2xl">{proj.name}</h2>

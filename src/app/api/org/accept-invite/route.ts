@@ -29,10 +29,14 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
-    // Update profile with org
+    // Update profile with org + upgrade to enterprise plan
     await serviceClient
       .from('profiles')
-      .update({ org_id: member.org_id, org_role: member.role })
+      .update({ 
+        org_id: member.org_id, 
+        org_role: member.role,
+        plan: 'enterprise'  // Org members get enterprise access
+      })
       .eq('id', userId)
 
     return NextResponse.json({ success: true, orgId: member.org_id })

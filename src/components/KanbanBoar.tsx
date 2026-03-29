@@ -1248,7 +1248,7 @@ export default function KanbanBoard({
     if (updates.assignee_email && updates.assignee_email !== old.assignee_email) {
       logAudit({ action: AUDIT_ACTIONS.TASK_ASSIGNED, category: 'task',
         entityId: old.id, entityName: old.title,
-        oldValue: old.assignee_email || null, newValue: updates.assignee_email,
+        oldValue: old.assignee_email || undefined, newValue: updates.assignee_email,
         metadata: { projectName: proj?.name } })
     }
     if (updates.priority && updates.priority !== old.priority) {

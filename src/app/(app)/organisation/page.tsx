@@ -55,7 +55,7 @@ export default async function OrganisationPage() {
         .order('created_at', { ascending: false }),
       serviceClient
         .from('organisation_members')
-        .select('*, profiles(full_name, email)')
+        .select('*, profiles!organisation_members_user_id_fkey(full_name, email)')
         .eq('org_id', org.id)
         .neq('status', 'removed')
         .order('created_at', { ascending: true }),

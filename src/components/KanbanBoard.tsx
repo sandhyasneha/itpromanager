@@ -1,4 +1,5 @@
 'use client'
+import { logAudit, AUDIT_ACTIONS } from '@/lib/audit'
 import { useState, useCallback, useEffect } from 'react'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
@@ -1235,12 +1236,35 @@ export default function KanbanBoard({
       tasks: col.tasks.map(t => t.id === old.id ? { ...t, ...updates } : t)
     })))
     setEditingTask(null)
+
+    // Audit logging
+    const proj = localProjects.find(p => p.id === old.project_id)
+    if (updates.status && updates.status !== old.status) {
+      logAudit({ action: AUDIT_ACTIONS.TASK_STATUS_CHANGED, category: 'task',
+        entityId: old.id, entityName: old.title,
+        oldValue: old.status, newValue: updates.status,
+        metadata: { projectName: proj?.name } })
+    }
+    if (updates.assignee_email && updates.assignee_email !== old.assignee_email) {
+      logAudit({ action: AUDIT_ACTIONS.TASK_ASSIGNED, category: 'task',
+        entityId: old.id, entityName: old.title,
+        oldValue: old.assignee_email || null, newValue: updates.assignee_email,
+        metadata: { projectName: proj?.name } })
+    }
+    if (updates.priority && updates.priority !== old.priority) {
+      logAudit({ action: AUDIT_ACTIONS.TASK_PRIORITY_CHANGED, category: 'task',
+        entityId: old.id, entityName: old.title,
+        oldValue: old.priority, newValue: updates.priority })
+    }
   }
 
   async function deleteTask(id: string) {
+    const task = editingTask
     await supabase.from('tasks').delete().eq('id', id)
     setColumns(prev => prev.map(col => ({ ...col, tasks: col.tasks.filter(t => t.id !== id) })))
     setEditingTask(null)
+    if (task) logAudit({ action: AUDIT_ACTIONS.TASK_DELETED, category: 'task',
+      entityId: id, entityName: task.title })
   }
 
   async function saveProject(updates: Partial<Project>) {
@@ -1348,6 +1372,8 @@ export default function KanbanBoard({
       setLocalProjects(p => [data as Project, ...p])
       setProjectId(data.id)
       setColumns(buildColumns([]))
+      logAudit({ action: AUDIT_ACTIONS.PROJECT_CREATED, category: 'project',
+        entityId: data.id, entityName: data.name })
       setNewProjectName('')
       setNewProjectStart('')
       setNewProjectEnd('')

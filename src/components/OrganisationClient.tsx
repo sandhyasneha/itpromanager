@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { logAudit, AUDIT_ACTIONS } from '@/lib/audit'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -130,6 +131,8 @@ export default function OrganisationClient({
       setShowWsForm(false)
       setWsName(''); setWsClient(''); setWsClientEmail(''); setWsDesc('')
       setMsg({ type: 'success', text: `✅ Workspace "${data.name}" created!` })
+      logAudit({ action: AUDIT_ACTIONS.WORKSPACE_CREATED, category: 'workspace',
+        entityId: data.id, entityName: data.name, orgId: org.id })
     } catch (err: any) {
       setMsg({ type: 'error', text: `❌ ${err.message}` })
     } finally {
@@ -152,6 +155,8 @@ export default function OrganisationClient({
         client_email: editWsEmail, description: editWsDesc, color: editWsColor,
       } : w))
       setMsg({ type: 'success', text: `✅ Workspace updated!` })
+      logAudit({ action: AUDIT_ACTIONS.WORKSPACE_UPDATED, category: 'workspace',
+        entityId: editingWs.id, entityName: editWsName, orgId: org?.id })
       setEditingWs(null)
     } catch (err: any) {
       setMsg({ type: 'error', text: `❌ ${err.message}` })
@@ -189,6 +194,9 @@ export default function OrganisationClient({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setMsg({ type: 'success', text: `✅ Invitation sent to ${inviteEmail}` })
+      logAudit({ action: AUDIT_ACTIONS.ORG_MEMBER_INVITED, category: 'org',
+        entityName: inviteEmail, newValue: inviteEmail, orgId: org?.id,
+        metadata: { role: inviteRole } })
       setInviteEmail('')
       router.refresh()
     } catch (err: any) {

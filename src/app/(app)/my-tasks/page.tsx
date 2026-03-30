@@ -16,7 +16,7 @@ export default async function MyTasksPage() {
   if (!user) redirect("/login");
 
   // Fetch tasks assigned to logged-in user with project info
-  const { data: tasks, error } = await supabase
+  const { data: rawTasks, error } = await supabase
     .from("tasks")
     .select(
       `
@@ -27,7 +27,6 @@ export default async function MyTasksPage() {
       priority,
       due_date,
       created_at,
-      updated_at,
       project_id,
       assignee_id,
       projects (
@@ -42,6 +41,22 @@ export default async function MyTasksPage() {
   if (error) {
     console.error("Error fetching tasks:", error);
   }
+
+  // Normalize projects from array to single object
+  const tasks = (rawTasks ?? []).map((t) => ({
+    id: t.id as string,
+    title: t.title as string,
+    description: t.description as string | null,
+    status: t.status as string,
+    priority: t.priority as string,
+    due_date: t.due_date as string | null,
+    created_at: t.created_at as string,
+    project_id: t.project_id as string | null,
+    assignee_id: t.assignee_id as string | null,
+    projects: Array.isArray(t.projects)
+      ? (t.projects[0] as { id: string; name: string } | null) ?? null
+      : (t.projects as { id: string; name: string } | null) ?? null,
+  }));
 
   // Fetch user's profile
   const { data: profile } = await supabase
@@ -58,7 +73,7 @@ export default async function MyTasksPage() {
 
   return (
     <MyTasksClient
-      tasks={tasks ?? []}
+      tasks={tasks}
       profile={profile}
       projects={projects ?? []}
       userId={user.id}

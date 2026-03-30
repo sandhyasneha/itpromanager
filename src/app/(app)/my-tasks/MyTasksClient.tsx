@@ -34,7 +34,6 @@ type Task = {
   created_at: string;
   assignee_id: string | null;
   project_id: string | null;
-  assignee_id: string | null;
   projects?: { id: string; name: string } | null;
 };
 
@@ -598,7 +597,7 @@ export default function MyTasksClient({
 
     const { error } = await supabase
       .from("tasks")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .update({ status: newStatus })
       .eq("id", taskId);
 
     if (error) {

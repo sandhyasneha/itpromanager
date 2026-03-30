@@ -24,6 +24,15 @@ export const metadata: Metadata = {
   creator: 'NexPlan',
   metadataBase: new URL('https://www.nexplan.io'),
   alternates: { canonical: 'https://www.nexplan.io' },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'NexPlan',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: 'NexPlan — Free AI-Powered IT Project Management',
     description: 'Free tool for IT PMs — Kanban boards, AI knowledge base, project plans and network diagrams. No credit card required.',
@@ -48,6 +57,23 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* PWA — iOS */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="NexPlan" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
+
+        {/* PWA — Android / General */}
+        <meta name="theme-color" content="#00d4ff" />
+        <meta name="mobile-web-app-capable" content="yes" />
+
+        {/* Splash screen */}
+        <meta name="msapplication-TileColor" content="#0a0c10" />
+        <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+      </head>
       <body>
         {/* Google Analytics */}
         <Script

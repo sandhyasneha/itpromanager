@@ -1,30 +1,67 @@
-import { createClient } from '@/lib/supabase/server'
-import MyTasksBoard from '@/components/MyTasksBoard'
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import MyTasksClient from "./MyTasksClient";
+
+export const metadata = {
+  title: "My Tasks — NexPlan",
+};
 
 export default async function MyTasksPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  // Fetch tasks assigned to logged-in user with project info
+  const { data: tasks, error } = await supabase
+    .from("tasks")
+    .select(
+      `
+      id,
+      title,
+      description,
+      status,
+      priority,
+      due_date,
+      created_at,
+      updated_at,
+      project_id,
+      assignee_id,
+      projects (
+        id,
+        name
+      )
+    `
+    )
+    .eq("assignee_id", user.id)
+    .order("due_date", { ascending: true, nullsFirst: false });
+
+  if (error) {
+    console.error("Error fetching tasks:", error);
+  }
+
+  // Fetch user's profile
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user!.id)
-    .single()
+    .from("profiles")
+    .select("id, full_name, avatar_url")
+    .eq("id", user.id)
+    .single();
 
-  const email = profile?.email || user?.email || ''
-
-  // Load tasks assigned to this user's email
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('*, projects(id, name, color, start_date, end_date)')
-    .eq('assignee_email', email)
-    .order('due_date', { ascending: true })
+  // Fetch projects for filter dropdown
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, name")
+    .order("name");
 
   return (
-    <MyTasksBoard
-      tasks={tasks || []}
-      userEmail={email}
-      userName={profile?.full_name || email}
+    <MyTasksClient
+      tasks={tasks ?? []}
+      profile={profile}
+      projects={projects ?? []}
+      userId={user.id}
     />
-  )
+  );
 }

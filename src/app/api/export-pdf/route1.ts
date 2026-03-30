@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
-    const { projects, tasks, risks, orgName, generatedBy, aiInsights, workspaces: wsData, brandColor, corporateEmail, websiteUrl } = await request.json()
+    const { projects, tasks, risks, orgName, generatedBy, aiInsights, workspaces: wsData } = await request.json()
 
     // Use jsPDF via dynamic import
     const { jsPDF } = await import('jspdf')
@@ -74,8 +74,6 @@ export async function POST(request: Request) {
     // Meta
     setFont(C.muted); doc.setFontSize(11)
     doc.text(`Generated: ${today}`, 20, 140)
-    if (corporateEmail) { setFont(C.muted); doc.text(`Contact: ${corporateEmail}`, 20, 150) }
-    if (websiteUrl) { setFont(C.muted); doc.text(websiteUrl, 20, corporateEmail ? 158 : 150) }
     doc.text(`Prepared by: ${generatedBy || 'Portfolio Manager'}`, 20, 150)
     doc.text(`Total Projects: ${projects?.length || 0}  |  Completion: ${pct}%  |  Overdue: ${overdueTasks}`, 20, 160)
 

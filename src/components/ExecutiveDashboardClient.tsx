@@ -117,6 +117,9 @@ export default function ExecutiveDashboardClient({
           workspaces: wsStats,
           generatedBy: 'Portfolio Manager',
           aiInsights: null,
+          brandColor: org.brand_color || '#00d4ff',
+          corporateEmail: org.corporate_email || '',
+          websiteUrl: org.website_url || '',
         })
       })
       if (!res.ok) throw new Error('Export failed')

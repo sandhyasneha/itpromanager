@@ -78,6 +78,49 @@ export default function OrganisationClient({
   const [settingsDesc, setSettingsDesc]         = useState(org?.description || '')
   const [settingsSaving, setSettingsSaving]     = useState(false)
 
+  // Corporate settings
+  const [corpEmail, setCorpEmail]         = useState(org?.corporate_email || '')
+  const [adminEmail, setAdminEmail]       = useState(org?.admin_email || '')
+  const [websiteUrl, setWebsiteUrl]       = useState(org?.website_url || '')
+  const [brandColor, setBrandColor]       = useState(org?.brand_color || '#00d4ff')
+  const [officeLocation, setOfficeLocation] = useState(org?.office_location || '')
+  const [phone, setPhone]                 = useState(org?.phone || '')
+  const [consentSharepoint, setConsentSharepoint] = useState(org?.consent_sharepoint || false)
+  const [consentGoogle, setConsentGoogle] = useState(org?.consent_google || false)
+  const [consentOutlook, setConsentOutlook] = useState(org?.consent_outlook || false)
+  const [sharepointUrl, setSharepointUrl] = useState(org?.sharepoint_url || '')
+  const [googleDriveUrl, setGoogleDriveUrl] = useState(org?.google_drive_url || '')
+  const [corpSaving, setCorpSaving]       = useState(false)
+
+  async function saveCorporateSettings() {
+    if (!org) return
+    setCorpSaving(true)
+    try {
+      const { error } = await supabase.from('organisations').update({
+        corporate_email:   corpEmail.trim() || null,
+        admin_email:       adminEmail.trim() || null,
+        website_url:       websiteUrl.trim() || null,
+        brand_color:       brandColor,
+        office_location:   officeLocation.trim() || null,
+        phone:             phone.trim() || null,
+        consent_sharepoint: consentSharepoint,
+        consent_google:    consentGoogle,
+        consent_outlook:   consentOutlook,
+        sharepoint_url:    sharepointUrl.trim() || null,
+        google_drive_url:  googleDriveUrl.trim() || null,
+        updated_at:        new Date().toISOString(),
+      }).eq('id', org.id)
+      if (error) throw error
+      logAudit({ action: AUDIT_ACTIONS.ORG_UPDATED, category: 'org',
+        entityId: org.id, entityName: org.name })
+      setMsg({ type: 'success', text: '✅ Corporate settings saved!' })
+    } catch (err: any) {
+      setMsg({ type: 'error', text: `❌ ${err.message}` })
+    } finally {
+      setCorpSaving(false)
+    }
+  }
+
   function generateSlug(name: string) {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   }
@@ -333,7 +376,7 @@ export default function OrganisationClient({
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-surface2 rounded-xl w-fit">
-        {[['workspaces','🏢 Workspaces'],['members','👥 Team'],['settings','⚙️ Settings']].map(([t,label]) => (
+        {[['workspaces','🏢 Workspaces'],['members','👥 Team'],['settings','⚙️ Settings'],['corporate','🏛️ Corporate']].map(([t,label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${tab===t ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
             {label}
@@ -551,6 +594,174 @@ export default function OrganisationClient({
           </div>
         </div>
       )}
+
+      {/* CORPORATE SETTINGS TAB */}
+      {tab === 'corporate' && (isOwner || userRole === 'account_manager') && (
+        <div className="space-y-6 max-w-2xl">
+
+          {msg && tab === 'corporate' && (
+            <div className={`px-4 py-3 rounded-xl text-sm font-semibold ${msg.type === 'success' ? 'bg-accent3/10 text-accent3 border border-accent3/30' : 'bg-danger/10 text-danger border border-danger/30'}`}>
+              {msg.text}
+            </div>
+          )}
+
+          {/* Contact & Admin */}
+          <div className="card space-y-4">
+            <h3 className="font-syne font-bold text-base flex items-center gap-2">
+              📧 Contact & Admin Emails
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Corporate Email</label>
+                <input className="input w-full" type="email" placeholder="info@company.com"
+                  value={corpEmail} onChange={e => setCorpEmail(e.target.value)}/>
+                <p className="text-[10px] text-muted mt-1">Official contact email shown in reports</p>
+              </div>
+              <div>
+                <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Admin Alert Email</label>
+                <input className="input w-full" type="email" placeholder="admin@company.com"
+                  value={adminEmail} onChange={e => setAdminEmail(e.target.value)}/>
+                <p className="text-[10px] text-muted mt-1">Receives system alerts and notifications</p>
+              </div>
+              <div>
+                <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Company Website</label>
+                <input className="input w-full" type="url" placeholder="https://company.com"
+                  value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)}/>
+              </div>
+              <div>
+                <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Phone / Office</label>
+                <input className="input w-full" placeholder="+65 6123 4567"
+                  value={phone} onChange={e => setPhone(e.target.value)}/>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1.5 block">Office Location</label>
+                <input className="input w-full" placeholder="e.g. Singapore, Tokyo, London"
+                  value={officeLocation} onChange={e => setOfficeLocation(e.target.value)}/>
+              </div>
+            </div>
+          </div>
+
+          {/* Branding */}
+          <div className="card space-y-4">
+            <h3 className="font-syne font-bold text-base flex items-center gap-2">
+              🎨 Brand Colour
+            </h3>
+            <p className="text-xs text-muted">Used in PDF and PPT reports to match your company branding</p>
+            <div className="flex items-center gap-4 flex-wrap">
+              <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)}
+                className="w-14 h-14 rounded-xl border border-border cursor-pointer"/>
+              <div className="flex gap-2 flex-wrap">
+                {['#00d4ff','#7c3aed','#ef4444','#f59e0b','#22d3a5','#0ea5e9','#8b5cf6','#ec4899','#14b8a6','#64748b'].map(c => (
+                  <button key={c} onClick={() => setBrandColor(c)}
+                    className={`w-9 h-9 rounded-xl border-2 transition-all ${brandColor === c ? 'border-white scale-110 shadow-lg' : 'border-transparent'}`}
+                    style={{ background: c }}/>
+                ))}
+              </div>
+            </div>
+            {/* Preview */}
+            <div className="rounded-xl overflow-hidden border border-border">
+              <div className="h-2 w-full" style={{ background: brandColor }}/>
+              <div className="p-4 bg-surface2">
+                <p className="font-syne font-black text-sm" style={{ color: brandColor }}>✦ NexPlan</p>
+                <p className="text-xs text-muted mt-1">Report preview — your brand colour will appear in PDF & PPT exports</p>
+                <div className="mt-2 h-1.5 w-32 rounded-full" style={{ background: brandColor }}/>
+              </div>
+            </div>
+          </div>
+
+          {/* Integrations */}
+          <div className="card space-y-4">
+            <div>
+              <h3 className="font-syne font-bold text-base flex items-center gap-2">🔗 Integrations & Consent</h3>
+              <p className="text-xs text-muted mt-1">All integrations are optional. Granting consent allows NexPlan to connect with these services on your behalf.</p>
+            </div>
+
+            {/* SharePoint */}
+            <div className="bg-surface2 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📁</span>
+                  <div>
+                    <p className="font-semibold text-sm">Microsoft 365 / SharePoint</p>
+                    <p className="text-xs text-muted">Store and share project documents</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={consentSharepoint}
+                    onChange={e => setConsentSharepoint(e.target.checked)}/>
+                  <div className="w-11 h-6 bg-surface rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"/>
+                </label>
+              </div>
+              {consentSharepoint && (
+                <div>
+                  <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1 block">SharePoint Site URL</label>
+                  <input className="input w-full text-sm" placeholder="https://company.sharepoint.com/sites/projects"
+                    value={sharepointUrl} onChange={e => setSharepointUrl(e.target.value)}/>
+                </div>
+              )}
+            </div>
+
+            {/* Google Workspace */}
+            <div className="bg-surface2 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📊</span>
+                  <div>
+                    <p className="font-semibold text-sm">Google Workspace / Drive</p>
+                    <p className="text-xs text-muted">Sync project files with Google Drive</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={consentGoogle}
+                    onChange={e => setConsentGoogle(e.target.checked)}/>
+                  <div className="w-11 h-6 bg-surface rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"/>
+                </label>
+              </div>
+              {consentGoogle && (
+                <div>
+                  <label className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-1 block">Google Drive Folder URL</label>
+                  <input className="input w-full text-sm" placeholder="https://drive.google.com/drive/folders/..."
+                    value={googleDriveUrl} onChange={e => setGoogleDriveUrl(e.target.value)}/>
+                </div>
+              )}
+            </div>
+
+            {/* Outlook / Email OAuth */}
+            <div className="bg-surface2 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">✉️</span>
+                  <div>
+                    <p className="font-semibold text-sm">Corporate Email (Outlook / Gmail)</p>
+                    <p className="text-xs text-muted">Send NexPlan notifications from your corporate email</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={consentOutlook}
+                    onChange={e => setConsentOutlook(e.target.checked)}/>
+                  <div className="w-11 h-6 bg-surface rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"/>
+                </label>
+              </div>
+              {consentOutlook && (
+                <p className="text-xs text-amber-400 mt-2">⚠️ Corporate email OAuth integration coming soon. Your consent has been recorded.</p>
+              )}
+            </div>
+
+            <p className="text-[11px] text-muted bg-surface2 rounded-xl p-3">
+              🔒 <strong>Privacy:</strong> NexPlan only accesses data you explicitly share. You can revoke consent at any time by toggling off. We never store credentials — all integrations use secure OAuth tokens.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pb-4">
+            <button onClick={saveCorporateSettings} disabled={corpSaving}
+              className="btn-primary px-6 py-2.5 text-sm disabled:opacity-50">
+              {corpSaving ? '⟳ Saving...' : '💾 Save Corporate Settings'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Only show message if not on corporate tab (handled above) */}
 
       {/* WORKSPACE EDIT MODAL */}
       {editingWs && (

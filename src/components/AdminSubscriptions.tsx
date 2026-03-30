@@ -52,6 +52,8 @@ export default function AdminSubscriptions() {
   const [loading, setLoading]       = useState(true)
   const [searchEmail, setSearch]    = useState('')
   const [filterPlan, setFilterPlan] = useState<'all' | Plan>('all')
+  const [page, setPage]             = useState(1)
+  const PAGE_SIZE = 20
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null)
   const [newPlan, setNewPlan]         = useState<Plan>('free')
   const [newBilling, setNewBilling]   = useState<'monthly' | 'yearly'>('monthly')
@@ -196,7 +198,7 @@ export default function AdminSubscriptions() {
           <div className="flex gap-3 mb-4 flex-wrap">
             <input className="input text-sm flex-1 min-w-[200px]"
               placeholder="🔍 Search by email…"
-              value={searchEmail} onChange={e => setSearch(e.target.value)} />
+              value={searchEmail} onChange={e => { setSearch(e.target.value); setPage(1) }} />
             <div className="flex gap-1 p-1 bg-surface2 rounded-xl">
               {(['all', ...PLANS] as const).map(p => (
                 <button key={p} onClick={() => setFilterPlan(p)}
@@ -221,7 +223,7 @@ export default function AdminSubscriptions() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map(user => {
+                  {filteredUsers.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE).map(user => {
                     const plan = (user.plan ?? 'free') as Plan
                     const d = PLAN_DISPLAY[plan]
                     return (
@@ -259,6 +261,33 @@ export default function AdminSubscriptions() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {filteredUsers.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+                <span className="text-xs text-muted font-mono-code">
+                  Showing {(page-1)*PAGE_SIZE+1}–{Math.min(page*PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} users
+                </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-border hover:bg-surface2 disabled:opacity-30 transition-colors">
+                    ← Prev
+                  </button>
+                  {Array.from({ length: Math.ceil(filteredUsers.length/PAGE_SIZE) }, (_,i) => i+1).map(p => (
+                    <button key={p} onClick={() => setPage(p)}
+                      className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors
+                        ${page === p ? 'bg-accent text-black' : 'border border-border hover:bg-surface2 text-muted'}`}>
+                      {p}
+                    </button>
+                  ))}
+                  <button onClick={() => setPage(p => Math.min(Math.ceil(filteredUsers.length/PAGE_SIZE), p+1))}
+                    disabled={page === Math.ceil(filteredUsers.length/PAGE_SIZE)}
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-border hover:bg-surface2 disabled:opacity-30 transition-colors">
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Change plan modal */}

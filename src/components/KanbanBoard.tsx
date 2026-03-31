@@ -1,4 +1,5 @@
 'use client'
+import { MobileKanban, MobileBottomSheet } from '@/components/MobileKanban'
 import { logAudit, AUDIT_ACTIONS } from '@/lib/audit'
 import { useState, useCallback, useEffect } from 'react'
 import PCRManager from '@/components/PCRManager'
@@ -1079,6 +1080,9 @@ export default function KanbanBoard({
   const [showBudget, setShowBudget] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
   const [newProjectWorkspaceId, setNewProjectWorkspaceId] = useState<string>('')
+  const [mobileEditingTask, setMobileEditingTask] = useState<Task | null>(null)
+
+
 
   const [currentUser, setCurrentUser] = useState({ name: 'PM', email: '' })
   useEffect(() => {
@@ -2027,99 +2031,126 @@ export default function KanbanBoard({
         <div className="text-center py-24"><p className="text-muted animate-pulse">Loading tasks...</p></div>
       ) : view === 'timeline' ? (
         <TimelineView tasks={allTasks} project={currentProject} onEditTask={setEditingTask} onEditProject={() => setEditingProject(true)}/>
-      ) : (
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {columns.map(col => (
-              <div key={col.id} className={`flex-shrink-0 w-[272px] bg-surface border rounded-2xl p-4 ${COL_BORDERS[col.id]}`}>
-                <div className="flex items-center gap-2 font-syne font-bold text-sm mb-4">
-                  <span className={col.color}>{col.emoji} {col.title}</span>
-                  <span className="w-5 h-5 rounded-md bg-surface2 flex items-center justify-center text-xs text-muted font-normal ml-auto">
-                    {col.tasks.length}
-                  </span>
-                </div>
-                <Droppable droppableId={col.id}>
-                  {(provided, snapshot) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps}
-                      className={`min-h-[40px] rounded-xl transition-colors ${snapshot.isDraggingOver ? 'bg-accent/5' : ''}`}>
-                      {col.tasks.map((task, idx) => (
-                        <Draggable key={task.id} draggableId={task.id} index={idx}>
-                          {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
-                              className={`bg-card border rounded-xl p-4 mb-2.5 cursor-grab transition-all duration-150 ${
-                                snapshot.isDragging
-                                  ? 'border-accent shadow-[0_8px_32px_rgba(0,0,0,0.6)] rotate-1 scale-105'
-                                  : 'border-border hover:border-accent/40 hover:-translate-y-0.5'
-                              }`}>
-                              <p className="text-sm font-semibold mb-2.5 leading-snug">{task.title}</p>
-                              <div className="flex flex-wrap gap-1.5 mb-2">
-                                <span className={`tag-chip ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
-                                {task.tags?.map((tag: string) => (
-                                  <span key={tag} className="tag-chip bg-accent2/10 text-purple-300">{tag}</span>
-                                ))}
-                              </div>
-                              {/* Show dates if set */}
-                              {task.start_date && task.end_date && (
-                                <div className="mb-2 px-2 py-1.5 bg-accent/5 border border-accent/10 rounded-lg">
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <span className="text-[10px] font-mono-code text-accent">
-                                      {new Date(task.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                      {' → '}
-                                      {new Date(task.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                    </span>
-                                    <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded">
-                                      ⏱ {task.duration ?? daysBetween(task.start_date, task.end_date) + 1}d
-                                    </span>
+      
+) : (
+        <>
+          {/* ── MOBILE: one column at a time, swipe ── */}
+          <div className="block sm:hidden">
+            <MobileKanban
+              columns={columns}
+              onEditTask={task => setMobileEditingTask(task)}
+              onAddTask={colId => setShowAddTask(colId)}
+              newTaskTitle={newTaskTitle}
+              setNewTaskTitle={setNewTaskTitle}
+              showAddTask={showAddTask}
+              setShowAddTask={setShowAddTask}
+              addTask={addTask}
+              saving={saving}
+            />
+            {mobileEditingTask && (
+              <MobileBottomSheet
+                task={mobileEditingTask}
+                onClose={() => setMobileEditingTask(null)}
+                onSave={async (updates) => { await saveTask(updates); setMobileEditingTask(null) }}
+                onDelete={async (id) => { await deleteTask(id); setMobileEditingTask(null) }}
+              />
+            )}
+          </div>
+
+          <div className="hidden sm:block">
+            <DragDropContext onDragEnd={onDragEnd}>
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {columns.map(col => (
+                  <div key={col.id} className={`flex-shrink-0 w-[272px] bg-surface border rounded-2xl p-4 ${COL_BORDERS[col.id]}`}>
+                    <div className="flex items-center gap-2 font-syne font-bold text-sm mb-4">
+                      <span className={col.color}>{col.emoji} {col.title}</span>
+                      <span className="w-5 h-5 rounded-md bg-surface2 flex items-center justify-center text-xs text-muted font-normal ml-auto">
+                        {col.tasks.length}
+                      </span>
+                    </div>
+                    <Droppable droppableId={col.id}>
+                      {(provided, snapshot) => (
+                        <div ref={provided.innerRef} {...provided.droppableProps}
+                          className={`min-h-[40px] rounded-xl transition-colors ${snapshot.isDraggingOver ? 'bg-accent/5' : ''}`}>
+                          {col.tasks.map((task, idx) => (
+                            <Draggable key={task.id} draggableId={task.id} index={idx}>
+                              {(provided, snapshot) => (
+                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
+                                  className={`bg-card border rounded-xl p-4 mb-2.5 cursor-grab transition-all duration-150 ${
+                                    snapshot.isDragging
+                                      ? 'border-accent shadow-[0_8px_32px_rgba(0,0,0,0.6)] rotate-1 scale-105'
+                                      : 'border-border hover:border-accent/40 hover:-translate-y-0.5'
+                                  }`}>
+                                  <p className="text-sm font-semibold mb-2.5 leading-snug">{task.title}</p>
+                                  <div className="flex flex-wrap gap-1.5 mb-2">
+                                    <span className={`tag-chip ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
+                                    {task.tags?.map((tag: string) => (
+                                      <span key={tag} className="tag-chip bg-accent2/10 text-purple-300">{tag}</span>
+                                    ))}
+                                  </div>
+                                  {task.start_date && task.end_date && (
+                                    <div className="mb-2 px-2 py-1.5 bg-accent/5 border border-accent/10 rounded-lg">
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <span className="text-[10px] font-mono-code text-accent">
+                                          {new Date(task.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                          {' → '}
+                                          {new Date(task.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded">
+                                          ⏱ {task.duration ?? daysBetween(task.start_date, task.end_date) + 1}d
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between">
+                                    {task.assignee_name && (
+                                      <div className="w-6 h-6 rounded-full bg-accent2 flex items-center justify-center text-[10px] font-bold text-white">
+                                        {task.assignee_name.slice(0, 2).toUpperCase()}
+                                      </div>
+                                    )}
+                                    {task.due_date && (
+                                      <span className="font-mono-code text-[11px] text-muted ml-auto">
+                                        Due: {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                      </span>
+                                    )}
+                                    <button onClick={() => setEditingTask(task)}
+                                      className="ml-auto text-[10px] text-muted hover:text-accent font-mono-code transition-colors">
+                                      edit
+                                    </button>
                                   </div>
                                 </div>
                               )}
-                              <div className="flex items-center justify-between">
-                                {task.assignee_name && (
-                                  <div className="w-6 h-6 rounded-full bg-accent2 flex items-center justify-center text-[10px] font-bold text-white">
-                                    {task.assignee_name.slice(0, 2).toUpperCase()}
-                                  </div>
-                                )}
-                                {task.due_date && (
-                                  <span className="font-mono-code text-[11px] text-muted ml-auto">
-                                    Due: {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                  </span>
-                                )}
-                                <button onClick={() => setEditingTask(task)}
-                                  className="ml-auto text-[10px] text-muted hover:text-accent font-mono-code transition-colors">
-                                  edit
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-                {showAddTask === col.id ? (
-                  <div className="mt-2">
-                    <textarea className="input text-sm resize-none h-20 mb-2" placeholder="Task title..."
-                      value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} autoFocus
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTask(col.id) }
-                        if (e.key === 'Escape') { setShowAddTask(null); setNewTaskTitle('') }
-                      }}/>
-                    <div className="flex gap-2">
-                      <button onClick={() => addTask(col.id)} className="btn-primary text-xs px-3 py-1.5" disabled={saving}>Add</button>
-                      <button onClick={() => { setShowAddTask(null); setNewTaskTitle('') }} className="btn-ghost text-xs px-3 py-1.5">Cancel</button>
-                    </div>
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                    {showAddTask === col.id ? (
+                      <div className="mt-2">
+                        <textarea className="input text-sm resize-none h-20 mb-2" placeholder="Task title..."
+                          value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} autoFocus
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTask(col.id) }
+                            if (e.key === 'Escape') { setShowAddTask(null); setNewTaskTitle('') }
+                          }}/>
+                        <div className="flex gap-2">
+                          <button onClick={() => addTask(col.id)} className="btn-primary text-xs px-3 py-1.5" disabled={saving}>Add</button>
+                          <button onClick={() => { setShowAddTask(null); setNewTaskTitle('') }} className="btn-ghost text-xs px-3 py-1.5">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setShowAddTask(col.id)}
+                        className="w-full mt-2 py-2 border border-dashed border-border rounded-xl text-muted text-sm hover:border-accent/50 hover:text-accent transition-colors">
+                        + Add card
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <button onClick={() => setShowAddTask(col.id)}
-                    className="w-full mt-2 py-2 border border-dashed border-border rounded-xl text-muted text-sm hover:border-accent/50 hover:text-accent transition-colors">
-                    + Add card
-                  </button>
-                )}
+                ))}
               </div>
-            ))}
+            </DragDropContext>
           </div>
-        </DragDropContext>
+        </>
       )}
     </div>
   )

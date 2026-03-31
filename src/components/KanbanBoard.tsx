@@ -1,6 +1,5 @@
 'use client'
-import { MobileKanban, MobileBottomSheet } from '@/components/MobileKanban'
-import { logAudit, AUDIT_ACTIONS } from '@/lib/audit'
+import { MobileKanban } from '@/components/MobileKanban'
 import { useState, useCallback, useEffect } from 'react'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
@@ -13,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
 import PostMortemGenerator from '@/components/PostMortemGenerator'
 import BudgetTracker from '@/components/BudgetTracker'
+import { logAudit, AUDIT_ACTIONS } from '@/lib/audit'
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
   low:      'bg-muted/10 text-muted',

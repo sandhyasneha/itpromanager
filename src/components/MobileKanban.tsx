@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import type { KanbanColumn, Task, TaskStatus } from '@/types'
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -18,6 +18,142 @@ const COL_META: Record<string, { emoji: string; color: string; title: string }> 
 }
 
 const STATUSES: TaskStatus[] = ['backlog', 'in_progress', 'review', 'blocked', 'done']
+
+// ─── Move To Sheet (shown on long press) ─────────────────────────────────────
+
+function MoveToSheet({
+  task,
+  onClose,
+  onMove,
+}: {
+  task: Task
+  onClose: () => void
+  onMove: (taskId: string, newStatus: TaskStatus) => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl border-t border-border shadow-2xl">
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-border" />
+        </div>
+        <div className="px-5 py-3 border-b border-border">
+          <p className="font-syne font-black text-base truncate">{task.title}</p>
+          <p className="text-xs text-muted mt-0.5">Move to column</p>
+        </div>
+        <div className="px-5 py-4 grid grid-cols-2 gap-3">
+          {STATUSES.filter(s => s !== task.status).map(s => {
+            const meta = COL_META[s]
+            return (
+              <button
+                key={s}
+                onClick={() => { onMove(task.id, s); onClose() }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-border bg-surface2 text-left active:scale-95 transition-all"
+              >
+                <span className="text-2xl">{meta.emoji}</span>
+                <div>
+                  <p className={`text-sm font-bold ${meta.color}`}>{meta.title}</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        <div className="px-5 pb-6">
+          <button onClick={onClose} className="w-full py-3 rounded-xl btn-ghost text-sm font-semibold">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Task Card with tap + long press ─────────────────────────────────────────
+
+function MobileTaskCard({
+  task,
+  onTap,
+  onLongPress,
+}: {
+  task: Task
+  onTap: () => void
+  onLongPress: () => void
+}) {
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const didLongPress = useRef(false)
+  const [pressing, setPressing] = useState(false)
+
+  function startPress() {
+    didLongPress.current = false
+    setPressing(true)
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true
+      setPressing(false)
+      onLongPress()
+    }, 500)
+  }
+
+  function endPress() {
+    setPressing(false)
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    if (!didLongPress.current) {
+      onTap()
+    }
+    didLongPress.current = false
+  }
+
+  function cancelPress() {
+    setPressing(false)
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    didLongPress.current = false
+  }
+
+  return (
+    <div
+      onTouchStart={startPress}
+      onTouchEnd={endPress}
+      onTouchMove={cancelPress}
+      onMouseDown={startPress}
+      onMouseUp={endPress}
+      onMouseLeave={cancelPress}
+      className={`bg-card border border-border rounded-xl p-4 transition-all duration-150 cursor-pointer select-none
+        ${pressing ? 'scale-95 border-accent/60 bg-accent/5' : 'active:scale-95'}`}
+    >
+      <p className="text-sm font-semibold mb-2 leading-snug">{task.title}</p>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <span className={`tag-chip ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
+        {task.tags?.map((tag: string) => (
+          <span key={tag} className="tag-chip bg-accent2/10 text-purple-300">{tag}</span>
+        ))}
+      </div>
+      <div className="flex items-center justify-between">
+        {task.assignee_name && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-full bg-accent2 flex items-center justify-center text-[10px] font-bold text-white">
+              {task.assignee_name.slice(0, 2).toUpperCase()}
+            </div>
+            <span className="text-[11px] text-muted">{task.assignee_name.split(' ')[0]}</span>
+          </div>
+        )}
+        {task.due_date && (
+          <span className="font-mono text-[11px] text-muted ml-auto">
+            Due: {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+          </span>
+        )}
+      </div>
+      {/* Long press hint */}
+      <p className="text-[10px] text-muted/50 mt-2">Tap to edit · Hold to move</p>
+    </div>
+  )
+}
+
+// ─── Main MobileKanban ────────────────────────────────────────────────────────
 
 export function MobileKanban({
   columns,
@@ -41,7 +177,7 @@ export function MobileKanban({
   saving: boolean
 }) {
   const [activeIdx, setActiveIdx] = useState(0)
-  const [sheetTask, setSheetTask] = useState<Task | null>(null)
+  const [moveTask, setMoveTask] = useState<Task | null>(null)
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
 
@@ -54,7 +190,7 @@ export function MobileKanban({
     if (touchStartX.current === null || touchStartY.current === null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = e.changedTouches[0].clientY - touchStartY.current
-    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return
     if (dx < 0 && activeIdx < columns.length - 1) setActiveIdx(i => i + 1)
     if (dx > 0 && activeIdx > 0) setActiveIdx(i => i - 1)
     touchStartX.current = null
@@ -66,13 +202,15 @@ export function MobileKanban({
 
   return (
     <div className="flex flex-col">
+
       {/* Column tab pills */}
       <div className="flex gap-1.5 overflow-x-auto pb-2 no-scrollbar px-1 mb-3">
         {columns.map((c, i) => {
           const m = COL_META[c.id]
           return (
             <button key={c.id} onClick={() => setActiveIdx(i)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${activeIdx === i ? 'bg-accent/10 border-accent text-accent' : 'bg-surface2 border-border text-muted'}`}>
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all
+                ${activeIdx === i ? 'bg-accent/10 border-accent text-accent' : 'bg-surface2 border-border text-muted'}`}>
               {m.emoji} {m.title}
               <span className="bg-surface rounded-full w-4 h-4 flex items-center justify-center text-[10px]">{c.tasks.length}</span>
             </button>
@@ -82,18 +220,17 @@ export function MobileKanban({
 
       {/* Swipe area */}
       <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+
+        {/* Column header */}
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className={`font-syne font-bold text-base ${meta.color}`}>
             {meta.emoji} {meta.title}
             <span className="ml-2 text-xs text-muted font-normal">({col.tasks.length})</span>
           </h2>
-          <div className="flex items-center gap-1 text-[10px] text-muted">
-            {activeIdx > 0 && <span>prev</span>}
-            <span>swipe</span>
-            {activeIdx < columns.length - 1 && <span>next</span>}
-          </div>
+          <div className="text-[10px] text-muted">swipe to change column</div>
         </div>
 
+        {/* Tasks */}
         <div className="space-y-2.5 pb-4">
           {col.tasks.length === 0 && (
             <div className="text-center py-12 text-muted">
@@ -102,31 +239,16 @@ export function MobileKanban({
             </div>
           )}
           {col.tasks.map(task => (
-            <div key={task.id} onClick={() => setSheetTask(task)}
-              className="bg-card border border-border rounded-xl p-4 active:scale-95 transition-transform cursor-pointer">
-              <p className="text-sm font-semibold mb-2 leading-snug">{task.title}</p>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                <span className={`tag-chip ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
-                {task.tags?.map((tag: string) => (
-                  <span key={tag} className="tag-chip bg-accent2/10 text-purple-300">{tag}</span>
-                ))}
-              </div>
-              <div className="flex items-center justify-between">
-                {task.assignee_name && (
-                  <div className="w-6 h-6 rounded-full bg-accent2 flex items-center justify-center text-[10px] font-bold text-white">
-                    {task.assignee_name.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
-                {task.due_date && (
-                  <span className="font-mono text-[11px] text-muted ml-auto">
-                    Due: {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                  </span>
-                )}
-              </div>
-            </div>
+            <MobileTaskCard
+              key={task.id}
+              task={task}
+              onTap={() => onEditTask(task)}
+              onLongPress={() => setMoveTask(task)}
+            />
           ))}
         </div>
 
+        {/* Add task */}
         {showAddTask === col.id ? (
           <div className="mt-2">
             <textarea className="input text-sm resize-none h-20 mb-2 w-full" placeholder="Task title..."
@@ -156,87 +278,14 @@ export function MobileKanban({
         ))}
       </div>
 
-      {/* Bottom sheet */}
-      {sheetTask && (
-        <MobileBottomSheet
-          task={sheetTask}
-          onClose={() => setSheetTask(null)}
-          onMoveTask={(taskId, newStatus) => { onMoveTask(taskId, newStatus); setSheetTask(null) }}
-          onOpenFullEdit={(task) => { setSheetTask(null); onEditTask(task) }}
-          onDelete={() => setSheetTask(null)}
+      {/* Move To sheet — shown on long press */}
+      {moveTask && (
+        <MoveToSheet
+          task={moveTask}
+          onClose={() => setMoveTask(null)}
+          onMove={(taskId, newStatus) => { onMoveTask(taskId, newStatus); setMoveTask(null) }}
         />
       )}
     </div>
-  )
-}
-
-export function MobileBottomSheet({
-  task, onClose, onMoveTask, onOpenFullEdit, onDelete,
-}: {
-  task: Task
-  onClose: () => void
-  onMoveTask: (taskId: string, newStatus: TaskStatus) => void
-  onOpenFullEdit: (task: Task) => void
-  onDelete: (id: string) => void
-}) {
-  return (
-    <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl border-t border-border shadow-2xl max-h-[80vh] flex flex-col">
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-border" />
-        </div>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
-          <div className="flex-1 pr-3">
-            <p className="font-syne font-black text-base truncate">{task.title}</p>
-            <p className="text-xs text-muted mt-0.5">
-              {COL_META[task.status]?.emoji} {COL_META[task.status]?.title}
-              {task.assignee_name ? ` · ${task.assignee_name}` : ''}
-            </p>
-          </div>
-          <button onClick={onClose} className="text-muted text-xl shrink-0">X</button>
-        </div>
-        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-          {task.description && (
-            <div className="bg-surface2 rounded-xl p-3">
-              <p className="text-xs text-muted leading-relaxed">{task.description}</p>
-            </div>
-          )}
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className={`tag-chip ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
-            {task.due_date && (
-              <span className="tag-chip bg-surface2 text-muted">
-                Due: {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-              </span>
-            )}
-          </div>
-          <div>
-            <p className="text-xs font-syne font-semibold text-muted mb-2">Move to column</p>
-            <div className="grid grid-cols-3 gap-2">
-              {STATUSES.filter(s => s !== task.status).map(s => {
-                const meta = COL_META[s]
-                return (
-                  <button key={s} onClick={() => { onMoveTask(task.id, s); onClose() }}
-                    className="py-2.5 rounded-xl text-xs font-bold border-2 border-border bg-surface2 text-muted active:scale-95 transition-all flex flex-col items-center gap-1">
-                    <span className="text-base">{meta.emoji}</span>
-                    <span>{meta.title}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-        <div className="px-5 py-4 border-t border-border flex gap-3 shrink-0">
-          <button onClick={() => { onDelete(task.id); onClose() }}
-            className="px-4 py-3 rounded-xl text-sm font-bold text-danger bg-danger/10 border border-danger/30">
-            Delete
-          </button>
-          <button onClick={() => { onClose(); onOpenFullEdit(task) }}
-            className="flex-1 py-3 rounded-xl text-sm font-bold btn-primary">
-            Full Edit
-          </button>
-        </div>
-      </div>
-    </>
   )
 }

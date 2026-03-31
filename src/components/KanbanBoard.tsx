@@ -2035,11 +2035,24 @@ export default function KanbanBoard({
 ) : (
         <>
           {/* ── MOBILE: one column at a time, swipe ── */}
-          <div className="block sm:hidden">
+      
+<div className="block sm:hidden">
             <MobileKanban
               columns={columns}
-              onEditTask={task => setMobileEditingTask(task)}
-              onAddTask={colId => setShowAddTask(colId)}
+              onEditTask={task => setEditingTask(task)}
+              onMoveTask={async (taskId, newStatus) => {
+                setColumns(prev => {
+                  const next = prev.map(c => ({ ...c, tasks: [...c.tasks] }))
+                  let moved: Task | undefined
+                  next.forEach(c => {
+                    const idx = c.tasks.findIndex(t => t.id === taskId)
+                    if (idx !== -1) { [moved] = c.tasks.splice(idx, 1) }
+                  })
+                  if (moved) { moved.status = newStatus; next.find(c => c.id === newStatus)?.tasks.push(moved) }
+                  return next
+                })
+                await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId)
+              }}
               newTaskTitle={newTaskTitle}
               setNewTaskTitle={setNewTaskTitle}
               showAddTask={showAddTask}
@@ -2047,14 +2060,6 @@ export default function KanbanBoard({
               addTask={addTask}
               saving={saving}
             />
-            {mobileEditingTask && (
-              <MobileBottomSheet
-                task={mobileEditingTask}
-                onClose={() => setMobileEditingTask(null)}
-                onSave={async (updates) => { await saveTask(updates); setMobileEditingTask(null) }}
-                onDelete={async (id) => { await deleteTask(id); setMobileEditingTask(null) }}
-              />
-            )}
           </div>
 
           <div className="hidden sm:block">

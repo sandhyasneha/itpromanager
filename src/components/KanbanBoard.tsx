@@ -1,5 +1,6 @@
 'use client'
 import { MobileKanban } from '@/components/MobileKanban'
+import PushNotificationToggle from '@/components/PushNotificationToggle'
 import { useState, useCallback, useEffect } from 'react'
 import PCRManager from '@/components/PCRManager'
 import RiskRegister from '@/components/RiskRegister'
@@ -13,6 +14,7 @@ import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/ty
 import PostMortemGenerator from '@/components/PostMortemGenerator'
 import BudgetTracker from '@/components/BudgetTracker'
 import { logAudit, AUDIT_ACTIONS } from '@/lib/audit'
+
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
   low:      'bg-muted/10 text-muted',
@@ -1255,12 +1257,53 @@ export default function KanbanBoard({
         oldValue: old.assignee_email || undefined, newValue: updates.assignee_email,
         metadata: { projectName: proj?.name } })
     }
-    if (updates.priority && updates.priority !== old.priority) {
+    
+
+if (updates.priority && updates.priority !== old.priority) {
       logAudit({ action: AUDIT_ACTIONS.TASK_PRIORITY_CHANGED, category: 'task',
         entityId: old.id, entityName: old.title,
         oldValue: old.priority, newValue: updates.priority })
     }
+
+    // Push: notify new assignee
+    if (updates.assignee_id && updates.assignee_id !== old.assignee_id) {
+      const proj = localProjects.find(p => p.id === old.project_id)
+      fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: updates.assignee_id,
+          payload: {
+            title: '📋 New Task Assigned',
+            body: `${currentUser.name} assigned you "${old.title}" in ${proj?.name ?? 'a project'}`,
+            url: '/my-tasks',
+            tag: 'task-assigned',
+          },
+        }),
+      }).catch(() => {})
+    }
+
+    // Push: notify assignee of status change
+    if (updates.status && updates.status !== old.status && (updates.assignee_id || old.assignee_id)) {
+      const targetUserId = updates.assignee_id ?? old.assignee_id
+      if (targetUserId && targetUserId !== currentUserId) {
+        fetch('/api/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: targetUserId,
+            payload: {
+              title: '🔄 Task Updated',
+              body: `"${old.title}" moved to ${(updates.status as string).replace('_', ' ')}`,
+              url: '/my-tasks',
+              tag: 'task-status',
+            },
+          }),
+        }).catch(() => {})
+      }
+    }
   }
+
 
   async function deleteTask(id: string) {
     const task = editingTask

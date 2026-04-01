@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import UserSupportPanel from '@/components/UserSupportPanel'
+import PushNotificationToggle from '@/components/PushNotificationToggle'
 import ChangeFreezeCalendar from '@/components/ChangeFreezeCalendar'
 import type { Profile } from '@/types'
 
@@ -86,6 +87,9 @@ export default function SettingsPage() {
           </button>
         </form>
       </div>
+
+      {/* Push Notifications */}
+      <PushNotificationToggle />
 
       {/* Help & Support */}
       <UserSupportPanel />

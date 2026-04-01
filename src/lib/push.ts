@@ -1,7 +1,7 @@
 // src/lib/push.ts
 // Helper to send push notifications from server-side code (API routes, cron jobs)
 
-import webpush from 'web-push'
+const webpush = require('web-push')
 import { createClient } from '@/lib/supabase/server'
 
 webpush.setVapidDetails(

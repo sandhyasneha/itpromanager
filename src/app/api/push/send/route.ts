@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import webpush from 'web-push'
+const webpush = require('web-push')
 
 webpush.setVapidDetails(
   process.env.VAPID_EMAIL!,

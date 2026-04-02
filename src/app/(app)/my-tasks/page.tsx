@@ -15,6 +15,8 @@ export default async function MyTasksPage() {
 
   if (!user) redirect("/login");
 
+  const userEmail = user.email ?? '';
+
   // Fetch tasks assigned to logged-in user with project info
   const { data: rawTasks, error } = await supabase
     .from("tasks")
@@ -29,13 +31,15 @@ export default async function MyTasksPage() {
       created_at,
       project_id,
       assignee_id,
+      assignee_email,
+      assignee_name,
       projects (
         id,
         name
       )
     `
     )
-    .eq("assignee_id", user.id)
+    .eq("assignee_email", userEmail)
     .order("due_date", { ascending: true, nullsFirst: false });
 
   if (error) {

@@ -615,6 +615,7 @@ export default function MyTasksClient({
         })
       }
     }
+  }
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
 

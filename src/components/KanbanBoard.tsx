@@ -1155,12 +1155,16 @@ export default function KanbanBoard({
       .order('created_at', { ascending: false })
     if (!data) return
     const map: Record<string, any> = {}
+    // Prefer status_change as the displayed activity, fallback to latest any
     data.forEach((row: any) => {
-      if (!map[row.task_id]) map[row.task_id] = row
+      if (!map[row.task_id]) {
+        map[row.task_id] = row
+      } else if (row.action_type === 'status_change' && map[row.task_id].action_type !== 'status_change') {
+        map[row.task_id] = row
+      }
     })
     setTaskActivity(map)
   }
-
   const onDragEnd = useCallback(async (result: DropResult) => {
     const { source, destination, draggableId } = result
     if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) return

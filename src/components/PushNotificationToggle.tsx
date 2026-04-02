@@ -44,15 +44,17 @@ export default function PushNotificationToggle() {
         ),
       })
 
-      const json = sub.toJSON()
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          endpoint: json.endpoint,
-          keys: json.keys,
-        }),
-      })
+     const json = sub.toJSON()
+     const p256dh = json.keys?.p256dh ?? ''
+     const auth = json.keys?.auth ?? ''
+     await fetch('/api/push/subscribe', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({
+    endpoint: json.endpoint,
+    keys: { p256dh, auth },
+  }),
+})
 
       setSubscribed(true)
     } catch (e: any) {
@@ -61,6 +63,11 @@ export default function PushNotificationToggle() {
       setLoading(false)
     }
   }
+
+
+
+
+
 
   async function unsubscribe() {
     setLoading(true)

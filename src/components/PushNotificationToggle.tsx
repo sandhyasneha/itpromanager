@@ -41,7 +41,7 @@ export default function PushNotificationToggle() {
         userVisibleOnly: true,
        applicationServerKey: urlBase64ToUint8Array(
           'BG8pbmjQ8rmL3XSw7PLRPv7NT0iT7SrlNZpQ_jYU-JCcqtzsGofQupTeLYu90y34va6eKij6WYkTM2So-CwXIlk'
-        ),
+        )
 
      const json = sub.toJSON()
      const p256dh = json.keys?.p256dh ?? ''

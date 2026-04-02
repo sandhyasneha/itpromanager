@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import Topbar from '@/components/Topbar'
+import IPCapture from '@/components/IPCapture'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +77,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-bg">
+      <IPCapture />
       <Sidebar profile={mergedProfile} />
       <div className="flex-1 flex flex-col ml-[240px]">
         <Topbar profile={mergedProfile} />

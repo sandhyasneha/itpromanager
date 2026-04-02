@@ -600,12 +600,21 @@ export default function MyTasksClient({
       .update({ status: newStatus })
       .eq("id", taskId);
 
-    if (error) {
-      console.error("Failed to update task status:", error);
-      // Revert
-      setTasks(initialTasks);
+    if (!error) {
+      const task = tasks.find(t => t.id === taskId)
+      if (task) {
+        await supabase.from("task_activity_log").insert({
+          task_id: taskId,
+          project_id: task.project_id,
+          actor_name: profile?.full_name ?? "User",
+          actor_email: userId,
+          action_type: "status_change",
+          field_changed: "status",
+          old_value: task.status,
+          new_value: newStatus,
+        })
+      }
     }
-  }
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
 

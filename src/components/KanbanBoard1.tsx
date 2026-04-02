@@ -1083,7 +1083,6 @@ export default function KanbanBoard({
   const [exportingExcel, setExportingExcel] = useState(false)
   const [newProjectWorkspaceId, setNewProjectWorkspaceId] = useState<string>('')
   const [mobileEditingTask, setMobileEditingTask] = useState<Task | null>(null)
-  const [taskActivity, setTaskActivity] = useState<Record<string, { actor_name: string; action_type: string; new_value: string; created_at: string }>>({})
 
 
 
@@ -1101,7 +1100,6 @@ export default function KanbanBoard({
               name:  p.full_name || p.email?.split('@')[0] || 'PM',
               email: p.email || data.user!.email || '',
             })
-            if (projectId) fetchTaskActivity(projectId)
           })
       }
     })
@@ -1144,21 +1142,6 @@ export default function KanbanBoard({
     const { data } = await supabase.from('tasks').select('*').eq('project_id', newProjectId).order('position', { ascending: true })
     setColumns(buildColumns((data ?? []) as Task[]))
     setLoading(false)
-    fetchTaskActivity(newProjectId)
-  }
-
-  async function fetchTaskActivity(pid: string) {
-    const { data } = await supabase
-      .from('task_activity_log')
-      .select('task_id, actor_name, action_type, new_value, created_at')
-      .eq('project_id', pid)
-      .order('created_at', { ascending: false })
-    if (!data) return
-    const map: Record<string, any> = {}
-    data.forEach((row: any) => {
-      if (!map[row.task_id]) map[row.task_id] = row
-    })
-    setTaskActivity(map)
   }
 
   const onDragEnd = useCallback(async (result: DropResult) => {
@@ -2183,33 +2166,6 @@ if (updates.priority && updates.priority !== old.priority) {
                                       edit
                                     </button>
                                   </div>
-                                  {/* Last activity */}
-                                  {taskActivity[task.id] && (
-                                    <div className="mt-2 pt-2 border-t border-border/50">
-                                      <p className="text-[10px] text-muted leading-snug">
-                                        {taskActivity[task.id].action_type === 'status_change' && '⚡ '}
-                                        {taskActivity[task.id].action_type === 'assignee_change' && '👤 '}
-                                        {taskActivity[task.id].action_type === 'priority_change' && '🔺 '}
-                                        {taskActivity[task.id].action_type === 'due_date_change' && '📅 '}
-                                        {taskActivity[task.id].action_type === 'title_change' && '✏️ '}
-                                        {taskActivity[task.id].action_type === 'status_change'
-                                          ? `Moved to ${taskActivity[task.id].new_value.replace('_', ' ')}`
-                                          : taskActivity[task.id].action_type === 'assignee_change'
-                                          ? `Assigned to ${taskActivity[task.id].new_value}`
-                                          : taskActivity[task.id].action_type === 'priority_change'
-                                          ? `Priority → ${taskActivity[task.id].new_value}`
-                                          : taskActivity[task.id].action_type === 'due_date_change'
-                                          ? `Due date set`
-                                          : 'Updated'}
-                                        {' by '}
-                                        <span className="text-accent/80">{taskActivity[task.id].actor_name}</span>
-                                        {' · '}
-                                        {new Date(taskActivity[task.id].created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                        {' '}
-                                        {new Date(taskActivity[task.id].created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                      </p>
-                                    </div>
-                                  )}
                                 </div>
                               )}
                             </Draggable>

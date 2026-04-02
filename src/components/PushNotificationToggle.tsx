@@ -1,9 +1,18 @@
 'use client'
-// src/components/PushNotificationToggle.tsx
-// Drop this in your Settings page so users can enable/disable push notifications
-
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+
+const VAPID_PUBLIC_KEY = 'BG8pbmjQ8rmL3XSw7PLRPv7NT0iT7SrlNZpQ_jYU-JCcqtzsGofQupTeLYu90y34va6eKij6WYkTM2So-CwXIlk'
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray
+}
 
 export default function PushNotificationToggle() {
   const [supported, setSupported] = useState(false)
@@ -39,22 +48,20 @@ export default function PushNotificationToggle() {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-       applicationServerKey: urlBase64ToUint8Array(
-          'BG8pbmjQ8rmL3XSw7PLRPv7NT0iT7SrlNZpQ_jYU-JCcqtzsGofQupTeLYu90y34va6eKij6WYkTM2So-CwXIlk'
-        )
-
-     const json = sub.toJSON()
-     const p256dh = json.keys?.p256dh ?? ''
-     const auth = json.keys?.auth ?? ''
-     await fetch('/api/push/subscribe', {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({
-    endpoint: json.endpoint,
-    keys: { p256dh, auth },
-  }),
-})
-
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      })
+      const json = sub.toJSON()
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: json.endpoint,
+          keys: {
+            p256dh: json.keys?.p256dh ?? '',
+            auth: json.keys?.auth ?? '',
+          },
+        }),
+      })
       setSubscribed(true)
     } catch (e: any) {
       setError(e.message ?? 'Failed to enable notifications')
@@ -62,11 +69,6 @@ export default function PushNotificationToggle() {
       setLoading(false)
     }
   }
-
-
-
-
-
 
   async function unsubscribe() {
     setLoading(true)
@@ -111,8 +113,6 @@ export default function PushNotificationToggle() {
           </p>
           {error && <p className="text-xs text-danger mt-2">{error}</p>}
         </div>
-
-        {/* Toggle */}
         <button
           onClick={subscribed ? unsubscribe : subscribe}
           disabled={loading}
@@ -124,17 +124,11 @@ export default function PushNotificationToggle() {
             ${subscribed ? 'translate-x-6' : 'translate-x-0'}`} />
         </button>
       </div>
-
       {subscribed && (
         <div className="mt-4 pt-4 border-t border-border">
           <p className="text-xs text-accent3 font-semibold mb-2">You will be notified for:</p>
           <ul className="space-y-1">
-            {[
-              '📋 Task assigned to you',
-              '🔄 Task status changed',
-              '⏰ Task due tomorrow',
-              '🚨 Task overdue',
-            ].map(item => (
+            {['📋 Task assigned to you', '🔄 Task status changed', '⏰ Task due tomorrow', '🚨 Task overdue'].map(item => (
               <li key={item} className="text-xs text-muted flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent3 shrink-0" />
                 {item}
@@ -145,16 +139,4 @@ export default function PushNotificationToggle() {
       )}
     </div>
   )
-}
-
-// Helper to convert VAPID public key
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
 }

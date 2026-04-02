@@ -39,10 +39,9 @@ export default function PushNotificationToggle() {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+       applicationServerKey: urlBase64ToUint8Array(
+          'BG8pbmjQ8rmL3XSw7PLRPv7NT0iT7SrlNZpQ_jYU-JCcqtzsGofQupTeLYu90y34va6eKij6WYkTM2So-CwXIlk'
         ),
-      })
 
      const json = sub.toJSON()
      const p256dh = json.keys?.p256dh ?? ''

@@ -1153,11 +1153,8 @@ export default function KanbanBoard({
       .select('task_id, actor_name, action_type, new_value, created_at')
       .eq('project_id', pid)
       .order('created_at', { ascending: false })
-    if (!data) return
-    const map: Record<string, any> = {}
-
-
-// First pass — get latest status_change per task
+   if (!data) return
+    // First pass — get latest status_change per task
     const statusMap: Record<string, any> = {}
     const anyMap: Record<string, any> = {}
     data.forEach((row: any) => {
@@ -1172,9 +1169,7 @@ export default function KanbanBoard({
       merged[taskId] = statusMap[taskId]
     })
     setTaskActivity(merged)
-   
-
-
+  }
 
   const onDragEnd = useCallback(async (result: DropResult) => {
     const { source, destination, draggableId } = result

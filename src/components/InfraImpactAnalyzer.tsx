@@ -1,6 +1,17 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import type { Task, TaskStatus, Project } from '@/types'
+
+type SavedAnalysis = {
+  id: string
+  description: string
+  servicenow_change: string | null
+  change_date: string | null
+  result: AnalysisResult
+  created_at: string
+  project_id: string
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +82,8 @@ export default function InfraImpactAnalyzer({
   userPlan?: 'free' | 'pro' | 'enterprise'
   analysisCount?: number
 }) {
-  const [step, setStep] = useState<'input' | 'analyzing' | 'result'>('input')
+  const supabase = createClient()
+  const [step, setStep] = useState<'input' | 'analyzing' | 'result' | 'history'>('input')
   const [selectedProject, setSelectedProject] = useState<Project | null>(project)
   const [description, setDescription] = useState('')
   const [serviceNowChange, setServiceNowChange] = useState('')
@@ -80,6 +92,55 @@ export default function InfraImpactAnalyzer({
   const [error, setError] = useState('')
   const [importedTasks, setImportedTasks] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'implementation' | 'testing' | 'backout' | 'servicenow'>('overview')
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadHistory()
+  }, [])
+
+  async function loadHistory() {
+    setLoadingHistory(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('infra_impact_analyses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      if (data) setSavedAnalyses(data as SavedAnalysis[])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  async function saveAnalysis(analysisResult: AnalysisResult) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('infra_impact_analyses')
+        .insert({
+          project_id: selectedProject?.id ?? project?.id,
+          user_id: user.id,
+          description,
+          servicenow_change: serviceNowChange || null,
+          change_date: changeDate || null,
+          result: analysisResult,
+        })
+        .select()
+        .single()
+      if (data) {
+        setCurrentAnalysisId(data.id)
+        setSavedAnalyses(prev => [data as SavedAnalysis, ...prev])
+      }
+    } catch (e) {
+      console.warn('Failed to save analysis:', e)
+    }
+  }
 
   const FREE_LIMIT = 3
   const isLimitReached = userPlan === 'free' && analysisCount >= FREE_LIMIT
@@ -133,6 +194,7 @@ ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
       const parsed: AnalysisResult = data.result
       setResult(parsed)
       setStep('result')
+      await saveAnalysis(parsed)
     } catch (e) {
       console.error(e)
       setError('Analysis failed. Please try again.')
@@ -178,11 +240,70 @@ ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-text text-xl">✕</button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => step === 'history' ? setStep('input') : setStep('history')}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-border text-muted hover:text-accent hover:border-accent/40 transition-all">
+              {step === 'history' ? '← Back' : `🕒 History (${savedAnalyses.length})`}
+            </button>
+            <button onClick={onClose} className="text-muted hover:text-text text-xl">✕</button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
+
+          {/* ── HISTORY STEP ── */}
+          {step === 'history' && (
+            <div className="p-5">
+              <h3 className="font-syne font-bold text-sm mb-4">🕒 Past Analyses</h3>
+              {loadingHistory ? (
+                <p className="text-muted text-sm text-center py-8">Loading history...</p>
+              ) : savedAnalyses.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-3xl mb-3">🔍</p>
+                  <p className="text-muted text-sm">No past analyses yet.</p>
+                  <button onClick={() => setStep('input')} className="btn-primary text-sm px-4 py-2 mt-4">Run First Analysis</button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {savedAnalyses.map(a => {
+                    const proj = projects.find(p => p.id === a.project_id)
+                    return (
+                      <div key={a.id}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-accent/40 hover:bg-accent/5 ${currentAnalysisId === a.id ? 'border-accent bg-accent/5' : 'border-border bg-surface2'}`}
+                        onClick={() => {
+                          setResult(a.result)
+                          setDescription(a.description)
+                          setServiceNowChange(a.servicenow_change ?? '')
+                          setChangeDate(a.change_date ?? '')
+                          setSelectedProject(proj ?? selectedProject)
+                          setCurrentAnalysisId(a.id)
+                          setImportedTasks(false)
+                          setActiveTab('overview')
+                          setStep('result')
+                        }}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">{a.description.slice(0, 80)}{a.description.length > 80 ? '...' : ''}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {proj && <span className="text-xs text-accent">📁 {proj.name}</span>}
+                              {a.servicenow_change && <span className="text-xs text-muted">🔗 {a.servicenow_change}</span>}
+                              {a.change_date && <span className="text-xs text-muted">📅 {new Date(a.change_date).toLocaleDateString('en-GB')}</span>}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs text-muted">{new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            <p className="text-xs text-accent mt-1">{a.result.changeType}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── INPUT STEP ── */}
           {step === 'input' && (

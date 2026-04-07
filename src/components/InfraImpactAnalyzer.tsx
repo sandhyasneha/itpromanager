@@ -117,22 +117,20 @@ Change Description: ${description}
 ${serviceNowChange ? `ServiceNow Change Number: ${serviceNowChange}` : ''}
 ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/infra-impact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userMessage }],
+          description,
+          projectName: selectedProject?.name ?? project?.name ?? 'Unknown',
+          serviceNowChange,
+          changeDate,
         }),
       })
 
       const data = await res.json()
-      const text = data.content?.[0]?.text ?? ''
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('Invalid response')
-      const parsed: AnalysisResult = JSON.parse(jsonMatch[0])
+      if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed')
+      const parsed: AnalysisResult = data.result
       setResult(parsed)
       setStep('result')
     } catch (e) {

@@ -58,18 +58,21 @@ const RISK_DOT: Record<RiskLevel, string> = {
 
 export default function InfraImpactAnalyzer({
   project,
+  projects = [],
   onImportTasks,
   onClose,
   userPlan = 'free',
   analysisCount = 0,
 }: {
   project: Project | null
-  onImportTasks: (tasks: { title: string; priority: string; description: string }[]) => void
+  projects?: Project[]
+  onImportTasks: (tasks: { title: string; priority: string; description: string }[], projectId: string) => void
   onClose: () => void
   userPlan?: 'free' | 'pro' | 'enterprise'
   analysisCount?: number
 }) {
   const [step, setStep] = useState<'input' | 'analyzing' | 'result'>('input')
+  const [selectedProject, setSelectedProject] = useState<Project | null>(project)
   const [description, setDescription] = useState('')
   const [serviceNowChange, setServiceNowChange] = useState('')
   const [changeDate, setChangeDate] = useState('')
@@ -109,7 +112,7 @@ Analyse the infrastructure change described and produce a comprehensive impact a
 
 Generate 5-8 affected CIs, 4-6 risks, 6-10 implementation steps, 4-6 pre-tests, 4-6 post-tests, 4-6 backout steps, and 8-12 suggested tasks.`
 
-      const userMessage = `Project: ${project?.name ?? 'Unknown'}
+      const userMessage = `Project: ${selectedProject?.name ?? project?.name ?? 'Unknown'}
 Change Description: ${description}
 ${serviceNowChange ? `ServiceNow Change Number: ${serviceNowChange}` : ''}
 ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
@@ -141,7 +144,7 @@ ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
 
   function handleImportTasks() {
     if (!result) return
-    onImportTasks(result.suggestedTasks)
+    onImportTasks(result.suggestedTasks, selectedProject?.id ?? project?.id ?? '')
     setImportedTasks(true)
   }
 
@@ -171,9 +174,8 @@ ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
             <div>
               <h2 className="font-syne font-black text-lg">Infra Impact Analyzer</h2>
               <p className="text-xs text-muted">
-                {project?.name ?? 'No project selected'} 
                 {userPlan === 'free' && (
-                  <span className="ml-2 text-warn">· {FREE_LIMIT - analysisCount} analyses remaining (Free)</span>
+                  <span className="text-warn">{FREE_LIMIT - analysisCount} analyses remaining (Free)</span>
                 )}
               </p>
             </div>
@@ -187,7 +189,27 @@ ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
           {/* ── INPUT STEP ── */}
           {step === 'input' && (
             <div className="p-5 space-y-5">
-              {isLimitReached && (
+              {/* Project Selector */}
+            <div>
+              <label className="block text-xs font-syne font-semibold text-muted mb-2">
+                Select Project *
+              </label>
+              <select
+                className="select w-full"
+                value={selectedProject?.id ?? ''}
+                onChange={e => {
+                  const p = projects.find(p => p.id === e.target.value) ?? null
+                  setSelectedProject(p)
+                }}
+              >
+                <option value="">— Select a project —</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {isLimitReached && (
                 <div className="p-4 bg-warn/10 border border-warn/30 rounded-xl">
                   <p className="text-warn text-sm font-semibold">⚠️ Free plan limit reached ({FREE_LIMIT} analyses/month)</p>
                   <p className="text-muted text-xs mt-1">Upgrade to Pro for unlimited infrastructure impact analyses.</p>
@@ -257,7 +279,7 @@ ${changeDate ? `Planned Change Date: ${changeDate}` : ''}`
                 <button onClick={onClose} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
                 <button
                   onClick={runAnalysis}
-                  disabled={!description.trim() || isLimitReached}
+                  disabled={!description.trim() || isLimitReached || !selectedProject}
                   className="btn-primary px-6 py-2 text-sm disabled:opacity-50"
                 >
                   🔍 Run Impact Analysis

@@ -2270,13 +2270,15 @@ if (updates.priority && updates.priority !== old.priority) {
       {showInfraAnalyzer && (
         <InfraImpactAnalyzer
           project={currentProject}
+          projects={localProjects}
           onClose={() => setShowInfraAnalyzer(false)}
           analysisCount={infraAnalysisCount}
-          onImportTasks={async (tasks) => {
-            if (!projectId) return
+          onImportTasks={async (tasks, targetProjectId) => {
+            const pid = targetProjectId || projectId
+            if (!pid) return
             for (const task of tasks) {
               const { data } = await supabase.from('tasks').insert({
-                project_id: projectId,
+                project_id: pid,
                 title: task.title,
                 description: task.description,
                 status: 'backlog' as TaskStatus,
@@ -2284,7 +2286,7 @@ if (updates.priority && updates.priority !== old.priority) {
                 tags: [],
                 position: 0,
               }).select().single()
-              if (data) setColumns(prev => prev.map(c => c.id === 'backlog' ? { ...c, tasks: [...c.tasks, data as Task] } : c))
+              if (data && pid === projectId) setColumns(prev => prev.map(c => c.id === 'backlog' ? { ...c, tasks: [...c.tasks, data as Task] } : c))
             }
             setInfraAnalysisCount(c => c + 1)
             setShowInfraAnalyzer(false)

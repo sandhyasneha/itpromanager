@@ -13,7 +13,6 @@ import { createClient } from '@/lib/supabase/client'
 import type { KanbanColumn, Task, TaskStatus, TaskPriority, Project } from '@/types'
 import PostMortemGenerator from '@/components/PostMortemGenerator'
 import BudgetTracker from '@/components/BudgetTracker'
-import InfraImpactAnalyzer from '@/components/InfraImpactAnalyzer'
 import { logAudit, AUDIT_ACTIONS } from '@/lib/audit'
 
 
@@ -1082,8 +1081,6 @@ export default function KanbanBoard({
   const [showPostMortem, setShowPostMortem] = useState(false)
   const [showBudget, setShowBudget] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
-  const [showInfraAnalyzer, setShowInfraAnalyzer] = useState(false)
-  const [infraAnalysisCount, setInfraAnalysisCount] = useState(0)
   const [newProjectWorkspaceId, setNewProjectWorkspaceId] = useState<string>('')
   const [mobileEditingTask, setMobileEditingTask] = useState<Task | null>(null)
   const [taskActivity, setTaskActivity] = useState<Record<string, { actor_name: string; action_type: string; new_value: string; created_at: string }>>({})
@@ -1594,13 +1591,6 @@ if (updates.priority && updates.priority !== old.priority) {
                 <span className="pointer-events-none">
                   {exportingExcel ? '⏳ Generating...' : '📊 Excel'}
                 </span>
-              </button>
-              {/* Infra Impact Analyzer */}
-              <button
-                onClick={() => setShowInfraAnalyzer(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-accent hover:bg-accent/10 border border-accent/30"
-                title="Infra Impact Analyzer — AI-powered change impact analysis">
-                🔍 Impact
               </button>
             </div>
           )}
@@ -2263,33 +2253,6 @@ if (updates.priority && updates.priority !== old.priority) {
             </DragDropContext>
           </div>
         </>
-      )}
-    
-
-      {/* Infra Impact Analyzer */}
-      {showInfraAnalyzer && (
-        <InfraImpactAnalyzer
-          project={currentProject}
-          onClose={() => setShowInfraAnalyzer(false)}
-          analysisCount={infraAnalysisCount}
-          onImportTasks={async (tasks) => {
-            if (!projectId) return
-            for (const task of tasks) {
-              const { data } = await supabase.from('tasks').insert({
-                project_id: projectId,
-                title: task.title,
-                description: task.description,
-                status: 'backlog' as TaskStatus,
-                priority: (task.priority as TaskPriority) || 'medium',
-                tags: [],
-                position: 0,
-              }).select().single()
-              if (data) setColumns(prev => prev.map(c => c.id === 'backlog' ? { ...c, tasks: [...c.tasks, data as Task] } : c))
-            }
-            setInfraAnalysisCount(c => c + 1)
-            setShowInfraAnalyzer(false)
-          }}
-        />
       )}
     </div>
   )

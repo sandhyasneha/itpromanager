@@ -70,6 +70,13 @@ const FEATURES = [
     desc: 'Track project budget vs actual spend in real time. Log costs against tasks, monitor burn rate and get early warnings when you are heading over budget.',
     bullets: ['Budget vs actual dashboard','Cost logging per task','Burn rate tracking','Over-budget early warnings'],
   },
+
+{
+    id: 'infra_impact', icon: '🔍', title: 'Infra Impact Analyzer', subtitle: 'AI Change Impact in Seconds',
+    color: '#00d4ff',
+    desc: 'Describe your infrastructure change in plain English. AI instantly identifies affected systems, assesses risks, generates implementation plans, pre and post test plans, and a full back-out strategy — so your project completes smoothly with zero surprises.',
+    bullets: ['Affected CIs & systems identified','RAG risk assessment + mitigations','Pre & post implementation test plans','Back-out / rollback plan generated'],
+  },
 ]
 
 const STEPS = [

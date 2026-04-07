@@ -665,6 +665,33 @@ const GUIDES: Guide[] = [
       'NXP-3001/3003 (Email errors) — check the assignee email address is correct',
     ],
   },
+  // ── Infra Impact Analyzer ──────────────────────────────────────────────────
+  {
+    id: 'infra-impact-analyzer', icon: '🔍', title: 'Infra Impact Analyzer',
+    subtitle: 'AI change impact analysis in seconds', category: 'AI Features',
+    color: '#00d4ff', estimated: '4 min',
+    steps: [
+      { step: 'Open any project on the Kanban Board', detail: 'The Infra Impact Analyzer is available for all projects. Select the project you want to analyse from the project dropdown.' },
+      { step: 'Click the "🔍 Impact" button in the toolbar', detail: 'The button is in the Kanban toolbar next to Excel and other tools. It opens the Infra Impact Analyzer panel.' },
+      { step: 'Select the project you are analysing', detail: 'Use the project dropdown inside the analyzer to choose which project this change relates to.' },
+      { step: 'Describe your infrastructure change in plain English', detail: 'Be specific — include systems, locations, applications and scope. Example: "Upgrade Cisco core switches from IOS 15.x to 17.x across 3 sites — affects 200 users and core routing".' },
+      { step: 'Optionally add ServiceNow Change Number and Planned Change Date', detail: 'If your organisation uses ServiceNow, enter the change number (e.g. CHG0012345). This links the analysis to your ITSM change record.' },
+      { step: 'Click "Run Impact Analysis"', detail: 'AI analyses your change description and produces a complete impact assessment in under 30 seconds.' },
+      { step: 'Review results across five tabs', detail: 'Overview: Affected CIs, risks, stakeholders, suggested tasks. Implementation: Step-by-step plan. Testing: Pre and post test plans. Back-out: Rollback procedure. ServiceNow: Change field mapping.' },
+      { step: 'Import suggested tasks to your Kanban board', detail: 'Click "Import Tasks" to add all AI-suggested tasks directly to your Backlog column — ready for your team to action.' },
+      { step: 'Download the full report as PDF', detail: 'Click "Download PDF" to save the complete change analysis document — ready for your Change Advisory Board or project sponsor.' },
+      { step: 'Access past analyses from History', detail: 'Click "🕒 History" in the analyzer header to view any previously run analysis instantly — no tokens used, no waiting.' },
+    ],
+    tips: [
+      'The more specific your description, the better the analysis — include technology names, user counts, and business impact',
+      'Use the example descriptions as starting points — click one and then edit it to match your change',
+      'Free plan allows 3 analyses per month — upgrade to Pro for unlimited analyses',
+      'All analyses are saved automatically — use History to revisit without re-running',
+      'Import tasks immediately after analysis to get your team started straight away',
+      'The ServiceNow field mapping tab gives you all the values you need to update your change record',
+    ],
+    related: ['ai-project', 'risk-register', 'pcr-workflow'],
+  },
 ]
 
 const CATEGORIES = ['All', 'Getting Started', 'Gantt & Timeline', 'PCR & Risk Register', 'AI Features', 'Phase 8 Features', 'Phase 9 Features', 'Team Collaboration', 'Organisation & Workspaces', 'Support']

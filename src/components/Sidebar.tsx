@@ -37,6 +37,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
   const router   = useRouter()
   const supabase = createClient()
   const [open, setOpen] = useState(false)
+  const [unresolvedAlerts, setUnresolvedAlerts] = useState(0)
 
   // Close sidebar on route change (mobile)
   useEffect(() => { setOpen(false) }, [path])
@@ -61,6 +62,15 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       body: JSON.stringify({ userId: profile.id }),
     }).catch(() => {}) // silent fail — not critical
   }, [profile?.id])
+
+  // ── Fetch unresolved governance alert count ───────────────
+  useEffect(() => {
+    supabase
+      .from('governance_alerts')
+      .select('id', { count: 'exact', head: true })
+      .eq('resolved', false)
+      .then(({ count }) => setUnresolvedAlerts(count ?? 0))
+  }, [])
 
   const isAdmin  = profile?.email === ADMIN_EMAIL
   const fullName = profile?.full_name ?? profile?.email?.split('@')[0] ?? 'User'
@@ -142,6 +152,18 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
               className={`nav-item mb-0.5 ${path.includes('/organisation/dashboard') ? 'active' : ''}`}>
               <span className="text-base w-5 text-center shrink-0">📊</span>
               <span className="truncate">Exec Dashboard</span>
+            </Link>
+
+            {/* ── Governance Dashboard (Enterprise only) ── */}
+            <Link href="/governance"
+              className={`nav-item mb-0.5 relative ${path.startsWith('/governance') ? 'active' : ''}`}>
+              <span className="text-base w-5 text-center shrink-0">🛡️</span>
+              <span className="truncate">Governance</span>
+              {unresolvedAlerts > 0 && (
+                <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold font-mono-code">
+                  {unresolvedAlerts > 9 ? '9+' : unresolvedAlerts}
+                </span>
+              )}
             </Link>
           </>
         )}

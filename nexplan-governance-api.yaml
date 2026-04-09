@@ -1,0 +1,1049 @@
+openapi: 3.1.0
+info:
+  title: NexPlan IT Governance API
+  version: 1.0.0
+  description: |
+    REST API for the NexPlan IT Project Governance Dashboard.
+    Provides portfolio roll-up metrics, project EAC vs. budget tracking,
+    governance gate status, milestone alerting, and enterprise deployment
+    configuration for CIO-level reporting.
+  contact:
+    name: NexPlan Engineering
+    url: https://github.com/sandhyasneha/itpromanager
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.nexplan.io/v1
+    description: Production
+  - url: https://staging-api.nexplan.io/v1
+    description: Staging
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Portfolio
+    description: CIO-level portfolio roll-up and KPI endpoints
+  - name: Projects
+    description: Individual project data, EAC tracking, status
+  - name: Governance
+    description: Gate reviews, compliance checks, steering alerts
+  - name: Milestones
+    description: Milestone registry and notification engine
+  - name: Alerts
+    description: Governance alert feed and severity management
+  - name: Deployment
+    description: Enterprise deployment configuration (SaaS / Data Center)
+
+paths:
+
+  # ─────────────── PORTFOLIO ───────────────
+
+  /portfolio/summary:
+    get:
+      tags: [Portfolio]
+      summary: Portfolio KPI snapshot
+      description: |
+        Returns the top-level CIO dashboard metrics: active project count,
+        on-track rate, budget utilisation, at-risk count, and upcoming
+        deliverable count. Used to populate the KPI strip on the governance dashboard.
+      parameters:
+        - $ref: '#/components/parameters/PeriodParam'
+        - $ref: '#/components/parameters/OrgUnitParam'
+      responses:
+        '200':
+          description: Portfolio KPI snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioSummary'
+              example:
+                period: "Q2-FY2026"
+                active_projects: 47
+                on_track_rate: 0.72
+                on_track_delta_pp: -4
+                budget_utilised: 18300000
+                budget_cap: 30000000
+                budget_utilisation_pct: 0.61
+                at_risk_count: 9
+                critical_count: 2
+                deliverables_due_30d: 14
+                generated_at: "2026-04-08T09:00:00Z"
+
+  /portfolio/budget-allocation:
+    get:
+      tags: [Portfolio]
+      summary: Budget allocation by domain
+      description: Breakdown of spend and remaining budget per IT domain (infrastructure, security, analytics, operations).
+      parameters:
+        - $ref: '#/components/parameters/PeriodParam'
+      responses:
+        '200':
+          description: Budget allocation breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetAllocation'
+
+  /portfolio/health-trend:
+    get:
+      tags: [Portfolio]
+      summary: Portfolio health over time
+      description: Weekly on-track rate, at-risk count, and budget burn for trend charts.
+      parameters:
+        - $ref: '#/components/parameters/PeriodParam'
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [weekly, monthly]
+            default: weekly
+      responses:
+        '200':
+          description: Time-series health data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthTrend'
+
+  # ─────────────── PROJECTS ───────────────
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Strategic project register
+      description: |
+        Returns the full list of projects with status, risk score, approved budget,
+        EAC (estimate at completion), owner, and domain. Supports filtering and sorting
+        for the governance dashboard table view.
+      parameters:
+        - $ref: '#/components/parameters/PeriodParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [on_track, at_risk, critical, monitoring, completed]
+        - name: domain
+          in: query
+          schema:
+            type: string
+            example: security
+        - name: owner_id
+          in: query
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [eac_delta, risk_score, due_date, name]
+            default: risk_score
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  projects:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+
+  /projects/{projectId}:
+    get:
+      tags: [Projects]
+      summary: Project detail
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      responses:
+        '200':
+          description: Full project record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{projectId}/eac:
+    get:
+      tags: [Projects]
+      summary: EAC vs. budget history
+      description: Time-series of estimate-at-completion versus approved budget. Useful for detecting cost trajectory early.
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      responses:
+        '200':
+          description: EAC trend data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EACTrend'
+
+    patch:
+      tags: [Projects]
+      summary: Update EAC
+      description: Project manager submits a revised EAC. Triggers variance re-calculation and alert evaluation.
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eac, reason, submitted_by]
+              properties:
+                eac:
+                  type: number
+                  description: Revised estimate at completion (USD)
+                reason:
+                  type: string
+                  maxLength: 500
+                submitted_by:
+                  type: string
+                  description: User ID of submitter
+      responses:
+        '200':
+          description: Updated EAC record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EACRecord'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ─────────────── GOVERNANCE ───────────────
+
+  /governance/gates:
+    get:
+      tags: [Governance]
+      summary: Gate review status across portfolio
+      description: |
+        Returns all governance gate checkpoints (architecture review, UAT sign-off,
+        steering committee approval, etc.) with pass/fail/pending/overdue status.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, passed, failed, overdue]
+        - $ref: '#/components/parameters/ProjectIdFilterParam'
+      responses:
+        '200':
+          description: Gate review list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GateReview'
+
+  /governance/gates/{gateId}/decision:
+    post:
+      tags: [Governance]
+      summary: Record gate decision
+      description: CIO or governance board records pass/fail decision with conditions.
+      parameters:
+        - name: gateId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GateDecisionRequest'
+      responses:
+        '201':
+          description: Gate decision recorded
+        '409':
+          description: Gate already decided
+
+  /governance/compliance:
+    get:
+      tags: [Governance]
+      summary: Portfolio-wide compliance scorecard
+      description: Aggregated view of policy adherence across all active projects.
+      responses:
+        '200':
+          description: Compliance scorecard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceScorecard'
+
+  # ─────────────── MILESTONES ───────────────
+
+  /milestones:
+    get:
+      tags: [Milestones]
+      summary: Milestone registry
+      description: All upcoming milestones across the portfolio, sortable by due date, risk, or project.
+      parameters:
+        - name: due_within_days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [upcoming, overdue, completed, at_risk]
+        - $ref: '#/components/parameters/ProjectIdFilterParam'
+      responses:
+        '200':
+          description: Milestone list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  milestones:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Milestone'
+
+    post:
+      tags: [Milestones]
+      summary: Create milestone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MilestoneCreateRequest'
+      responses:
+        '201':
+          description: Milestone created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Milestone'
+
+  /milestones/{milestoneId}:
+    patch:
+      tags: [Milestones]
+      summary: Update milestone status or dates
+      parameters:
+        - name: milestoneId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MilestoneUpdateRequest'
+      responses:
+        '200':
+          description: Updated milestone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Milestone'
+
+  /milestones/notifications/rules:
+    get:
+      tags: [Milestones]
+      summary: List notification rules
+      description: Configured rules for when milestone alerts are triggered (e.g. 30d, 14d, 7d, 1d before due date; on slip).
+      responses:
+        '200':
+          description: Notification rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRuleList'
+
+    post:
+      tags: [Milestones]
+      summary: Create notification rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRuleRequest'
+      responses:
+        '201':
+          description: Rule created
+
+  # ─────────────── ALERTS ───────────────
+
+  /alerts:
+    get:
+      tags: [Alerts]
+      summary: Governance alert feed
+      description: |
+        Active governance alerts ordered by severity. Includes budget overruns,
+        gate misses, schedule slippage, compliance violations, and pending
+        deployment decisions.
+      parameters:
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, high, medium, low, info]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [budget, schedule, gate, compliance, deployment, resource]
+        - name: resolved
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Alert feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GovernanceAlert'
+
+  /alerts/{alertId}/resolve:
+    post:
+      tags: [Alerts]
+      summary: Resolve an alert
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolved_by, resolution_note]
+              properties:
+                resolved_by: { type: string }
+                resolution_note: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Alert resolved
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /alerts/webhooks:
+    get:
+      tags: [Alerts]
+      summary: List webhook endpoints for alert delivery
+      responses:
+        '200':
+          description: Webhook list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookList'
+
+    post:
+      tags: [Alerts]
+      summary: Register webhook
+      description: Register an endpoint to receive real-time governance alert payloads.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+      responses:
+        '201':
+          description: Webhook registered
+
+  # ─────────────── DEPLOYMENT ───────────────
+
+  /deployment/config:
+    get:
+      tags: [Deployment]
+      summary: Deployment model configuration
+      description: Returns the current deployment configuration for the tenant.
+      responses:
+        '200':
+          description: Deployment config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentConfig'
+
+    put:
+      tags: [Deployment]
+      summary: Set or update deployment model
+      description: |
+        Configure the deployment model for an enterprise tenant.
+        For SaaS: sets region and data-residency preferences.
+        For Data Center: sets on-prem endpoint, network topology, and air-gap flags.
+        Triggers environment provisioning workflow on change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentConfigRequest'
+      responses:
+        '200':
+          description: Config updated, provisioning initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentProvisioningJob'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /deployment/comparison:
+    get:
+      tags: [Deployment]
+      summary: SaaS vs. Data Center comparison matrix
+      description: Returns structured comparison data (TCO, setup time, SLA, compliance options) for a given tenant profile.
+      parameters:
+        - name: annual_users
+          in: query
+          schema: { type: integer }
+        - name: data_residency_required
+          in: query
+          schema: { type: boolean }
+        - name: air_gap_required
+          in: query
+          schema: { type: boolean }
+        - name: contract_years
+          in: query
+          schema:
+            type: integer
+            enum: [1, 2, 3, 5]
+            default: 3
+      responses:
+        '200':
+          description: Comparison matrix
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentComparison'
+
+  /deployment/provisioning/{jobId}:
+    get:
+      tags: [Deployment]
+      summary: Provisioning job status
+      description: Poll status of an environment provisioning job triggered by a deployment config change.
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Provisioning job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentProvisioningJob'
+
+# ═══════════════════════════════════════
+# COMPONENTS
+# ═══════════════════════════════════════
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PeriodParam:
+      name: period
+      in: query
+      description: Fiscal period (e.g. Q2-FY2026)
+      schema:
+        type: string
+        example: Q2-FY2026
+
+    OrgUnitParam:
+      name: org_unit
+      in: query
+      description: Filter by organisational unit
+      schema:
+        type: string
+
+    ProjectIdParam:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ProjectIdFilterParam:
+      name: project_id
+      in: query
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+
+    PortfolioSummary:
+      type: object
+      properties:
+        period: { type: string }
+        active_projects: { type: integer }
+        on_track_rate: { type: number, format: float, minimum: 0, maximum: 1 }
+        on_track_delta_pp: { type: number, description: Quarter-over-quarter change in percentage points }
+        budget_utilised: { type: number, description: USD spent }
+        budget_cap: { type: number, description: Total approved budget USD }
+        budget_utilisation_pct: { type: number, format: float }
+        at_risk_count: { type: integer }
+        critical_count: { type: integer }
+        deliverables_due_30d: { type: integer }
+        generated_at: { type: string, format: date-time }
+
+    BudgetAllocation:
+      type: object
+      properties:
+        period: { type: string }
+        total_approved: { type: number }
+        total_spent: { type: number }
+        domains:
+          type: array
+          items:
+            type: object
+            properties:
+              domain: { type: string }
+              approved: { type: number }
+              spent: { type: number }
+              eac: { type: number }
+              variance_pct: { type: number }
+
+    HealthTrend:
+      type: object
+      properties:
+        period: { type: string }
+        granularity: { type: string }
+        data_points:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              on_track_rate: { type: number }
+              at_risk_count: { type: integer }
+              budget_burn_pct: { type: number }
+
+    Project:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        domain: { type: string }
+        status:
+          type: string
+          enum: [on_track, at_risk, critical, monitoring, completed]
+        risk_score: { type: number, format: float, minimum: 0, maximum: 1 }
+        approved_budget: { type: number }
+        actual_spend: { type: number }
+        eac: { type: number }
+        eac_variance_pct: { type: number }
+        owner:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+        phase: { type: string }
+        start_date: { type: string, format: date }
+        planned_end_date: { type: string, format: date }
+        forecast_end_date: { type: string, format: date }
+
+    ProjectDetail:
+      allOf:
+        - $ref: '#/components/schemas/Project'
+        - type: object
+          properties:
+            description: { type: string }
+            strategic_objective: { type: string }
+            milestones:
+              type: array
+              items:
+                $ref: '#/components/schemas/Milestone'
+            gates:
+              type: array
+              items:
+                $ref: '#/components/schemas/GateReview'
+            active_alerts:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovernanceAlert'
+            deployment_config:
+              $ref: '#/components/schemas/DeploymentConfig'
+
+    EACRecord:
+      type: object
+      properties:
+        project_id: { type: string, format: uuid }
+        approved_budget: { type: number }
+        eac: { type: number }
+        variance: { type: number }
+        variance_pct: { type: number }
+        reason: { type: string }
+        submitted_by: { type: string }
+        submitted_at: { type: string, format: date-time }
+
+    EACTrend:
+      type: object
+      properties:
+        project_id: { type: string, format: uuid }
+        approved_budget: { type: number }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              eac: { type: number }
+              actual_spend: { type: number }
+
+    GateReview:
+      type: object
+      properties:
+        id: { type: string }
+        project_id: { type: string, format: uuid }
+        gate_name: { type: string, example: Architecture Review }
+        gate_type:
+          type: string
+          enum: [architecture_review, uat_signoff, steering_committee, security_review, go_live_approval]
+        status:
+          type: string
+          enum: [pending, passed, failed, overdue, waived]
+        due_date: { type: string, format: date }
+        decided_at: { type: string, format: date-time, nullable: true }
+        decided_by: { type: string, nullable: true }
+        conditions: { type: string, nullable: true }
+        days_overdue: { type: integer, nullable: true }
+
+    GateDecisionRequest:
+      type: object
+      required: [decision, decided_by]
+      properties:
+        decision:
+          type: string
+          enum: [passed, failed, waived]
+        decided_by: { type: string }
+        conditions: { type: string, nullable: true }
+        next_review_date: { type: string, format: date, nullable: true }
+
+    ComplianceScorecard:
+      type: object
+      properties:
+        overall_score: { type: number, format: float, minimum: 0, maximum: 1 }
+        policies:
+          type: array
+          items:
+            type: object
+            properties:
+              policy: { type: string }
+              compliant_count: { type: integer }
+              total_count: { type: integer }
+              compliance_pct: { type: number }
+
+    Milestone:
+      type: object
+      properties:
+        id: { type: string }
+        project_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        due_date: { type: string, format: date }
+        status:
+          type: string
+          enum: [upcoming, overdue, completed, at_risk]
+        days_until_due: { type: integer }
+        days_overdue: { type: integer, nullable: true }
+        owner_id: { type: string }
+        blocking: { type: boolean, description: True if this milestone gates another }
+
+    MilestoneCreateRequest:
+      type: object
+      required: [project_id, name, due_date, owner_id]
+      properties:
+        project_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        due_date: { type: string, format: date }
+        owner_id: { type: string }
+        blocking: { type: boolean, default: false }
+        notification_rule_ids:
+          type: array
+          items: { type: string }
+
+    MilestoneUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [upcoming, overdue, completed, at_risk]
+        due_date: { type: string, format: date }
+        revised_due_date: { type: string, format: date }
+        slip_reason: { type: string }
+
+    NotificationRuleList:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationRule'
+
+    NotificationRule:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        trigger:
+          type: string
+          enum: [days_before_due, on_slip, on_overdue, on_status_change, on_eac_threshold]
+        trigger_value: { type: number, description: E.g. 30 for 30 days before due }
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [email, slack, webhook, in_app]
+        recipients:
+          type: array
+          items: { type: string, description: User ID or role }
+        severity_filter:
+          type: string
+          enum: [all, critical_only, high_and_above]
+
+    NotificationRuleRequest:
+      type: object
+      required: [name, trigger, channels, recipients]
+      properties:
+        name: { type: string }
+        trigger:
+          type: string
+          enum: [days_before_due, on_slip, on_overdue, on_status_change, on_eac_threshold]
+        trigger_value: { type: number }
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [email, slack, webhook, in_app]
+        recipients:
+          type: array
+          items: { type: string }
+        severity_filter:
+          type: string
+          enum: [all, critical_only, high_and_above]
+          default: all
+
+    GovernanceAlert:
+      type: object
+      properties:
+        id: { type: string }
+        project_id: { type: string, format: uuid, nullable: true }
+        project_name: { type: string, nullable: true }
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        category:
+          type: string
+          enum: [budget, schedule, gate, compliance, deployment, resource]
+        title: { type: string }
+        description: { type: string }
+        raised_at: { type: string, format: date-time }
+        resolved: { type: boolean }
+        resolved_at: { type: string, format: date-time, nullable: true }
+        resolved_by: { type: string, nullable: true }
+        action_required: { type: boolean }
+        action_due_date: { type: string, format: date, nullable: true }
+
+    WebhookList:
+      type: object
+      properties:
+        webhooks:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              url: { type: string, format: uri }
+              events:
+                type: array
+                items: { type: string }
+              active: { type: boolean }
+              created_at: { type: string, format: date-time }
+
+    WebhookRequest:
+      type: object
+      required: [url, events]
+      properties:
+        url: { type: string, format: uri }
+        secret: { type: string, description: HMAC signing secret }
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - alert.created
+              - alert.resolved
+              - milestone.due_soon
+              - milestone.overdue
+              - milestone.slipped
+              - gate.overdue
+              - gate.failed
+              - eac.threshold_exceeded
+              - deployment.config_changed
+              - deployment.provisioning_complete
+
+    DeploymentConfig:
+      type: object
+      properties:
+        tenant_id: { type: string }
+        model:
+          type: string
+          enum: [saas, data_center, hybrid]
+        saas_config:
+          type: object
+          nullable: true
+          properties:
+            region: { type: string, example: ap-south-1 }
+            data_residency: { type: string, example: IN }
+            tier: { type: string, enum: [standard, enterprise] }
+        data_center_config:
+          type: object
+          nullable: true
+          properties:
+            endpoint_url: { type: string, format: uri }
+            air_gap: { type: boolean }
+            network_topology:
+              type: string
+              enum: [vpn, private_link, direct_connect]
+            compliance_frameworks:
+              type: array
+              items: { type: string }
+        provisioning_status:
+          type: string
+          enum: [pending, in_progress, complete, failed]
+        last_updated: { type: string, format: date-time }
+
+    DeploymentConfigRequest:
+      type: object
+      required: [tenant_id, model]
+      properties:
+        tenant_id: { type: string }
+        model:
+          type: string
+          enum: [saas, data_center, hybrid]
+        saas_config:
+          type: object
+          nullable: true
+          properties:
+            region: { type: string }
+            data_residency: { type: string }
+            tier: { type: string, enum: [standard, enterprise] }
+        data_center_config:
+          type: object
+          nullable: true
+          properties:
+            endpoint_url: { type: string, format: uri }
+            air_gap: { type: boolean }
+            network_topology:
+              type: string
+              enum: [vpn, private_link, direct_connect]
+            compliance_frameworks:
+              type: array
+              items: { type: string }
+
+    DeploymentComparison:
+      type: object
+      properties:
+        tenant_profile:
+          type: object
+          properties:
+            annual_users: { type: integer }
+            data_residency_required: { type: boolean }
+            air_gap_required: { type: boolean }
+            contract_years: { type: integer }
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              model: { type: string, enum: [saas, data_center] }
+              setup_weeks_min: { type: integer }
+              setup_weeks_max: { type: integer }
+              tco_usd: { type: number }
+              uptime_sla: { type: number }
+              data_residency: { type: string, enum: [shared, isolated] }
+              compliance:
+                type: array
+                items: { type: string }
+              recommended: { type: boolean }
+              recommendation_reason: { type: string, nullable: true }
+
+    DeploymentProvisioningJob:
+      type: object
+      properties:
+        job_id: { type: string }
+        tenant_id: { type: string }
+        model: { type: string }
+        status:
+          type: string
+          enum: [queued, in_progress, complete, failed]
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              step: { type: string }
+              status: { type: string, enum: [pending, running, done, failed] }
+              completed_at: { type: string, format: date-time, nullable: true }
+        started_at: { type: string, format: date-time }
+        estimated_completion: { type: string, format: date-time, nullable: true }
+
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              issue: { type: string }

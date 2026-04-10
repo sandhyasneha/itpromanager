@@ -16,7 +16,7 @@ export async function GET() {
         from: 'NexPlan <info@nexplan.io>',
         to: ['info@nexplan.io'],
         subject: '✅ NexPlan Email Test',
-        html: '<h1>Email working!</h1><p>NexPlan email notifications configured correctly.</p>',
+        html: '<h1>Email working!</h1>',
       }),
     })
     const data = await res.json()

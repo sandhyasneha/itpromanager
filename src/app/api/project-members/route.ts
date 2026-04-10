@@ -1,6 +1,6 @@
 // src/app/api/project-members/route.ts
 // Returns all active members of a project
-
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'

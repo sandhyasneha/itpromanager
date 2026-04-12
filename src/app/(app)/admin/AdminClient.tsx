@@ -17,7 +17,6 @@
  */
 
 import { useState } from "react";
-import AdminAuditLog from "./AdminAuditLog";
 
 /* ─── shared styles ─────────────────────────────────────────────────────── */
 const S = `
@@ -164,7 +163,7 @@ const SLIDES: { id: Slide; label: string }[] = [
 ];
 
 /* ─── component ─────────────────────────────────────────────────────────── */
-export default function AdminClient() {
+export default function AdminClient({ auditLog }: { auditLog?: React.ReactNode }) {
   const [tab, setTab]       = useState<AdminTab>("overview");
 
   /* wizard state */
@@ -821,7 +820,11 @@ export default function AdminClient() {
           {tab === "pitch"    && <PitchTab />}
           {tab === "audit"    && (
             <div className="card">
-              <AdminAuditLog />
+              {auditLog ?? (
+                <div style={{ textAlign: "center", padding: 32, color: "var(--mut)", fontSize: 13 }}>
+                  Audit log not available.
+                </div>
+              )}
             </div>
           )}
         </div>

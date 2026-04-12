@@ -1,40 +1,41 @@
-/**
- * src/app/(app)/admin/page.tsx
- * ⚠ CORRECT PATH: src/app/(app)/admin/page.tsx
- *
- * Unified Admin Panel — info@nexplan.io only
- * Passes existing AdminAuditLog as a prop to the new AdminClient
- * so the client component never directly imports it (avoids build errors).
- */
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { redirect } from 'next/navigation'
+import AdminClient from '@/components/AdminClient'
 
-import { createClient }  from "@/lib/supabase/server";
-import { redirect }      from "next/navigation";
-import AdminClient       from "./AdminClient";
-import type { Metadata } from "next";
-
-// Import AdminAuditLog — it lives in the same folder as this page
-// If it has a default export use this:
-import AdminAuditLog from "./AdminAuditLog";
-// If the above fails at build, try the named export instead:
-// import { AdminAuditLog } from "./AdminAuditLog";
-// Or if it's in src/components/:
-// import AdminAuditLog from "@/components/AdminAuditLog";
-
-export const metadata: Metadata = {
-  title: "NexPlan Admin Panel",
-  description: "Internal admin panel — NexPlan operations",
-  robots: "noindex, nofollow",
-};
-
-const ADMIN_EMAIL = "info@nexplan.io";
+const ADMIN_EMAIL = 'info@nexplan.io'
 
 export default async function AdminPage() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user?.email !== ADMIN_EMAIL) redirect('/dashboard')
 
-  if (!user) redirect("/login");
-  if (user.email !== ADMIN_EMAIL) redirect("/dashboard");
+  const adminClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
-  // Pass AdminAuditLog as a React node — client component never imports it directly
-  return <AdminClient auditLog={<AdminAuditLog />} />;
+  const [
+    { data: profiles },
+    { data: projects },
+    { data: tasks },
+    { data: articles },
+    { data: feedback },
+  ] = await Promise.all([
+    adminClient.from('profiles').select('*').order('created_at', { ascending: false }),
+    adminClient.from('projects').select('*'),
+    adminClient.from('tasks').select('*'),
+    adminClient.from('kb_articles').select('*'),
+    adminClient.from('feedback').select('*').order('created_at', { ascending: false }),
+  ])
+
+  return (
+    <AdminClient
+      profiles={profiles ?? []}
+      projects={projects ?? []}
+      tasks={tasks ?? []}
+      articles={articles ?? []}
+      feedback={feedback ?? []}
+    />
+  )
 }

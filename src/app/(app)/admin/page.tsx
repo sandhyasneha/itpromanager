@@ -1,41 +1,32 @@
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { redirect } from 'next/navigation'
-import AdminClient from '@/components/AdminClient'
+/**
+ * src/app/(app)/admin/page.tsx
+ *
+ * ⚠ CORRECT PATH: src/app/(app)/admin/page.tsx
+ * The (app) route group is required — do NOT place at src/app/admin/
+ *
+ * Unified Admin Panel — info@nexplan.io only
+ * Tabs: Overview · DC Setup · ROI Calculator · CIO Pitch · Audit Log
+ */
 
-const ADMIN_EMAIL = 'info@nexplan.io'
+import { createClient } from "@/lib/supabase/server";
+import { redirect }     from "next/navigation";
+import AdminClient      from "./AdminClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "NexPlan Admin Panel",
+  description: "Internal admin panel — NexPlan operations",
+  robots: "noindex, nofollow",
+};
+
+const ADMIN_EMAIL = "info@nexplan.io";
 
 export default async function AdminPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user?.email !== ADMIN_EMAIL) redirect('/dashboard')
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const adminClient = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  if (!user) redirect("/login");
+  if (user.email !== ADMIN_EMAIL) redirect("/dashboard");
 
-  const [
-    { data: profiles },
-    { data: projects },
-    { data: tasks },
-    { data: articles },
-    { data: feedback },
-  ] = await Promise.all([
-    adminClient.from('profiles').select('*').order('created_at', { ascending: false }),
-    adminClient.from('projects').select('*'),
-    adminClient.from('tasks').select('*'),
-    adminClient.from('kb_articles').select('*'),
-    adminClient.from('feedback').select('*').order('created_at', { ascending: false }),
-  ])
-
-  return (
-    <AdminClient
-      profiles={profiles ?? []}
-      projects={projects ?? []}
-      tasks={tasks ?? []}
-      articles={articles ?? []}
-      feedback={feedback ?? []}
-    />
-  )
+  return <AdminClient />;
 }

@@ -17,12 +17,14 @@ const NAV = [
   { href: '/reports',      label: 'Reports',         icon: '📈' },
   { href: '/analytics',    label: 'Analytics',       icon: '🔬' },
   { href: '/help',         label: 'Help Center',     icon: '❓' },
-  { href: '/client-portal', label: 'Client Portal',   icon: '👁️' },
+  { href: '/client-portal', label: 'Client Portal',  icon: '👁️' },
 ]
 
+// ── All admin tools now live inside /admin as tabs ─────────────────────────
+// /admin → Overview + DC Setup Wizard + ROI Calculator + CIO Pitch Deck
 const ADMIN_NAV = [
-  { href: '/admin',    label: 'Admin Panel', icon: '🔐' },
-  { href: '/settings', label: 'Settings',    icon: '⚙️' },
+  { href: '/admin',    label: 'Admin Panel',     icon: '🔐' },
+  { href: '/settings', label: 'Settings',         icon: '⚙️' },
 ]
 
 const USER_NAV = [
@@ -37,22 +39,17 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
   const router   = useRouter()
   const supabase = createClient()
   const [open, setOpen] = useState(false)
-  const [unresolvedAlerts, setUnresolvedAlerts] = useState(0)
 
-  // Close sidebar on route change (mobile)
   useEffect(() => { setOpen(false) }, [path])
 
-  // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  // ── Capture IP/country on first load ─────────────────────
   useEffect(() => {
     if (!profile?.id) return
-    // Only capture once per session using sessionStorage
     const key = `ip_captured_${profile.id}`
     if (sessionStorage.getItem(key)) return
     sessionStorage.setItem(key, '1')
@@ -60,17 +57,8 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: profile.id }),
-    }).catch(() => {}) // silent fail — not critical
+    }).catch(() => {})
   }, [profile?.id])
-
-  // ── Fetch unresolved governance alert count ───────────────
-  useEffect(() => {
-    supabase
-      .from('governance_alerts')
-      .select('id', { count: 'exact', head: true })
-      .eq('resolved', false)
-      .then(({ count }) => setUnresolvedAlerts(count ?? 0))
-  }, [])
 
   const isAdmin  = profile?.email === ADMIN_EMAIL
   const fullName = profile?.full_name ?? profile?.email?.split('@')[0] ?? 'User'
@@ -96,7 +84,6 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
             </span>
           )}
         </div>
-        {/* Close button — mobile only */}
         <button onClick={() => setOpen(false)}
           className="md:hidden p-1 rounded-lg hover:bg-slate-100 text-slate-400">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -153,21 +140,10 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
               <span className="text-base w-5 text-center shrink-0">📊</span>
               <span className="truncate">Exec Dashboard</span>
             </Link>
-
-            {/* ── Governance Dashboard (Enterprise only) ── */}
-            <Link href="/governance"
-              className={`nav-item mb-0.5 relative ${path.startsWith('/governance') ? 'active' : ''}`}>
-              <span className="text-base w-5 text-center shrink-0">🛡️</span>
-              <span className="truncate">Governance</span>
-              {unresolvedAlerts > 0 && (
-                <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold font-mono-code">
-                  {unresolvedAlerts > 9 ? '9+' : unresolvedAlerts}
-                </span>
-              )}
-            </Link>
           </>
         )}
 
+        {/* Administration section — admin user only */}
         <p className="font-mono-code text-slate-400 text-[10px] tracking-widest uppercase px-3 mt-5 mb-2">
           {isAdmin ? 'Administration' : 'Account'}
         </p>
@@ -178,6 +154,24 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
             <span className="truncate">{item.label}</span>
           </Link>
         ))}
+
+        {/* Admin sub-items — shown when on /admin, collapsed otherwise */}
+        {isAdmin && path.startsWith('/admin') && (
+          <div className="ml-4 mt-1 mb-1 border-l-2 border-slate-100 pl-2">
+            {[
+              { tab: 'setup', label: 'DC Setup Wizard',  icon: '🖥' },
+              { tab: 'roi',   label: 'ROI Calculator',   icon: '💰' },
+              { tab: 'pitch', label: 'CIO Pitch Deck',   icon: '📊' },
+              { tab: 'audit', label: 'Audit Log',        icon: '📋' },
+            ].map(sub => (
+              <Link key={sub.tab} href={`/admin?tab=${sub.tab}`}
+                className={`nav-item mb-0.5 text-xs py-1.5 ${path.startsWith('/admin') ? 'text-slate-500' : ''}`}>
+                <span className="text-sm w-4 text-center shrink-0">{sub.icon}</span>
+                <span className="truncate text-[11px]">{sub.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Upgrade banner — free users only */}
@@ -206,12 +200,12 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
+      {/* Desktop sidebar */}
       <div className="hidden md:flex fixed left-0 top-0 bottom-0 z-50">
         <SidebarContent />
       </div>
 
-      {/* ── Mobile hamburger ── */}
+      {/* Mobile hamburger */}
       <button
         onClick={() => setOpen(true)}
         className="md:hidden fixed top-4 left-4 z-50 p-2.5 bg-white rounded-xl shadow-md border border-slate-200">
@@ -220,7 +214,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         </svg>
       </button>
 
-      {/* ── Mobile sidebar overlay ── */}
+      {/* Mobile sidebar overlay */}
       {open && (
         <>
           <div className="sidebar-overlay md:hidden" onClick={() => setOpen(false)} />

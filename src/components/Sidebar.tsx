@@ -20,11 +20,9 @@ const NAV = [
   { href: '/client-portal', label: 'Client Portal',  icon: '👁️' },
 ]
 
-// ── All admin tools now live inside /admin as tabs ─────────────────────────
-// /admin → Overview + DC Setup Wizard + ROI Calculator + CIO Pitch Deck
 const ADMIN_NAV = [
-  { href: '/admin',    label: 'Admin Panel',     icon: '🔐' },
-  { href: '/settings', label: 'Settings',         icon: '⚙️' },
+  { href: '/admin',    label: 'Admin Panel', icon: '🔐' },
+  { href: '/settings', label: 'Settings',    icon: '⚙️' },
 ]
 
 const USER_NAV = [
@@ -143,7 +141,6 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
           </>
         )}
 
-        {/* Administration section — admin user only */}
         <p className="font-mono-code text-slate-400 text-[10px] tracking-widest uppercase px-3 mt-5 mb-2">
           {isAdmin ? 'Administration' : 'Account'}
         </p>
@@ -155,23 +152,6 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
           </Link>
         ))}
 
-        {/* Admin sub-items — shown when on /admin, collapsed otherwise */}
-        {isAdmin && path.startsWith('/admin') && (
-          <div className="ml-4 mt-1 mb-1 border-l-2 border-slate-100 pl-2">
-            {[
-              { tab: 'setup', label: 'DC Setup Wizard',  icon: '🖥' },
-              { tab: 'roi',   label: 'ROI Calculator',   icon: '💰' },
-              { tab: 'pitch', label: 'CIO Pitch Deck',   icon: '📊' },
-              { tab: 'audit', label: 'Audit Log',        icon: '📋' },
-            ].map(sub => (
-              <Link key={sub.tab} href={`/admin?tab=${sub.tab}`}
-                className={`nav-item mb-0.5 text-xs py-1.5 ${path.startsWith('/admin') ? 'text-slate-500' : ''}`}>
-                <span className="text-sm w-4 text-center shrink-0">{sub.icon}</span>
-                <span className="truncate text-[11px]">{sub.label}</span>
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Upgrade banner — free users only */}

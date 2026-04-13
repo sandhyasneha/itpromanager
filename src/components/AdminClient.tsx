@@ -3,39 +3,41 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AdminAuditLog from '@/components/AdminAuditLog'
 import AdminSubscriptions from '@/components/AdminSubscriptions'
+import NexPlanOpsClient from './NexPlanOpsClient'
 import { PLAN_DISPLAY, type Plan } from '@/lib/planConfig'
 
 const STATUS_COLORS: Record<string, string> = {
-  new:         'bg-accent/10 text-accent border-accent/30',
-  reviewing:   'bg-warn/10 text-warn border-warn/30',
-  planned:     'bg-accent2/10 text-purple-300 border-accent2/30',
+  new: 'bg-accent/10 text-accent border-accent/30',
+  reviewing: 'bg-warn/10 text-warn border-warn/30',
+  planned: 'bg-accent2/10 text-purple-300 border-accent2/30',
   implemented: 'bg-accent3/10 text-accent3 border-accent3/30',
-  declined:    'bg-danger/10 text-danger border-danger/30',
+  declined: 'bg-danger/10 text-danger border-danger/30',
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  low:      'text-muted',
-  medium:   'text-accent',
-  high:     'text-warn',
+  low: 'text-muted',
+  medium: 'text-accent',
+  high: 'text-warn',
   critical: 'text-danger',
 }
 
-const TABS = ['Overview', 'Feedback', 'Users', 'Audit Log', 'Subscriptions']
+const TABS = ['Overview', 'Feedback', 'Users', 'Audit Log', 'Subscriptions', 'NexPlan Ops']
+
 const PAGE_SIZE = 15
 
 export default function AdminClient({ profiles, projects, tasks, articles, feedback }: {
   profiles: any[], projects: any[], tasks: any[], articles: any[], feedback: any[]
 }) {
   const supabase = createClient()
-  const [tab, setTab]                   = useState('Overview')
+  const [tab, setTab] = useState('Overview')
   const [feedbackList, setFeedbackList] = useState(feedback)
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null)
-  const [filterStatus, setFilterStatus]   = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
-  const [adminNote, setAdminNote]         = useState('')
-  const [savingNote, setSavingNote]       = useState(false)
-  const [userPage, setUserPage]           = useState(1)
-  const [userSearch, setUserSearch]       = useState('')
+  const [adminNote, setAdminNote] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
+  const [userPage, setUserPage] = useState(1)
+  const [userSearch, setUserSearch] = useState('')
 
   const totalPages = Math.ceil(profiles.length / PAGE_SIZE)
   const pagedUsers = profiles.slice((userPage - 1) * PAGE_SIZE, userPage * PAGE_SIZE)
@@ -49,12 +51,12 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
     : pagedUsers
 
   const stats = [
-    { label: 'Total Users',    value: profiles.length,                                     color: 'border-accent/40',  icon: '👥' },
-    { label: 'Total Projects', value: projects.length,                                     color: 'border-accent2/40', icon: '📋' },
-    { label: 'Total Tasks',    value: tasks.length,                                        color: 'border-accent3/40', icon: '✅' },
-    { label: 'KB Articles',    value: articles.length,                                     color: 'border-warn/40',    icon: '📚' },
-    { label: 'Feedback Items', value: feedbackList.length,                                 color: 'border-danger/40',  icon: '💬' },
-    { label: 'New Feedback',   value: feedbackList.filter(f => f.status === 'new').length, color: 'border-accent/40',  icon: '🔔' },
+    { label: 'Total Users',    value: profiles.length,                                       color: 'border-accent/40',  icon: '👥' },
+    { label: 'Total Projects', value: projects.length,                                       color: 'border-accent2/40', icon: '📋' },
+    { label: 'Total Tasks',    value: tasks.length,                                          color: 'border-accent3/40', icon: '✅' },
+    { label: 'KB Articles',    value: articles.length,                                       color: 'border-warn/40',    icon: '📚' },
+    { label: 'Feedback Items', value: feedbackList.length,                                   color: 'border-danger/40',  icon: '💬' },
+    { label: 'New Feedback',   value: feedbackList.filter(f => f.status === 'new').length,   color: 'border-accent/40',  icon: '🔔' },
   ]
 
   const last7 = Array.from({ length: 7 }, (_, i) => {
@@ -62,7 +64,7 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
     return d.toISOString().split('T')[0]
   })
   const signupsByDay = last7.map(day => ({
-    date:  day,
+    date: day,
     count: profiles.filter((u: any) => u.created_at?.startsWith(day)).length,
     label: new Date(day).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
   }))
@@ -77,29 +79,32 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
 
   const filteredFeedback = feedbackList.filter(f => {
     const matchStatus = filterStatus === 'all' || f.status === filterStatus
-    const matchCat    = filterCategory === 'all' || f.category === filterCategory
+    const matchCat = filterCategory === 'all' || f.category === filterCategory
     return matchStatus && matchCat
   })
   const categories = [...new Set(feedbackList.map(f => f.category))]
 
-  const ratingCounts = [1,2,3,4,5].map(r => ({
-    rating: r,
-    count:  feedbackList.filter(f => f.rating === r).length,
-    emoji:  r <= 2 ? '😕' : r === 3 ? '😐' : r === 4 ? '😊' : '🤩',
-  }))
   const avgRating = feedbackList.length > 0
     ? (feedbackList.reduce((sum, f) => sum + (f.rating ?? 0), 0) / feedbackList.length).toFixed(1)
     : '—'
 
   async function updateFeedbackStatus(id: string, status: string) {
-    await fetch('/api/admin/feedback', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) })
+    await fetch('/api/admin/feedback', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status })
+    })
     setFeedbackList(prev => prev.map(f => f.id === id ? { ...f, status } : f))
     if (selectedFeedback?.id === id) setSelectedFeedback((f: any) => ({ ...f, status }))
   }
 
   async function saveNote(id: string) {
     setSavingNote(true)
-    await fetch('/api/admin/feedback', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, admin_note: adminNote }) })
+    await fetch('/api/admin/feedback', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, admin_note: adminNote })
+    })
     setFeedbackList(prev => prev.map(f => f.id === id ? { ...f, admin_note: adminNote } : f))
     setSelectedFeedback((f: any) => ({ ...f, admin_note: adminNote }))
     setSavingNote(false)
@@ -128,10 +133,11 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
       <div className="flex gap-1 p-1 bg-surface2 rounded-xl w-fit flex-wrap">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all
-              ${tab === t ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
-            {t === 'Audit Log'     ? '🔍 Audit Log'     :
-             t === 'Subscriptions' ? '💳 Subscriptions' : t}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-surface text-text shadow' : 'text-muted hover:text-text'}`}>
+            {t === 'Audit Log' ? '🔍 Audit Log'
+              : t === 'Subscriptions' ? '💳 Subscriptions'
+              : t === 'NexPlan Ops' ? '⚙ NexPlan Ops'
+              : t}
             {t === 'Feedback' && feedbackList.filter(f => f.status === 'new').length > 0 && (
               <span className="ml-2 w-4 h-4 bg-danger rounded-full text-[10px] text-white inline-flex items-center justify-center">
                 {feedbackList.filter(f => f.status === 'new').length}
@@ -155,7 +161,6 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
               </div>
             ))}
           </div>
-
           <div className="card">
             <h3 className="font-syne font-bold text-lg mb-5">User Signups — Last 7 Days</h3>
             <div className="flex items-end gap-3 h-36">
@@ -171,7 +176,6 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
               ))}
             </div>
           </div>
-
           {countries.length > 0 && (
             <div className="card">
               <h3 className="font-syne font-bold text-lg mb-4">Users by Country <span className="text-xs text-muted font-normal ml-1">(IP detected)</span></h3>
@@ -205,7 +209,6 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
             </select>
             <span className="self-center text-sm text-muted font-mono-code">{filteredFeedback.length} items</span>
           </div>
-
           {filteredFeedback.length === 0 ? (
             <div className="card text-center py-16">
               <p className="text-4xl mb-3">💬</p>
@@ -245,17 +248,12 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
       {tab === 'Users' && (
         <div className="space-y-4">
           <div className="flex items-center gap-4 flex-wrap">
-            <input
-              className="input text-sm w-64"
-              placeholder="Search name, email, country…"
-              value={userSearch}
-              onChange={e => { setUserSearch(e.target.value); setUserPage(1) }}
-            />
+            <input className="input text-sm w-64" placeholder="Search name, email, country…"
+              value={userSearch} onChange={e => { setUserSearch(e.target.value); setUserPage(1) }} />
             <span className="text-xs text-muted font-mono-code">
               {userSearch ? `${filteredUsers.length} results` : `${profiles.length} total · Page ${userPage} of ${totalPages}`}
             </span>
           </div>
-
           <div className="card p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -312,8 +310,6 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
                 </tbody>
               </table>
             </div>
-
-            {/* Pagination */}
             {!userSearch && totalPages > 1 && (
               <div className="flex items-center justify-between px-6 py-4 border-t border-border">
                 <span className="text-xs text-muted font-mono-code">
@@ -326,8 +322,7 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                     <button key={p} onClick={() => setUserPage(p)}
-                      className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors
-                        ${userPage === p ? 'bg-accent text-black' : 'border border-border hover:bg-surface2 text-muted'}`}>
+                      className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors ${userPage === p ? 'bg-accent text-black' : 'border border-border hover:bg-surface2 text-muted'}`}>
                       {p}
                     </button>
                   ))}
@@ -348,6 +343,9 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
       {/* SUBSCRIPTIONS */}
       {tab === 'Subscriptions' && <AdminSubscriptions />}
 
+      {/* NEXPLAN OPS — DC Setup, ROI Calculator, CIO Pitch */}
+      {tab === 'NexPlan Ops' && <NexPlanOpsClient />}
+
       {/* FEEDBACK DETAIL MODAL */}
       {selectedFeedback && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -365,7 +363,6 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
               </div>
               <button onClick={() => setSelectedFeedback(null)} className="text-muted hover:text-text text-xl px-2">✕</button>
             </div>
-
             <div className="overflow-y-auto p-6 space-y-5 flex-1">
               <div className="flex items-center gap-3 p-4 bg-surface2 rounded-xl">
                 <span className="text-3xl">{[,'😕','😕','😐','😊','🤩'][selectedFeedback.rating]}</span>
@@ -374,12 +371,10 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
                   <p className="text-xs text-muted">Priority: <span className={PRIORITY_COLORS[selectedFeedback.priority]}>{selectedFeedback.priority}</span></p>
                 </div>
               </div>
-
               <div>
                 <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-2">Feedback</p>
                 <p className="text-sm leading-relaxed bg-surface2 rounded-xl p-4">{selectedFeedback.message}</p>
               </div>
-
               <div>
                 <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-2">Update Status</p>
                 <div className="flex gap-2 flex-wrap">
@@ -393,11 +388,9 @@ export default function AdminClient({ profiles, projects, tasks, articles, feedb
                   ))}
                 </div>
               </div>
-
               <div>
                 <p className="text-xs font-syne font-bold text-muted uppercase tracking-wide mb-2">Admin Notes</p>
-                <textarea className="input resize-none h-24 text-sm"
-                  placeholder="Add internal notes about this feedback..."
+                <textarea className="input resize-none h-24 text-sm" placeholder="Add internal notes about this feedback..."
                   value={adminNote} onChange={e => setAdminNote(e.target.value)}/>
                 <button onClick={() => saveNote(selectedFeedback.id)} disabled={savingNote}
                   className="btn-primary text-xs px-4 py-2 mt-2">

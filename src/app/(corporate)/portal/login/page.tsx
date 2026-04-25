@@ -1,12 +1,11 @@
 /**
- * src/app/(corporate)/login/page.tsx
+ * src/app/(corporate)/portal/login/page.tsx
  *
- * Sign-in page for corporate.nexplan.io.
- * UI matches the mockup: centred card, "Corporate Access Only" badge,
- * work email field, "Continue with Single Sign-On" button.
+ * Public sign-in page at corporate.nexplan.io/portal/login
+ * (Note: middleware also routes corporate.nexplan.io/login → here,
+ *  so users see "/login" in the URL bar but the file lives at /portal/login.)
  *
- * Mock auth: any email whose domain is whitelisted will be accepted.
- * Real auth: wire to Supabase Auth + magic link / SAML.
+ * No sidebar wrapper. After successful sign-in, redirects to /portal.
  */
 
 'use client'
@@ -28,33 +27,29 @@ export default function CorporateLoginPage() {
 
     const trimmed = email.trim().toLowerCase()
 
-    // ── Step 1: validate it looks like an email ─────────────────────────
     if (!trimmed.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       setError('Please enter a valid work email address.')
       setSubmitting(false)
       return
     }
 
-    // ── Step 2: check it's a whitelisted corporate domain ───────────────
     if (!isCorporateEmail(trimmed)) {
       setError(
         'This email isn\'t recognised as a corporate workspace. ' +
-        'Contact it-support@nexplan.io if you believe this is an error.'
+        'Contact corporate@nexplan.io if you believe this is an error.'
       )
       setSubmitting(false)
       return
     }
 
-    // ── Step 3 (mock): set a session cookie + redirect to portal ────────
-    // Real version: trigger SSO flow (Supabase magic link / Azure AD / SAML)
     document.cookie = `corp_email=${encodeURIComponent(trimmed)}; path=/; max-age=86400; samesite=lax`
     router.push('/portal')
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden bg-[#FAFAFB]">
 
-      {/* ── Background grid pattern ─────────────────────────────────────── */}
+      {/* Background grid */}
       <div
         aria-hidden
         className="absolute inset-0 opacity-[0.35]"
@@ -67,7 +62,6 @@ export default function CorporateLoginPage() {
         }}
       />
 
-      {/* Subtle gradient wash */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
@@ -79,7 +73,7 @@ export default function CorporateLoginPage() {
 
       <div className="relative w-full max-w-md">
 
-        {/* ── Logo + tenant identifier ────────────────────────────────── */}
+        {/* Logo + tenant identifier */}
         <div className="flex flex-col items-center gap-3 mb-6">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center">
@@ -98,7 +92,7 @@ export default function CorporateLoginPage() {
           </span>
         </div>
 
-        {/* ── Sign-in card ────────────────────────────────────────────── */}
+        {/* Sign-in card */}
         <form
           onSubmit={handleSignIn}
           className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] p-7"
@@ -161,11 +155,10 @@ export default function CorporateLoginPage() {
           </p>
         </form>
 
-        {/* ── Help link ────────────────────────────────────────────────── */}
         <p className="mt-5 text-center text-[12px] text-slate-500">
           Need help? Contact{' '}
-          <a href="mailto:it-support@nexplan.io" className="text-slate-900 hover:underline font-medium">
-            it-support@nexplan.io
+          <a href="mailto:corporate@nexplan.io" className="text-slate-900 hover:underline font-medium">
+            corporate@nexplan.io
           </a>
         </p>
       </div>

@@ -35,7 +35,7 @@ export function CorporateSidebar({ workspace, userEmail, userName }: Props) {
 
   function signOut() {
     document.cookie = 'corp_email=; path=/; max-age=0'
-    router.push('/login')
+    router.push('/portal/login')
   }
 
   // Initials for avatars

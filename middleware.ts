@@ -2,33 +2,33 @@
  * middleware.ts (REPO ROOT — same level as next.config.js)
  *
  * Routes corporate.nexplan.io to the (corporate) route group.
- * Behaviour:
  *
- *   Hostname = corporate.nexplan.io
- *     /             → /portal           (rewrite, shows the dashboard at /)
- *     /login        → /login            (no rewrite — sign-in page)
- *     /portal/*     → /portal/*         (no rewrite — already correct)
- *     /admin, /dashboard, etc → 404      (main-app routes blocked)
+ * URL the user sees           →  Actual file rendered
+ * ─────────────────────────────────────────────────────────────
+ * corporate.nexplan.io/           →  /portal               (overview)
+ * corporate.nexplan.io/login      →  /portal/login         (sign-in)
+ * corporate.nexplan.io/portal     →  /portal               (no rewrite)
+ * corporate.nexplan.io/portal/*   →  /portal/*             (no rewrite)
  *
- *   Hostname = nexplan.io / itpromanager.vercel.app
- *     unchanged — all main-app routes work as before
+ * On nexplan.io / itpromanager.vercel.app — middleware does NOTHING,
+ * so the main app behaves exactly as before.
  *
- * NOTE: keep this minimal. Auth checks happen inside (corporate)/layout.tsx,
- * not here, so middleware stays fast and the only job here is host routing.
- *
- * If you already have a middleware.ts, MERGE this logic in — don't replace.
+ * IMPORTANT: if you already have a middleware.ts at the repo root,
+ * MERGE this logic into it — don't replace.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 
-const CORPORATE_HOST = 'corporate.nexplan.io'
+const CORPORATE_HOSTS = [
+  'corporate.nexplan.io',
+  'corporate.localhost',     // for local dev — add to your hosts file
+]
 
-// Routes that are ALLOWED on the corporate subdomain (everything else 404s)
+// Paths that exist (or rewrite-target paths) on the corporate subdomain
 const CORPORATE_ALLOWED_PREFIXES = [
   '/portal',
-  '/login',
-  '/api/corporate',     // corporate-only API routes
-  '/_next',             // Next.js internals
+  '/api/corporate',
+  '/_next',
   '/favicon',
   '/icon',
   '/apple-icon',
@@ -36,25 +36,31 @@ const CORPORATE_ALLOWED_PREFIXES = [
 ]
 
 export function middleware(req: NextRequest) {
-  const host = req.headers.get('host') ?? ''
-  const url  = req.nextUrl.clone()
-
-  // ── Only act on the corporate subdomain ────────────────────────────────
-  const isCorporate = host.startsWith(CORPORATE_HOST) || host.startsWith('corporate.localhost')
+  const host = (req.headers.get('host') ?? '').toLowerCase()
+  const isCorporate = CORPORATE_HOSTS.some(h => host === h || host.startsWith(h + ':'))
   if (!isCorporate) return NextResponse.next()
 
+  const url  = req.nextUrl.clone()
   const path = url.pathname
 
-  // Root → portal dashboard (will redirect to /login if not authed by layout)
-  if (path === '/') {
+  // ── Friendly URL mappings ────────────────────────────────────────────
+  // /          → /portal
+  if (path === '/' || path === '') {
     url.pathname = '/portal'
     return NextResponse.rewrite(url)
   }
 
-  // Allow listed prefixes
-  const isAllowed = CORPORATE_ALLOWED_PREFIXES.some(p => path === p || path.startsWith(p + '/') || path.startsWith(p))
+  // /login     → /portal/login
+  if (path === '/login') {
+    url.pathname = '/portal/login'
+    return NextResponse.rewrite(url)
+  }
+
+  // ── Allow paths under /portal and a few static prefixes ──────────────
+  const isAllowed = CORPORATE_ALLOWED_PREFIXES.some(
+    p => path === p || path.startsWith(p + '/')
+  )
   if (!isAllowed) {
-    // Anything else on the corporate subdomain → 404
     url.pathname = '/portal/not-found'
     return NextResponse.rewrite(url)
   }

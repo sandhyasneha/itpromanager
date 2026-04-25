@@ -2,10 +2,9 @@
  * src/components/corporate/ActivityLog.tsx
  *
  * Bottom card with a table of recent workspace events.
- * Headers: Action / Detail / Timestamp.
  */
 
-interface ActivityEvent {
+export interface ActivityEvent {
   icon:    'eye' | 'download' | 'shield' | 'user' | 'check' | 'key'
   action:  string
   detail:  string

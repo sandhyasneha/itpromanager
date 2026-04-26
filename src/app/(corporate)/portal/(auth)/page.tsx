@@ -1,7 +1,8 @@
 /**
  * src/app/(corporate)/portal/(auth)/page.tsx
  *
- * Overview / dashboard page — matches mockup 2.
+ * Overview / dashboard page — now with QuickStartCard onboarding checklist
+ * shown at the top until all 3 steps are complete.
  */
 
 import { cookies } from 'next/headers'
@@ -10,6 +11,7 @@ import { LicenseStatusCard }    from '@/components/corporate/LicenseStatusCard'
 import { ProductLicenseCard }   from '@/components/corporate/ProductLicenseCard'
 import { DeveloperAssetsCard }  from '@/components/corporate/DeveloperAssetsCard'
 import { ActivityLog }          from '@/components/corporate/ActivityLog'
+import { QuickStartCard }       from '@/components/corporate/QuickStartCard'
 import type { ActivityEvent }   from '@/components/corporate/ActivityLog'
 
 export default async function PortalOverviewPage() {
@@ -21,9 +23,6 @@ export default async function PortalOverviewPage() {
   const firstName  = (localPart.split(/[._-]/)[0] || 'there')
   const display    = firstName.charAt(0).toUpperCase() + firstName.slice(1)
 
-  // ── Mock activity feed (last 6 events) ────────────────────────────────
-  // The `as const` assertion tells TypeScript these strings are the literal
-  // values in ActivityEvent['icon'], not just generic strings.
   const activity: ActivityEvent[] = [
     { icon: 'eye',      action: 'License key viewed',     detail: 'Masked display in dashboard',                ts: 'Feb 18, 2026 · 09:42 AM' },
     { icon: 'download', action: 'Dockerfile downloaded',  detail: 'nexplan.Dockerfile.txt',                     ts: 'Feb 17, 2026 · 04:18 PM' },
@@ -48,6 +47,9 @@ export default async function PortalOverviewPage() {
           Your enterprise license is active. Manage your developer assets and credentials below.
         </p>
       </div>
+
+      {/* ── NEW: Quick Start onboarding card (auto-hides when all done) ── */}
+      <QuickStartCard />
 
       {/* ── License status + 4 KPIs ───────────────────────────────────── */}
       <LicenseStatusCard workspace={workspace} />

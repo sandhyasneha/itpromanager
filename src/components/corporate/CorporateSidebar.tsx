@@ -19,6 +19,7 @@ const NAV = [
   { href: '/portal',           label: 'Overview',  icon: OverviewIcon  },
   { href: '/portal/licenses',  label: 'Licenses',  icon: LicensesIcon  },
   { href: '/portal/downloads', label: 'Downloads', icon: DownloadsIcon },
+  { href: '/portal/setup-guide', label: 'Setup Guide',  icon: SettingsIcon },
   { href: '/portal/activity',  label: 'Activity',  icon: ActivityIcon  },
   { href: '/portal/settings',  label: 'Settings',  icon: SettingsIcon  },
 ]

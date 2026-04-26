@@ -19,6 +19,15 @@ const nextConfig = {
       'graph.facebook.com',
     ],
   },
+
+  // ── DC / Docker build only ──────────────────────────────────────────────
+  // Vercel deployments leave NEXPLAN_BUILD_TARGET unset → output stays default
+  // (current behaviour, PWA works as today).
+  //
+  // Docker builds set NEXPLAN_BUILD_TARGET=docker (in the Dockerfile) → output
+  // switches to 'standalone' which produces a self-contained .next/standalone/
+  // folder for shipping to enterprise customers.
+  ...(process.env.NEXPLAN_BUILD_TARGET === 'docker' ? { output: 'standalone' } : {}),
 }
 
 module.exports = withPWA(nextConfig)

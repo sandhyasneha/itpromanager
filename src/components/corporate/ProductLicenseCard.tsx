@@ -1,42 +1,115 @@
-/**
- * src/components/corporate/ProductLicenseCard.tsx
- *
- * Shows the masked license key with reveal/copy buttons and the
- * "Generate New Key" action. Matches mockup 2 left card.
- */
-
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CorporateWorkspace } from '@/lib/corporate/whitelist'
 
+interface ActiveLicence {
+  licence_id:  string
+  plan:        string
+  seats:       number
+  ai_enabled:  boolean
+  expires_at:  string
+  issued_at:   string
+}
+
+interface IssueResponse {
+  licence_id:     string
+  licence_key:    string  // ← full JWT, only returned at issue-time
+  client_name:    string
+  allowed_domain: string
+  plan:           string
+  seats:          number
+  expires_at:     string
+}
+
 export function ProductLicenseCard({ workspace }: { workspace: CorporateWorkspace }) {
-  const [revealed, setRevealed] = useState(false)
-  const [copied,   setCopied]   = useState(false)
-  const [regenerating, setRegenerating] = useState(false)
 
-  // Mock visible key — real version fetches from /api/corporate/licence
-  const fullKey = `${workspace.licence_id.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 4) || 'XXXX'}-A4B9-7C2D-1234`
-  const masked  = 'XXXX-XXXX-XXXX-' + fullKey.slice(-4)
+  const [activeLicence, setActiveLicence] = useState<ActiveLicence | null>(null)
+  const [loadingActive, setLoadingActive] = useState(true)
 
-  const display = revealed ? fullKey : masked
+  // Held only briefly after generation; never re-fetched
+  const [freshKey,      setFreshKey]      = useState<string | null>(null)
+  const [revealed,      setRevealed]      = useState(false)
+  const [copied,        setCopied]        = useState(false)
+  const [generating,    setGenerating]    = useState(false)
+  const [error,         setError]         = useState<string | null>(null)
+
+  // ── Fetch the active-licence summary on mount ────────────────────────
+  useEffect(() => {
+    fetch('/api/corporate/licence/issue', { method: 'GET' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.active_licence) setActiveLicence(data.active_licence)
+        setLoadingActive(false)
+      })
+      .catch(() => setLoadingActive(false))
+  }, [])
+
+  // ── Generate a new key ───────────────────────────────────────────────
+  async function generate() {
+    const confirmMsg =
+      activeLicence
+        ? 'This will REVOKE the current key immediately.\n\n' +
+          'All running NexPlan deployments using the current key will lose access ' +
+          'within minutes (next licence revalidation).\n\n' +
+          'Update your .env on the server with the new key after generating.\n\n' +
+          'Continue?'
+        : 'Generate your first NexPlan licence key for ' + workspace.company_name + '?'
+
+    if (!confirm(confirmMsg)) return
+
+    setGenerating(true)
+    setError(null)
+    setFreshKey(null)
+    setRevealed(false)
+
+    try {
+      const r = await fetch('/api/corporate/licence/issue', { method: 'POST' })
+      const data = await r.json() as IssueResponse | { error: string }
+
+      if (!r.ok || 'error' in data) {
+        setError(('error' in data && data.error) || 'Failed to generate licence')
+        return
+      }
+
+      // Show the fresh key (only chance to copy it)
+      setFreshKey(data.licence_key)
+      setRevealed(true)
+
+      // Refresh the summary
+      setActiveLicence({
+        licence_id: data.licence_id,
+        plan:       data.plan,
+        seats:      data.seats,
+        ai_enabled: true,
+        expires_at: data.expires_at,
+        issued_at:  new Date().toISOString(),
+      })
+    } catch (e: any) {
+      setError(e.message ?? 'Network error')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   function copy() {
-    navigator.clipboard.writeText(fullKey)
+    if (!freshKey) return
+    navigator.clipboard.writeText(freshKey)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
 
-  function regen() {
-    if (!confirm('Generating a new key will immediately revoke the current one. All running deployments using the current key will lose access. Continue?')) return
-    setRegenerating(true)
-    setTimeout(() => setRegenerating(false), 1200)
-  }
+  // What to show in the key field
+  const display = freshKey
+    ? (revealed ? freshKey : 'eyJhbGci' + '•'.repeat(36) + freshKey.slice(-6))
+    : (activeLicence
+        ? `${activeLicence.licence_id.toUpperCase()} (key shown only at generation)`
+        : 'No licence yet — click Generate')
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 p-6">
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-start justify-between mb-4 gap-3">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
@@ -48,85 +121,91 @@ export function ProductLicenseCard({ workspace }: { workspace: CorporateWorkspac
           </div>
           <div>
             <h3 className="text-[15px] font-semibold text-slate-900 leading-tight">
-              Your Product License
+              Your Product Licence
             </h3>
             <p className="text-[12px] text-slate-500 mt-0.5 leading-relaxed">
-              This key authorizes deployment of Nexplan binaries within your workspace.
-              Treat it as a secret.
+              Authorises NexPlan to run on <strong>{workspace.domain}</strong>.
+              Treat the full key as a secret.
             </p>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-mono font-semibold tracking-wider text-emerald-700 uppercase shrink-0">
-          Verified
-        </span>
+        {activeLicence && (
+          <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-mono font-semibold tracking-wider text-emerald-700 uppercase shrink-0">
+            Active
+          </span>
+        )}
       </div>
 
-      {/* ── Key field ───────────────────────────────────────────────── */}
+      {/* Key field */}
       <div className="mb-3">
         <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-slate-500 mb-1.5">
-          License Key
+          Licence Key
         </p>
         <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 font-mono text-[13px] text-slate-700 select-all">
-            <span className="flex-1 truncate">{display}</span>
-            <button
-              onClick={() => setRevealed(r => !r)}
-              title={revealed ? 'Hide' : 'Reveal'}
-              className="p-1 text-slate-400 hover:text-slate-700 transition-colors shrink-0"
-            >
-              {revealed ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
-                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
-                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
-                  <line x1="2" y1="2" x2="22" y2="22"/>
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              )}
-            </button>
-          </div>
-          <button
-            onClick={copy}
-            title="Copy"
-            className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
-          >
-            {copied ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
+          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 font-mono text-[11px] text-slate-700 select-all">
+            <span className="flex-1 truncate">
+              {loadingActive ? 'Loading…' : display}
+            </span>
+            {freshKey && (
+              <button
+                onClick={() => setRevealed(r => !r)}
+                title={revealed ? 'Hide' : 'Reveal'}
+                className="p-1 text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+              >
+                {revealed ? '🙈' : '👁'}
+              </button>
             )}
-          </button>
+          </div>
+          {freshKey && (
+            <button
+              onClick={copy}
+              title="Copy"
+              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors text-[11px] font-mono"
+            >
+              {copied ? '✓' : 'Copy'}
+            </button>
+          )}
         </div>
+        {activeLicence && !freshKey && (
+          <p className="text-[10px] text-slate-400 mt-1.5">
+            Key issued {new Date(activeLicence.issued_at).toLocaleDateString()} · Expires {activeLicence.expires_at}.
+            For security the full key is shown only once at generation.
+          </p>
+        )}
       </div>
 
-      {/* ── Footer: warning + regenerate ────────────────────────────── */}
+      {/* Error / fresh-key warning */}
+      {error && (
+        <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-100 text-[11px] text-red-700">
+          {error}
+        </div>
+      )}
+      {freshKey && (
+        <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
+          ⚠ <strong>Copy this key now.</strong> It will not be shown again after you leave this page.
+          Add it to your server&apos;s <code className="bg-amber-100 px-1 rounded">.env</code> file as <code className="bg-amber-100 px-1 rounded">NEXPLAN_LICENCE_KEY</code>.
+        </div>
+      )}
+
+      {/* Footer: regenerate */}
       <div className="flex items-center justify-between gap-3 pt-3 mt-1 border-t border-slate-100">
         <p className="text-[11px] text-slate-500 leading-relaxed flex-1">
-          Generating a new key{' '}
-          <span className="font-semibold text-red-600">immediately revokes</span>{' '}
-          the current one.
+          {activeLicence
+            ? <>Generating a new key <span className="font-semibold text-red-600">immediately revokes</span> the current one.</>
+            : <>No active licence. Click <strong>Generate</strong> to create one.</>}
         </p>
         <button
-          onClick={regen}
-          disabled={regenerating}
+          onClick={generate}
+          disabled={generating}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[12px] font-semibold transition-colors whitespace-nowrap"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={regenerating ? 'animate-spin' : ''}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={generating ? 'animate-spin' : ''}>
             <path d="M21 2v6h-6"/>
             <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
             <path d="M3 22v-6h6"/>
             <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
           </svg>
-          {regenerating ? 'Generating…' : 'Generate New Key'}
+          {generating ? 'Generating…' : (activeLicence ? 'Generate New Key' : 'Generate Key')}
         </button>
       </div>
     </div>

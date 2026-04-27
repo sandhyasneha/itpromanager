@@ -15,27 +15,11 @@ interface OnboardingState {
   all_done: boolean
 }
 
-const STEP_CTA: Record<string, { label: string; href: string; scrollTo?: string }> = {
-  licence_generated: {
-    label:    'Generate now',
-    href:     '#product-licence',
-    scrollTo: 'product-licence',
-  },
-  assets_downloaded: {
-    label:    'Download files',
-    href:     '#deployment-assets',
-    scrollTo: 'deployment-assets',
-  },
-  licence_validated: {
-    label:    'Setup guide',
-    href:     '/portal/setup-guide',
-  },
-}
-
 export function QuickStartCard() {
   const [state,   setState]   = useState<OnboardingState | null>(null)
   const [loading, setLoading] = useState(true)
   const [hidden,  setHidden]  = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     fetch('/api/corporate/onboarding')
@@ -56,19 +40,61 @@ export function QuickStartCard() {
   const totalCount     = state.steps.length
   const progressPct    = (completedCount / totalCount) * 100
 
+  // ── Step actions — REAL downloads, not just scrolling ────────────────────
   function handleStepClick(stepId: string) {
-    const cta = STEP_CTA[stepId]
-    if (!cta) return
-    if (cta.scrollTo) {
-      const el = document.getElementById(cta.scrollTo)
+
+    if (stepId === 'licence_generated') {
+      // Scroll to Product Licence card (where they click Generate)
+      const el = document.getElementById('product-licence')
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        // Pulse it briefly
         el.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-2')
-        setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-500', 'ring-offset-2'), 2000)
+        setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-500', 'ring-offset-2'), 2500)
       }
-    } else {
-      window.location.href = cta.href
+      return
+    }
+
+    if (stepId === 'assets_downloaded') {
+      // ACTUALLY download the 4 files (not just scroll!)
+      setDownloading(true)
+      const files: Array<'dockerfile' | 'compose' | 'env' | 'readme'> = ['dockerfile', 'compose', 'env', 'readme']
+
+      files.forEach((f, i) => {
+        setTimeout(() => {
+          // Use a temporary anchor for each — works around browser multi-download blocking
+          const a = document.createElement('a')
+          a.href = `/api/corporate/assets/dockerfile?file=${f}`
+          a.download = ''  // hint to browser to download, not navigate
+          a.style.display = 'none'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        }, i * 400)
+      })
+
+      // Mark step done in onboarding state
+      fetch('/api/corporate/onboarding', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ step: 'assets_downloaded' }),
+      }).then(() => {
+        // Refresh the state so the green tick appears
+        setTimeout(() => {
+          fetch('/api/corporate/onboarding')
+            .then(r => r.json())
+            .then((data: OnboardingState) => setState(data))
+            .catch(() => {})
+        }, 1500)
+      }).catch(() => {})
+
+      setTimeout(() => setDownloading(false), 2000)
+      return
+    }
+
+    if (stepId === 'licence_validated') {
+      // Send them to the setup guide
+      window.location.href = '/portal/setup-guide'
+      return
     }
   }
 
@@ -123,7 +149,11 @@ export function QuickStartCard() {
       {/* Steps */}
       <div className="relative space-y-2">
         {state.steps.map((step, i) => {
-          const cta = STEP_CTA[step.id]
+          const stepLabels: Record<string, string> = {
+            licence_generated: 'Generate now',
+            assets_downloaded: downloading ? 'Downloading…' : 'Download all 4 files',
+            licence_validated: 'Setup guide',
+          }
           return (
             <div
               key={step.id}
@@ -161,12 +191,13 @@ export function QuickStartCard() {
               </div>
 
               {/* Action button */}
-              {!step.done && cta && (
+              {!step.done && (
                 <button
                   onClick={() => handleStepClick(step.id)}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0"
+                  disabled={downloading && step.id === 'assets_downloaded'}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0"
                 >
-                  {cta.label} →
+                  {stepLabels[step.id] ?? 'Go →'}
                 </button>
               )}
               {step.done && (
